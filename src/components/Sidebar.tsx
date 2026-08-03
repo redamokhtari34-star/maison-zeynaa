@@ -67,20 +67,20 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
     { id: 'parametres', label: t.parametres, icon: Settings },
   ];
 
-  const activeClass = 'bg-violet-100/90 text-violet-700 font-semibold rounded-[20px] shadow-sm';
-  const inactiveClass = 'text-gray-500 hover:bg-gray-50/80 hover:text-gray-900 rounded-[20px] transition-all duration-200';
+  const activeClass = 'bg-rose-100/80 text-rose-800 font-semibold rounded-2xl';
+  const inactiveClass = 'text-stone-500 hover:bg-stone-100/70 hover:text-stone-900 rounded-2xl transition-all duration-200';
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between p-6 bg-white border-r border-gray-200/80 shadow-sm overflow-y-auto">
       {/* Brand Logo & Name */}
       <div>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-tr from-violet-600 to-fuchsia-500 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+        <div className="flex items-center gap-3.5 mb-7">
+          <div className="w-11 h-11 bg-gradient-to-br from-rose-600 to-rose-400 rounded-2xl flex items-center justify-center text-white font-display font-semibold text-2xl shadow-sm shadow-rose-600/20">
             Z
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-fuchsia-500 font-sans">Maison Zeyna</h1>
-            <p className="text-[10px] text-violet-500 uppercase font-semibold tracking-wider font-mono">Alger, DZ 🇩🇿</p>
+            <h1 className="font-display text-2xl leading-none tracking-tight text-stone-900">Maison Zeyna</h1>
+            <p className="text-[10px] text-rose-500 uppercase font-semibold tracking-[0.22em] mt-1">Alger, DZ · Couture</p>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
                   isActive ? activeClass : inactiveClass
                 } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
               >
-                <Icon size={18} className={isActive ? 'text-violet-700' : 'text-gray-400 group-hover:text-violet-600'} />
+                <Icon size={18} className={isActive ? 'text-rose-700' : 'text-stone-400 group-hover:text-rose-600'} />
                 <span className="truncate">{item.label}</span>
               </button>
             );
@@ -160,10 +160,10 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
         isRtl ? 'flex-row-reverse' : ''
       }`}>
         <div className={`flex items-center gap-2.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <div className="p-1.5 bg-gradient-to-tr from-violet-600 to-fuchsia-500 rounded-lg text-white">
+          <div className="p-1.5 bg-gradient-to-br from-rose-600 to-rose-400 rounded-lg text-white">
             <Crown size={16} />
           </div>
-          <span className="font-bold text-gray-900 text-sm hidden sm:inline">Maison Zeyna</span>
+          <span className="font-display text-lg text-stone-900 hidden sm:inline">Maison Zeyna</span>
           <button
             id="mobile-tresorerie-pill"
             onClick={() => setCurrentTab('caisse')}

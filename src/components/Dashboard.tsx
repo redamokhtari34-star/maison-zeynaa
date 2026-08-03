@@ -1,24 +1,23 @@
 import React from 'react';
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Calendar, 
-  RotateCcw, 
-  Layers, 
-  Gem, 
-  PlusCircle, 
-  UserPlus, 
-  DollarSign, 
-  Clock, 
-  FileSpreadsheet, 
-  TrendingUp, 
+import {
+  ArrowDownRight,
+  Calendar,
+  RotateCcw,
+  Layers,
+  Gem,
+  PlusCircle,
+  UserPlus,
+  DollarSign,
+  Clock,
+  FileSpreadsheet,
+  TrendingUp,
   AlertTriangle,
-  Users,
   BarChart3,
   Coins,
   Settings,
   Activity,
-  Sparkles
+  Sparkles,
+  ArrowUpRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Language } from '../types';
@@ -49,8 +48,8 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     .reduce((sum, tr) => sum + tr.montant_da, 0);
 
   const upcomingReservations = db.reservations.filter(r => r.statut === 'future').length;
-  
-  const returnsToday = db.reservations.filter(r => 
+
+  const returnsToday = db.reservations.filter(r =>
     r.date_retour === todayStr && (r.statut === 'en_cours' || r.statut === 'en_retard')
   ).length;
 
@@ -69,7 +68,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
       alerts.push({
         id: `alert-late-${r.id}`,
         type: 'error',
-        text: language === 'fr' 
+        text: language === 'fr'
           ? `Retour en retard: ${client?.nom_complet || 'Inconnu'} pour "${dressNames}" (Prévu le ${r.date_retour})`
           : `إرجاع متأخر: ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}" (كان مقرراً في ${r.date_retour})`,
         clientName: client?.nom_complet,
@@ -126,412 +125,301 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     if (act.includes('robe')) {
       return {
         icon: <Sparkles size={16} />,
-        bg: 'bg-purple-100 text-purple-600 border border-purple-200/50'
+        bg: 'bg-rose-100 text-rose-600 border border-rose-200/60'
       };
     }
     if (act.includes('bijou') || act.includes('accessoire')) {
       return {
         icon: <Gem size={16} />,
-        bg: 'bg-fuchsia-100 text-fuchsia-600 border border-fuchsia-200/50'
+        bg: 'bg-amber-100 text-amber-700 border border-amber-200/60'
       };
     }
     if (act.includes('réservation') || act.includes('location') || act.includes('contrat')) {
       return {
         icon: <Calendar size={16} />,
-        bg: 'bg-blue-100 text-blue-600 border border-blue-200/50'
+        bg: 'bg-blue-100 text-blue-600 border border-blue-200/60'
       };
     }
     if (act.includes('retour')) {
       return {
         icon: <RotateCcw size={16} />,
-        bg: 'bg-amber-100 text-amber-600 border border-amber-200/50'
+        bg: 'bg-amber-100 text-amber-700 border border-amber-200/60'
       };
     }
     if (act.includes('paiement') || act.includes('caisse') || act.includes('entrée') || act.includes('vidage')) {
       return {
         icon: <Coins size={16} />,
-        bg: 'bg-emerald-100 text-emerald-600 border border-emerald-200/50'
+        bg: 'bg-emerald-100 text-emerald-700 border border-emerald-200/60'
       };
     }
     if (act.includes('dépense') || act.includes('sortie')) {
       return {
         icon: <ArrowDownRight size={16} />,
-        bg: 'bg-rose-100 text-rose-600 border border-rose-200/50'
+        bg: 'bg-red-100 text-red-600 border border-red-200/60'
       };
     }
     if (act.includes('cliente')) {
       return {
         icon: <UserPlus size={16} />,
-        bg: 'bg-indigo-100 text-indigo-600 border border-indigo-200/50'
+        bg: 'bg-rose-100 text-rose-600 border border-rose-200/60'
       };
     }
     if (act.includes('paramètre') || act.includes('réinitialisation')) {
       return {
         icon: <Settings size={16} />,
-        bg: 'bg-slate-200 text-slate-700 border border-slate-300'
+        bg: 'bg-stone-200 text-stone-700 border border-stone-300'
       };
     }
     return {
       icon: <Activity size={16} />,
-      bg: 'bg-slate-100 text-slate-600 border border-slate-200/50'
+      bg: 'bg-stone-100 text-stone-600 border border-stone-200/60'
     };
   };
 
+  const dateLabel = language === 'fr' ? 'Mardi 21 Juillet 2026' : 'الثلاثاء 21 جويلية 2026';
+
+  // Small counts shown as an editorial hairline strip
+  const counts = [
+    {
+      label: t.upcoming_reservations,
+      value: upcomingReservations,
+      hint: language === 'fr' ? 'Confirmées par acompte' : 'مؤكدة بالعربون',
+      icon: <Calendar size={15} />,
+    },
+    {
+      label: t.returns_today,
+      value: returnsToday,
+      hint: language === 'fr' ? 'Restitution prévue' : 'متوقعة للاسترجاع',
+      icon: <RotateCcw size={15} />,
+    },
+    {
+      label: t.available_dresses,
+      value: availableDresses,
+      suffix: `/ ${totalDresses}`,
+      hint: language === 'fr' ? 'Prêtes pour location' : 'جاهزة للإيجار',
+      icon: <Layers size={15} />,
+    },
+    {
+      label: t.rented_dresses,
+      value: rentedDresses,
+      hint: language === 'fr' ? 'Sorties ou réservées' : 'خارجة أو محجوزة',
+      icon: <Clock size={15} />,
+    },
+  ];
+
+  // Quick actions — same ids / handlers, restyled as editorial tiles
+  const actions = [
+    { id: 'qa-new-res-btn', onClick: () => onOpenQuickAction?.('reservation'), icon: PlusCircle, label: t.qa_new_reservation, sub: language === 'fr' ? 'Créer un contrat' : 'إنشاء عقد جديد', featured: true },
+    { id: 'qa-add-dress-btn', onClick: () => onOpenQuickAction?.('robe'), icon: Layers, label: t.qa_add_dress, sub: language === 'fr' ? 'Nouveau modèle' : 'موديل جديد' },
+    { id: 'qa-add-bijou-btn', onClick: () => onOpenQuickAction?.('bijou'), icon: Gem, label: t.qa_add_bijou, sub: language === 'fr' ? 'Accessoire' : 'إضافة مجوهرات' },
+    { id: 'qa-add-expense-btn', onClick: () => onOpenQuickAction?.('depense'), icon: ArrowDownRight, label: t.qa_add_expense, sub: language === 'fr' ? 'Saisir un frais' : 'تسجيل مصاريف' },
+    { id: 'qa-return-rental-btn', onClick: () => setCurrentTab('retours'), icon: RotateCcw, label: t.qa_return_rental, sub: language === 'fr' ? 'Gérer un retour' : 'إدارة الإرجاع' },
+    { id: 'qa-view-calendar-btn', onClick: () => setCurrentTab('calendrier'), icon: Calendar, label: t.qa_view_calendar, sub: language === 'fr' ? "Consulter l'agenda" : 'جدول المواعيد' },
+    { id: 'qa-view-stats-btn', onClick: () => setCurrentTab('statistiques'), icon: BarChart3, label: t.qa_view_stats, sub: language === 'fr' ? 'Rapports de ventes' : 'التقارير والتحليل' },
+    { id: 'qa-create-receipt-btn', onClick: () => setCurrentTab('documents'), icon: FileSpreadsheet, label: t.qa_create_receipt, sub: language === 'fr' ? 'Factures & reçus' : 'الفواتير والإيصالات' },
+  ];
+
   return (
-    <div className={`space-y-8 p-1 sm:p-2 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
-      {/* Header section */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
-        isRtl ? 'sm:flex-row-reverse' : ''
-      }`}>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t.welcome}</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {language === 'fr' 
-              ? 'Gérez sereinement votre magasin de location de robes traditionnelles algériennes de luxe.' 
-              : 'قم بإدارة صالون تأجير الفساتين الفاخرة التقليدية الجزائرية بكل سهولة واحترافية.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-violet-50 text-violet-700 px-4 py-2.5 rounded-2xl text-sm font-semibold border border-violet-100">
-          <Calendar size={16} />
-          <span>{language === 'fr' ? 'Mardi 21 Juillet 2026' : 'الثلاثاء 21 جويلية 2026'}</span>
-        </div>
-      </div>
+    <div className={`max-w-6xl mx-auto space-y-10 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card 1: Today Revenue */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.05 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.today_revenue}</span>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-2xl font-bold text-gray-900">{formatDa(incomeToday)}</span>
-          </div>
-          <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mt-2 inline-block">
-            {language === 'fr' ? 'Aujourd’hui' : 'اليوم'}
-          </span>
-        </motion.div>
+      {/* ── Editorial masthead ─────────────────────────────────────── */}
+      <motion.header
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-[26px] border border-stone-200 bg-white"
+      >
+        {/* soft blush wash in the corner */}
+        <div className={`pointer-events-none absolute -top-24 h-64 w-64 rounded-full bg-rose-200/40 blur-3xl ${isRtl ? '-left-16' : '-right-16'}`} />
 
-        {/* Card 2: Month Revenue */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.1 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.month_revenue}</span>
-            <div className="p-3 bg-violet-50 text-violet-600 rounded-xl group-hover:scale-110 transition-transform">
-              <DollarSign size={18} />
+        <div className="relative grid lg:grid-cols-[1.7fr_1fr]">
+          {/* Greeting */}
+          <div className="px-7 py-9 sm:px-10 sm:py-12">
+            <div className={`flex items-center gap-3 text-[11px] uppercase tracking-[0.28em] text-stone-400 font-medium ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <span>{dateLabel}</span>
+              <span className="h-px w-8 bg-stone-300" />
+              <span>Alger · DZ</span>
             </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-2xl font-bold text-gray-900">{formatDa(incomeMonth)}</span>
-          </div>
-          <span className="text-[11px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md mt-2 inline-block">
-            {language === 'fr' ? 'Juillet 2026' : 'جويلية 2026'}
-          </span>
-        </motion.div>
 
-        {/* Card 3: Upcoming Reservations */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.upcoming_reservations}</span>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Calendar size={18} />
-            </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-3xl font-extrabold text-gray-900">{upcomingReservations}</span>
-          </div>
-          <span className="text-xs text-gray-400 mt-2 block">{language === 'fr' ? 'Confirmées par acompte' : 'مؤكدة بالعربون'}</span>
-        </motion.div>
+            <h2 className="font-display display-tight text-[2.6rem] leading-none sm:text-[3.6rem] text-stone-900 mt-5">
+              {t.welcome}
+            </h2>
 
-        {/* Card 4: Returns Today */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.2 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.returns_today}</span>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
-              <RotateCcw size={18} />
-            </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-3xl font-extrabold text-gray-900">{returnsToday}</span>
-          </div>
-          <span className="text-xs text-gray-400 mt-2 block">{language === 'fr' ? 'Restitution prévue' : 'متوقعة للاسترجاع'}</span>
-        </motion.div>
+            <p className="text-[15px] text-stone-500 max-w-md mt-4 leading-relaxed">
+              {language === 'fr'
+                ? 'La maison de location de robes traditionnelles algériennes de luxe — vue d’ensemble de votre journée.'
+                : 'دار تأجير الفساتين التقليدية الجزائرية الفاخرة — نظرة عامة على يومك.'}
+            </p>
 
-        {/* Card 5: Available Dresses */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.25 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.available_dresses}</span>
-            <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Layers size={18} />
-            </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-3xl font-extrabold text-gray-900">{availableDresses}</span>
-            <span className="text-xs text-gray-400">/ {totalDresses}</span>
-          </div>
-          <span className="text-xs text-gray-400 mt-2 block">{language === 'fr' ? 'Prêtes pour location' : 'جاهزة للإيجار'}</span>
-        </motion.div>
-
-        {/* Card 6: Rented Dresses */}
-        <motion.div 
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.3 }}
-          className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md hover:border-violet-200/50 transition-all duration-200 group"
-        >
-          <div className={`flex justify-between items-start mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-sm font-semibold text-gray-500">{t.rented_dresses}</span>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform">
-              <Clock size={18} />
-            </div>
-          </div>
-          <div className={`flex items-baseline gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <span className="text-3xl font-extrabold text-gray-900">{rentedDresses}</span>
-          </div>
-          <span className="text-xs text-gray-400 mt-2 block">{language === 'fr' ? 'Sorties ou réservées' : 'خارجة أو محجوزة'}</span>
-        </motion.div>
-      </div>
-
-      {/* Quick Actions Panel */}
-      <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">{t.quick_actions}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <button
-            id="qa-new-res-btn"
-            onClick={() => onOpenQuickAction?.('reservation')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/10 hover:shadow-violet-600/20 hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-white/15 text-white rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <PlusCircle size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold tracking-tight leading-tight">{t.qa_new_reservation}</span>
-              <span className="text-[10px] text-white/70 font-medium mt-1">
-                {language === 'fr' ? 'Créer un contrat' : 'إنشاء عقد جديد'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-add-dress-btn"
-            onClick={() => onOpenQuickAction?.('robe')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-violet-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-violet-50 text-violet-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <Layers size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-violet-600 transition-colors">
-                {t.qa_add_dress}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Nouveau modèle' : 'موديل جديد'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-add-bijou-btn"
-            onClick={() => onOpenQuickAction?.('bijou')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-fuchsia-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <Gem size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-fuchsia-600 transition-colors">
-                {t.qa_add_bijou}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Accessoire' : 'إضافة مجوهرات'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-add-expense-btn"
-            onClick={() => onOpenQuickAction?.('depense')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-rose-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <ArrowDownRight size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-rose-600 transition-colors">
-                {t.qa_add_expense}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Saisir un frais' : 'تسجيل مصاريف'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-return-rental-btn"
-            onClick={() => setCurrentTab('retours')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-amber-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <RotateCcw size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-amber-600 transition-colors">
-                {t.qa_return_rental}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Gérer un retour' : 'إدارة الإرجاع'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-view-calendar-btn"
-            onClick={() => setCurrentTab('calendrier')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-indigo-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <Calendar size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-indigo-600 transition-colors">
+            <div className={`flex flex-wrap items-center gap-2.5 mt-7 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <button
+                onClick={() => onOpenQuickAction?.('reservation')}
+                className={`inline-flex items-center gap-2 rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-rose-600/20 hover:bg-rose-700 transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}
+              >
+                <PlusCircle size={16} />
+                {t.qa_new_reservation}
+              </button>
+              <button
+                onClick={() => setCurrentTab('calendrier')}
+                className={`inline-flex items-center gap-2 rounded-full border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 hover:border-rose-400 hover:text-rose-700 transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}
+              >
+                <Calendar size={16} />
                 {t.qa_view_calendar}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? "Consulter l'agenda" : 'جدول المواعيد'}
-              </span>
+              </button>
             </div>
-          </button>
+          </div>
 
-          <button
-            id="qa-view-stats-btn"
-            onClick={() => setCurrentTab('statistiques')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-cyan-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-cyan-50 text-cyan-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <BarChart3 size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-cyan-600 transition-colors">
-                {t.qa_view_stats}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Rapports de ventes' : 'التقارير والتحليل'}
-              </span>
-            </div>
-          </button>
-
-          <button
-            id="qa-create-receipt-btn"
-            onClick={() => setCurrentTab('documents')}
-            className={`flex items-center gap-4 p-4 rounded-[16px] bg-white border border-gray-200/80 shadow-sm hover:border-emerald-400 hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group ${
-              isRtl ? 'flex-row-reverse text-right' : 'text-left'
-            }`}
-          >
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-[12px] group-hover:scale-110 transition-transform flex-shrink-0">
-              <FileSpreadsheet size={22} />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-800 leading-tight truncate group-hover:text-emerald-600 transition-colors">
-                {t.qa_create_receipt}
-              </span>
-              <span className="text-[10px] text-gray-400 font-medium mt-1">
-                {language === 'fr' ? 'Factures & reçus' : 'الفواتير والإيصالات'}
-              </span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom split: Alerts & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Alerts box */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">{t.important_alerts}</h3>
-          
-          {alerts.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-gray-200">
-              <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-3">
-                ✓
+          {/* Revenue feature */}
+          <div className={`relative flex flex-col justify-center gap-6 bg-stone-50/70 px-7 py-9 sm:px-9 ${isRtl ? 'lg:border-r border-stone-200' : 'lg:border-l border-stone-200'} border-t lg:border-t-0`}>
+            <div>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-400 font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <TrendingUp size={13} className="text-emerald-600" />
+                <span>{t.today_revenue}</span>
               </div>
-              <p className="text-sm font-medium text-gray-500">
+              <div className={`mt-2 font-display text-4xl sm:text-[2.7rem] leading-none text-stone-900 tabular-nums ${isRtl ? 'flex flex-row-reverse justify-end' : ''}`}>
+                {formatDa(incomeToday)}
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-stone-200" />
+
+            <div>
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-400 font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <DollarSign size={13} className="text-rose-500" />
+                <span>{t.month_revenue}</span>
+              </div>
+              <div className="mt-2 font-display text-3xl leading-none text-stone-700 tabular-nums">
+                {formatDa(incomeMonth)}
+              </div>
+              <span className="text-[11px] text-stone-400 mt-1.5 inline-block">
+                {language === 'fr' ? 'Cumul · Juillet 2026' : 'المجموع · جويلية 2026'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.header>
+
+      {/* ── Counts hairline strip ──────────────────────────────────── */}
+      <section className="rounded-[22px] border border-stone-200 overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-stone-200">
+          {counts.map((c, i) => (
+            <motion.div
+              key={c.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut', delay: 0.05 * i }}
+              className="bg-white p-6"
+            >
+              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-semibold text-stone-400 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <span className="text-rose-400">{c.icon}</span>
+                <span className="truncate">{c.label}</span>
+              </div>
+              <div className={`flex items-baseline gap-1.5 mt-3 ${isRtl ? 'flex-row-reverse justify-end' : ''}`}>
+                <span className="font-display text-4xl leading-none text-stone-900 tabular-nums">{c.value}</span>
+                {c.suffix && <span className="text-sm text-stone-400 tabular-nums">{c.suffix}</span>}
+              </div>
+              <p className="text-xs text-stone-400 mt-2">{c.hint}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Quick actions ──────────────────────────────────────────── */}
+      <section>
+        <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <h3 className="font-display text-2xl text-stone-900">{t.quick_actions}</h3>
+          <span className="h-px flex-1 bg-stone-200" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {actions.map((a) => {
+            const Icon = a.icon;
+            if (a.featured) {
+              return (
+                <button
+                  key={a.id}
+                  id={a.id}
+                  onClick={a.onClick}
+                  className={`group flex items-center gap-4 rounded-[18px] bg-gradient-to-br from-rose-600 to-rose-500 p-4 text-white shadow-sm shadow-rose-600/20 hover:shadow-md hover:shadow-rose-600/25 hover:-translate-y-0.5 transition-all ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                >
+                  <div className="flex-shrink-0 rounded-[12px] bg-white/15 p-3 group-hover:scale-110 transition-transform">
+                    <Icon size={22} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-bold leading-tight">{a.label}</span>
+                    <span className="text-[10px] text-white/75 font-medium mt-1">{a.sub}</span>
+                  </div>
+                </button>
+              );
+            }
+            return (
+              <button
+                key={a.id}
+                id={a.id}
+                onClick={a.onClick}
+                className={`group flex items-center gap-4 rounded-[18px] border border-stone-200 bg-white p-4 hover:border-rose-300 hover:-translate-y-0.5 hover:shadow-sm transition-all ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+              >
+                <div className="flex-shrink-0 rounded-full border border-stone-200 bg-stone-50 p-2.5 text-rose-600 group-hover:border-rose-200 group-hover:bg-rose-50 transition-colors">
+                  <Icon size={20} />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-semibold text-stone-800 leading-tight truncate group-hover:text-rose-700 transition-colors">{a.label}</span>
+                  <span className="text-[10px] text-stone-400 font-medium mt-1">{a.sub}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Alerts & Activity ──────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Alerts */}
+        <div className="rounded-[22px] border border-stone-200 bg-white p-6 flex flex-col">
+          <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className="font-display text-xl text-stone-900">{t.important_alerts}</h3>
+            <span className="h-px flex-1 bg-stone-200" />
+            {alerts.length > 0 && (
+              <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-2.5 py-0.5 tabular-nums">
+                {alerts.length}
+              </span>
+            )}
+          </div>
+
+          {alerts.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-stone-200 bg-stone-50/50">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">✓</div>
+              <p className="text-sm font-medium text-stone-500">
                 {language === 'fr' ? 'Aucune alerte importante' : 'لا توجد تنبيهات هامة'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
               {alerts.map((alert) => {
                 const isError = alert.type === 'error';
                 const isWarning = alert.type === 'warning';
-                
+                const tone = isError
+                  ? 'bg-red-50/70 border-red-100 text-red-900'
+                  : isWarning
+                    ? 'bg-amber-50/70 border-amber-100 text-amber-900'
+                    : 'bg-blue-50/70 border-blue-100 text-blue-900';
+                const chip = isError
+                  ? 'bg-red-100 text-red-600'
+                  : isWarning
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-blue-100 text-blue-600';
                 return (
-                  <div 
-                    key={alert.id}
-                    className={`p-4 rounded-2xl border flex gap-3.5 items-start ${
-                      isError 
-                        ? 'bg-red-50/70 border-red-100 text-red-900' 
-                        : isWarning 
-                          ? 'bg-amber-50/70 border-amber-100 text-amber-900' 
-                          : 'bg-blue-50/70 border-blue-100 text-blue-900'
-                    } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
-                  >
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${
-                      isError 
-                        ? 'bg-red-100 text-red-600' 
-                        : isWarning 
-                          ? 'bg-amber-100 text-amber-600' 
-                          : 'bg-blue-100 text-blue-600'
-                    }`}>
+                  <div key={alert.id} className={`p-4 rounded-2xl border flex gap-3.5 items-start ${tone} ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                    <div className={`p-1.5 rounded-lg mt-0.5 ${chip}`}>
                       <AlertTriangle size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium leading-relaxed">{alert.text}</p>
                       {alert.phone && (
                         <div className={`flex gap-3 mt-2.5 text-xs font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          <a 
-                            href={`tel:${alert.phone}`} 
-                            className={`hover:underline flex items-center gap-1 ${
-                              isError ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-blue-700'
-                            }`}
+                          <a
+                            href={`tel:${alert.phone}`}
+                            className={`hover:underline flex items-center gap-1 ${isError ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-blue-700'}`}
                           >
                             📞 {alert.phone}
                           </a>
@@ -545,41 +433,41 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           )}
         </div>
 
-        {/* Recent timeline logs */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
-          <div className={`flex justify-between items-center mb-6 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <h3 className="text-lg font-bold text-gray-900">{t.recent_activity}</h3>
-            <button 
+        {/* Recent activity timeline */}
+        <div className="rounded-[22px] border border-stone-200 bg-white p-6 flex flex-col">
+          <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className="font-display text-xl text-stone-900">{t.recent_activity}</h3>
+            <span className="h-px flex-1 bg-stone-200" />
+            <button
               onClick={() => setCurrentTab('statistiques')}
-              className="text-xs font-semibold text-violet-600 hover:underline"
+              className={`inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-800 ${isRtl ? 'flex-row-reverse' : ''}`}
             >
               {language === 'fr' ? 'Voir tout' : 'عرض الكل'}
+              <ArrowUpRight size={13} />
             </button>
           </div>
 
           <div className="space-y-6 max-h-[350px] overflow-y-auto pr-1">
             {db.history.slice(0, 5).map((log, index) => {
               const { icon, bg } = getHistoryIcon(log.action);
-
+              const isLast = index >= db.history.slice(0, 5).length - 1;
               return (
                 <div key={log.id} className={`flex gap-4 relative ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                  {/* Timeline connectors */}
-                  {index < db.history.slice(0, 5).length - 1 && (
-                    <div className={`absolute top-10 bottom-[-24px] w-0.5 bg-gray-100 ${isRtl ? 'right-5' : 'left-5'}`} />
+                  {!isLast && (
+                    <div className={`absolute top-10 bottom-[-24px] w-px bg-stone-200 ${isRtl ? 'right-5' : 'left-5'}`} />
                   )}
-
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 z-10 font-bold ${bg}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 ${bg}`}>
                     {icon}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className={`flex flex-wrap justify-between items-baseline gap-2 mb-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <h4 className="text-sm font-bold text-gray-900 leading-none">{log.action}</h4>
-                      <span className="text-[10px] text-gray-400 font-medium font-mono">
+                      <h4 className="text-sm font-semibold text-stone-900 leading-none">{log.action}</h4>
+                      <span className="text-[10px] text-stone-400 font-medium font-mono tabular-nums">
                         {log.date} @ {log.heure}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">{log.details}</p>
-                    <span className="text-[10px] bg-slate-50 border border-slate-100 text-slate-500 font-semibold px-1.5 py-0.5 rounded-md mt-1 inline-block">
+                    <p className="text-xs text-stone-500 leading-relaxed">{log.details}</p>
+                    <span className="text-[10px] bg-stone-50 border border-stone-200 text-stone-500 font-semibold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">
                       👤 {log.utilisateur}
                     </span>
                   </div>
