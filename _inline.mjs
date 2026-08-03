@@ -1,0 +1,63 @@
+import { readFileSync, writeFileSync, readdirSync } from 'fs';
+
+const DIST = '/home/user/maison-zeynaa/dist';
+const assets = readdirSync(`${DIST}/assets`);
+const jsFile = assets.find(f => f.endsWith('.js'));
+const cssFile = assets.find(f => f.endsWith('.css'));
+
+let js = readFileSync(`${DIST}/assets/${jsFile}`, 'utf8');
+// The Google Fonts @import is blocked by the artifact CSP, so drop it and let
+// the stack fall through to the system UI font.
+const css = readFileSync(`${DIST}/assets/${cssFile}`, 'utf8')
+  // The URL carries its own semicolons (wght@300;400;...), so match to the
+  // closing quote rather than the first ';'.
+  .replace(/@import\s*["'][^"']*fonts\.googleapis\.com[^"']*["']\s*;/g, '');
+
+// Artifacts run under a strict CSP that blocks every external host, so the
+// Unsplash photos would render as broken images. Swap them for inline gradient
+// placeholders keyed off the photo id, so each item keeps a stable visual.
+const palettes = [
+  ['#7c3aed', '#c026d3'], ['#be123c', '#f43f5e'], ['#047857', '#10b981'],
+  ['#1d4ed8', '#3b82f6'], ['#b45309', '#f59e0b'], ['#0f766e', '#14b8a6'],
+  ['#4338ca', '#818cf8'], ['#9d174d', '#ec4899']
+];
+
+const placeholder = (seed) => {
+  let h = 0;
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const [from, to] = palettes[h % palettes.length];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="600" height="800" fill="url(#g)"/><text x="300" y="400" font-family="system-ui,sans-serif" font-size="180" text-anchor="middle" fill="rgba(255,255,255,.55)">&#128087;</text></svg>`;
+  return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
+};
+
+let count = 0;
+js = js.replace(/https:\/\/images\.unsplash\.com\/photo-[A-Za-z0-9_-]+\?[^"'`\\\s]*/g, (url) => {
+  count++;
+  return placeholder(url.slice(0, 60));
+});
+console.log(`Replaced ${count} Unsplash URLs with inline placeholders`);
+
+// An inline script inherits the document's encoding. If the page is ever served
+// without a utf-8 charset, the French/Arabic/emoji literals decode as latin-1 and
+// the module dies with "Invalid or unexpected token". Escaping to pure ASCII
+// makes the bundle immune to however the host labels the response.
+let escaped = 0;
+js = js.replace(/[^\x00-\x7F]/g, (ch) => {
+  escaped++;
+  return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+});
+console.log(`Escaped ${escaped} non-ASCII characters`);
+
+const html = `<meta charset="utf-8">
+<title>Maison Zeyna — Gestion de Location</title>
+<style>
+${css}
+</style>
+<div id="root"></div>
+<script type="module">
+${js}
+</script>
+`;
+
+writeFileSync(process.argv[2], html);
+console.log(`Wrote ${process.argv[2]} (${(html.length / 1024).toFixed(0)} KB)`);
