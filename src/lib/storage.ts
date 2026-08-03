@@ -668,6 +668,15 @@ export async function cleanFinancialsAndReservationsForProduction() {
       const { error: trErr } = await supabase.from('mouvements_caisse').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (trErr) console.warn('Supabase mouvements_caisse clear warning:', trErr.message);
 
+      // 2b. Clients and the activity log are cleared locally too, so they must
+      // go in the cloud as well — otherwise the next sync would bring back the
+      // records the shop just asked to erase.
+      const { error: cliErr } = await supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (cliErr) console.warn('Supabase clients clear warning:', cliErr.message);
+
+      const { error: histErr } = await supabase.from('historique_actions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (histErr) console.warn('Supabase historique_actions clear warning:', histErr.message);
+
       // 3. Reset tresorerie / safe balance
       await updateTresorerieInDb();
 

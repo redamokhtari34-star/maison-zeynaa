@@ -172,8 +172,8 @@ export default function App() {
   // confirmed explicitly and never runs on its own.
   const handleResetDatabase = async () => {
     const warning = language === 'fr'
-      ? 'Cette action supprime définitivement toutes les réservations, les clientes et tous les mouvements de caisse, y compris dans le cloud. Les catalogues de robes et de bijoux sont conservés.\n\nVoulez-vous vraiment continuer ?'
-      : 'سيؤدي هذا إلى حذف جميع الحجوزات والزبونات وحركات الصندوق نهائياً، بما في ذلك في السحابة. سيتم الاحتفاظ بكتالوج الفساتين والمجوهرات.\n\nهل تريد المتابعة؟';
+      ? 'Réinitialisation\n\nSeront supprimés définitivement, sur cet appareil et dans le cloud :\n• les clientes\n• les réservations\n• la caisse et la trésorerie\n• le journal d’activité\n\nSeront conservés :\n• le catalogue des robes\n• le catalogue des bijoux\n\nVoulez-vous vraiment continuer ?'
+      : 'إعادة الضبط\n\nسيتم حذفه نهائياً، على هذا الجهاز وفي السحابة:\n• الزبونات\n• الحجوزات\n• الصندوق والخزينة\n• سجل النشاط\n\nسيتم الاحتفاظ به:\n• كتالوج الفساتين\n• كتالوج المجوهرات\n\nهل تريد المتابعة؟';
     if (!window.confirm(warning)) return;
 
     await cleanFinancialsAndReservationsForProduction();
