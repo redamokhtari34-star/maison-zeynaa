@@ -17,7 +17,7 @@ import {
   Settings,
   Activity,
   Sparkles,
-  ArrowUpRight
+  ChevronRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Language } from '../types';
@@ -122,250 +122,189 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
 
   const getHistoryIcon = (action: string) => {
     const act = action.toLowerCase();
-    if (act.includes('robe')) {
-      return {
-        icon: <Sparkles size={16} />,
-        bg: 'bg-rose-100 text-rose-600 border border-rose-200/60'
-      };
-    }
-    if (act.includes('bijou') || act.includes('accessoire')) {
-      return {
-        icon: <Gem size={16} />,
-        bg: 'bg-amber-100 text-amber-700 border border-amber-200/60'
-      };
-    }
-    if (act.includes('réservation') || act.includes('location') || act.includes('contrat')) {
-      return {
-        icon: <Calendar size={16} />,
-        bg: 'bg-blue-100 text-blue-600 border border-blue-200/60'
-      };
-    }
-    if (act.includes('retour')) {
-      return {
-        icon: <RotateCcw size={16} />,
-        bg: 'bg-amber-100 text-amber-700 border border-amber-200/60'
-      };
-    }
-    if (act.includes('paiement') || act.includes('caisse') || act.includes('entrée') || act.includes('vidage')) {
-      return {
-        icon: <Coins size={16} />,
-        bg: 'bg-emerald-100 text-emerald-700 border border-emerald-200/60'
-      };
-    }
-    if (act.includes('dépense') || act.includes('sortie')) {
-      return {
-        icon: <ArrowDownRight size={16} />,
-        bg: 'bg-red-100 text-red-600 border border-red-200/60'
-      };
-    }
-    if (act.includes('cliente')) {
-      return {
-        icon: <UserPlus size={16} />,
-        bg: 'bg-rose-100 text-rose-600 border border-rose-200/60'
-      };
-    }
-    if (act.includes('paramètre') || act.includes('réinitialisation')) {
-      return {
-        icon: <Settings size={16} />,
-        bg: 'bg-stone-200 text-stone-700 border border-stone-300'
-      };
-    }
-    return {
-      icon: <Activity size={16} />,
-      bg: 'bg-stone-100 text-stone-600 border border-stone-200/60'
-    };
+    if (act.includes('robe')) return { icon: <Sparkles size={15} />, grad: 'from-fuchsia-500 to-violet-500' };
+    if (act.includes('bijou') || act.includes('accessoire')) return { icon: <Gem size={15} />, grad: 'from-amber-400 to-rose-500' };
+    if (act.includes('réservation') || act.includes('location') || act.includes('contrat')) return { icon: <Calendar size={15} />, grad: 'from-indigo-500 to-blue-500' };
+    if (act.includes('retour')) return { icon: <RotateCcw size={15} />, grad: 'from-rose-500 to-amber-400' };
+    if (act.includes('paiement') || act.includes('caisse') || act.includes('entrée') || act.includes('vidage')) return { icon: <Coins size={15} />, grad: 'from-emerald-500 to-teal-400' };
+    if (act.includes('dépense') || act.includes('sortie')) return { icon: <ArrowDownRight size={15} />, grad: 'from-red-500 to-rose-500' };
+    if (act.includes('cliente')) return { icon: <UserPlus size={15} />, grad: 'from-blue-500 to-teal-400' };
+    if (act.includes('paramètre') || act.includes('réinitialisation')) return { icon: <Settings size={15} />, grad: 'from-neutral-500 to-neutral-700' };
+    return { icon: <Activity size={15} />, grad: 'from-violet-500 to-indigo-500' };
   };
 
   const dateLabel = language === 'fr' ? 'Mardi 21 Juillet 2026' : 'الثلاثاء 21 جويلية 2026';
 
-  // Small counts shown as an editorial hairline strip
-  const counts = [
+  // Bento stat tiles — each owns a gradient + matching coloured shadow
+  const tiles = [
+    {
+      label: t.month_revenue,
+      value: formatDa(incomeMonth),
+      hint: language === 'fr' ? 'Cumul Juillet 2026' : 'المجموع جويلية 2026',
+      icon: DollarSign,
+      grad: 'from-indigo-500 to-blue-500',
+      shadow: 'shadow-indigo-500/30',
+      big: true,
+    },
     {
       label: t.upcoming_reservations,
       value: upcomingReservations,
       hint: language === 'fr' ? 'Confirmées par acompte' : 'مؤكدة بالعربون',
-      icon: <Calendar size={15} />,
+      icon: Calendar,
+      grad: 'from-violet-500 to-fuchsia-500',
+      shadow: 'shadow-violet-500/30',
     },
     {
       label: t.returns_today,
       value: returnsToday,
       hint: language === 'fr' ? 'Restitution prévue' : 'متوقعة للاسترجاع',
-      icon: <RotateCcw size={15} />,
+      icon: RotateCcw,
+      grad: 'from-rose-500 to-amber-400',
+      shadow: 'shadow-rose-500/30',
     },
     {
       label: t.available_dresses,
       value: availableDresses,
       suffix: `/ ${totalDresses}`,
       hint: language === 'fr' ? 'Prêtes pour location' : 'جاهزة للإيجار',
-      icon: <Layers size={15} />,
+      icon: Layers,
+      grad: 'from-emerald-500 to-teal-400',
+      shadow: 'shadow-emerald-500/30',
     },
     {
       label: t.rented_dresses,
       value: rentedDresses,
       hint: language === 'fr' ? 'Sorties ou réservées' : 'خارجة أو محجوزة',
-      icon: <Clock size={15} />,
+      icon: Clock,
+      grad: 'from-blue-500 to-teal-400',
+      shadow: 'shadow-blue-500/30',
     },
   ];
 
-  // Quick actions — same ids / handlers, restyled as editorial tiles
+  // Quick actions — same ids / handlers, restyled as gradient chips
   const actions = [
-    { id: 'qa-new-res-btn', onClick: () => onOpenQuickAction?.('reservation'), icon: PlusCircle, label: t.qa_new_reservation, sub: language === 'fr' ? 'Créer un contrat' : 'إنشاء عقد جديد', featured: true },
-    { id: 'qa-add-dress-btn', onClick: () => onOpenQuickAction?.('robe'), icon: Layers, label: t.qa_add_dress, sub: language === 'fr' ? 'Nouveau modèle' : 'موديل جديد' },
-    { id: 'qa-add-bijou-btn', onClick: () => onOpenQuickAction?.('bijou'), icon: Gem, label: t.qa_add_bijou, sub: language === 'fr' ? 'Accessoire' : 'إضافة مجوهرات' },
-    { id: 'qa-add-expense-btn', onClick: () => onOpenQuickAction?.('depense'), icon: ArrowDownRight, label: t.qa_add_expense, sub: language === 'fr' ? 'Saisir un frais' : 'تسجيل مصاريف' },
-    { id: 'qa-return-rental-btn', onClick: () => setCurrentTab('retours'), icon: RotateCcw, label: t.qa_return_rental, sub: language === 'fr' ? 'Gérer un retour' : 'إدارة الإرجاع' },
-    { id: 'qa-view-calendar-btn', onClick: () => setCurrentTab('calendrier'), icon: Calendar, label: t.qa_view_calendar, sub: language === 'fr' ? "Consulter l'agenda" : 'جدول المواعيد' },
-    { id: 'qa-view-stats-btn', onClick: () => setCurrentTab('statistiques'), icon: BarChart3, label: t.qa_view_stats, sub: language === 'fr' ? 'Rapports de ventes' : 'التقارير والتحليل' },
-    { id: 'qa-create-receipt-btn', onClick: () => setCurrentTab('documents'), icon: FileSpreadsheet, label: t.qa_create_receipt, sub: language === 'fr' ? 'Factures & reçus' : 'الفواتير والإيصالات' },
+    { id: 'qa-new-res-btn', onClick: () => onOpenQuickAction?.('reservation'), icon: PlusCircle, label: t.qa_new_reservation, sub: language === 'fr' ? 'Créer un contrat' : 'إنشاء عقد جديد', grad: 'from-violet-500 to-fuchsia-500', shadow: 'shadow-violet-500/30' },
+    { id: 'qa-add-dress-btn', onClick: () => onOpenQuickAction?.('robe'), icon: Layers, label: t.qa_add_dress, sub: language === 'fr' ? 'Nouveau modèle' : 'موديل جديد', grad: 'from-fuchsia-500 to-rose-500', shadow: 'shadow-fuchsia-500/30' },
+    { id: 'qa-add-bijou-btn', onClick: () => onOpenQuickAction?.('bijou'), icon: Gem, label: t.qa_add_bijou, sub: language === 'fr' ? 'Accessoire' : 'إضافة مجوهرات', grad: 'from-amber-400 to-rose-500', shadow: 'shadow-amber-400/30' },
+    { id: 'qa-add-expense-btn', onClick: () => onOpenQuickAction?.('depense'), icon: ArrowDownRight, label: t.qa_add_expense, sub: language === 'fr' ? 'Saisir un frais' : 'تسجيل مصاريف', grad: 'from-red-500 to-rose-500', shadow: 'shadow-red-500/30' },
+    { id: 'qa-return-rental-btn', onClick: () => setCurrentTab('retours'), icon: RotateCcw, label: t.qa_return_rental, sub: language === 'fr' ? 'Gérer un retour' : 'إدارة الإرجاع', grad: 'from-rose-500 to-amber-400', shadow: 'shadow-rose-500/30' },
+    { id: 'qa-view-calendar-btn', onClick: () => setCurrentTab('calendrier'), icon: Calendar, label: t.qa_view_calendar, sub: language === 'fr' ? "Consulter l'agenda" : 'جدول المواعيد', grad: 'from-indigo-500 to-blue-500', shadow: 'shadow-indigo-500/30' },
+    { id: 'qa-view-stats-btn', onClick: () => setCurrentTab('statistiques'), icon: BarChart3, label: t.qa_view_stats, sub: language === 'fr' ? 'Rapports de ventes' : 'التقارير والتحليل', grad: 'from-teal-400 to-blue-500', shadow: 'shadow-teal-400/30' },
+    { id: 'qa-create-receipt-btn', onClick: () => setCurrentTab('documents'), icon: FileSpreadsheet, label: t.qa_create_receipt, sub: language === 'fr' ? 'Factures & reçus' : 'الفواتير والإيصالات', grad: 'from-emerald-500 to-teal-400', shadow: 'shadow-emerald-500/30' },
   ];
 
   return (
-    <div className={`max-w-6xl mx-auto space-y-10 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`mx-auto max-w-6xl space-y-6 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
 
-      {/* ── Editorial masthead ─────────────────────────────────────── */}
-      <motion.header
-        initial={{ opacity: 0, y: 10 }}
+      {/* ── Gradient hero ──────────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-[26px] border border-stone-200 bg-white"
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-rose-500 p-7 text-white shadow-2xl shadow-violet-500/30 sm:p-9"
       >
-        {/* soft blush wash in the corner */}
-        <div className={`pointer-events-none absolute -top-24 h-64 w-64 rounded-full bg-rose-200/40 blur-3xl ${isRtl ? '-left-16' : '-right-16'}`} />
+        {/* glossy blobs */}
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-indigo-400/40 blur-3xl" />
 
-        <div className="relative grid lg:grid-cols-[1.7fr_1fr]">
-          {/* Greeting */}
-          <div className="px-7 py-9 sm:px-10 sm:py-12">
-            <div className={`flex items-center gap-3 text-[11px] uppercase tracking-[0.28em] text-stone-400 font-medium ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <span>{dateLabel}</span>
-              <span className="h-px w-8 bg-stone-300" />
-              <span>Alger · DZ</span>
-            </div>
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] backdrop-blur-sm">
+            <Sparkles size={12} /> {dateLabel}
+          </span>
 
-            <h2 className="font-display display-tight text-[2.6rem] leading-none sm:text-[3.6rem] text-stone-900 mt-5">
-              {t.welcome}
-            </h2>
+          <h2 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-[2.6rem]">
+            {t.welcome}
+          </h2>
 
-            <p className="text-[15px] text-stone-500 max-w-md mt-4 leading-relaxed">
-              {language === 'fr'
-                ? 'La maison de location de robes traditionnelles algériennes de luxe — vue d’ensemble de votre journée.'
-                : 'دار تأجير الفساتين التقليدية الجزائرية الفاخرة — نظرة عامة على يومك.'}
-            </p>
+          <p className="mt-2 max-w-md text-sm text-white/80 sm:text-[15px]">
+            {language === 'fr'
+              ? 'Votre showroom en un coup d’œil — locations, retours et trésorerie du jour.'
+              : 'صالة العرض في لمحة — الإيجارات والإرجاعات والخزينة اليوم.'}
+          </p>
 
-            <div className={`flex flex-wrap items-center gap-2.5 mt-7 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <button
-                onClick={() => onOpenQuickAction?.('reservation')}
-                className={`inline-flex items-center gap-2 rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-rose-600/20 hover:bg-rose-700 transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}
-              >
-                <PlusCircle size={16} />
-                {t.qa_new_reservation}
-              </button>
-              <button
-                onClick={() => setCurrentTab('calendrier')}
-                className={`inline-flex items-center gap-2 rounded-full border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 hover:border-rose-400 hover:text-rose-700 transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}
-              >
-                <Calendar size={16} />
-                {t.qa_view_calendar}
-              </button>
-            </div>
-          </div>
-
-          {/* Revenue feature */}
-          <div className={`relative flex flex-col justify-center gap-6 bg-stone-50/70 px-7 py-9 sm:px-9 ${isRtl ? 'lg:border-r border-stone-200' : 'lg:border-l border-stone-200'} border-t lg:border-t-0`}>
+          {/* today's revenue, oversized */}
+          <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-4">
             <div>
-              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-400 font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <TrendingUp size={13} className="text-emerald-600" />
-                <span>{t.today_revenue}</span>
+              <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <TrendingUp size={13} />
+                {t.today_revenue}
               </div>
-              <div className={`mt-2 font-display text-4xl sm:text-[2.7rem] leading-none text-stone-900 tabular-nums ${isRtl ? 'flex flex-row-reverse justify-end' : ''}`}>
+              <div className="mt-1 font-display text-4xl font-extrabold tabular-nums sm:text-5xl">
                 {formatDa(incomeToday)}
               </div>
             </div>
 
-            <div className="h-px w-full bg-stone-200" />
-
-            <div>
-              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-400 font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <DollarSign size={13} className="text-rose-500" />
-                <span>{t.month_revenue}</span>
-              </div>
-              <div className="mt-2 font-display text-3xl leading-none text-stone-700 tabular-nums">
-                {formatDa(incomeMonth)}
-              </div>
-              <span className="text-[11px] text-stone-400 mt-1.5 inline-block">
-                {language === 'fr' ? 'Cumul · Juillet 2026' : 'المجموع · جويلية 2026'}
-              </span>
-            </div>
+            <button
+              onClick={() => onOpenQuickAction?.('reservation')}
+              className={`inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-extrabold text-violet-700 shadow-lg transition-transform hover:-translate-y-0.5 ${isRtl ? 'flex-row-reverse' : ''}`}
+            >
+              <PlusCircle size={17} />
+              {t.qa_new_reservation}
+            </button>
           </div>
         </div>
-      </motion.header>
+      </motion.section>
 
-      {/* ── Counts hairline strip ──────────────────────────────────── */}
-      <section className="rounded-[22px] border border-stone-200 overflow-hidden">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-stone-200">
-          {counts.map((c, i) => (
+      {/* ── Bento stat tiles ───────────────────────────────────────── */}
+      {/* 5 tiles, the revenue one double-width = 6 cells: fills 2 rows exactly */}
+      <section className="grid grid-cols-2 gap-3.5 lg:grid-cols-3">
+        {tiles.map((tile, i) => {
+          const Icon = tile.icon;
+          return (
             <motion.div
-              key={c.label}
-              initial={{ opacity: 0, y: 8 }}
+              key={tile.label}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: 'easeOut', delay: 0.05 * i }}
-              className="bg-white p-6"
+              className={`rounded-[26px] bg-white p-5 shadow-lg shadow-neutral-300/40 transition-transform hover:-translate-y-1 ${
+                tile.big ? 'col-span-2' : ''
+              }`}
             >
-              <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] font-semibold text-stone-400 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <span className="text-rose-400">{c.icon}</span>
-                <span className="truncate">{c.label}</span>
+              <div className={`flex items-start justify-between gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+                  {tile.label}
+                </span>
+                <span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${tile.grad} text-white shadow-lg ${tile.shadow}`}>
+                  <Icon size={18} />
+                </span>
               </div>
-              <div className={`flex items-baseline gap-1.5 mt-3 ${isRtl ? 'flex-row-reverse justify-end' : ''}`}>
-                <span className="font-display text-4xl leading-none text-stone-900 tabular-nums">{c.value}</span>
-                {c.suffix && <span className="text-sm text-stone-400 tabular-nums">{c.suffix}</span>}
+
+              <div className={`mt-4 flex items-baseline gap-1.5 ${isRtl ? 'flex-row-reverse justify-end' : ''}`}>
+                <span className={`font-display font-extrabold tabular-nums text-neutral-900 ${tile.big ? 'text-3xl sm:text-4xl' : 'text-3xl'}`}>
+                  {tile.value}
+                </span>
+                {tile.suffix && <span className="text-sm font-semibold text-neutral-300 tabular-nums">{tile.suffix}</span>}
               </div>
-              <p className="text-xs text-stone-400 mt-2">{c.hint}</p>
+              <p className="mt-1.5 text-xs font-medium text-neutral-400">{tile.hint}</p>
             </motion.div>
-          ))}
-        </div>
+          );
+        })}
       </section>
 
       {/* ── Quick actions ──────────────────────────────────────────── */}
-      <section>
-        <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <h3 className="font-display text-2xl text-stone-900">{t.quick_actions}</h3>
-          <span className="h-px flex-1 bg-stone-200" />
-        </div>
+      <section className="rounded-[30px] bg-white p-5 shadow-lg shadow-neutral-300/40 sm:p-6">
+        <h3 className={`mb-4 flex items-center gap-2 font-display text-lg font-extrabold text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <Sparkles size={17} className="text-violet-500" />
+          {t.quick_actions}
+        </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {actions.map((a) => {
             const Icon = a.icon;
-            if (a.featured) {
-              return (
-                <button
-                  key={a.id}
-                  id={a.id}
-                  onClick={a.onClick}
-                  className={`group flex items-center gap-4 rounded-[18px] bg-gradient-to-br from-rose-600 to-rose-500 p-4 text-white shadow-sm shadow-rose-600/20 hover:shadow-md hover:shadow-rose-600/25 hover:-translate-y-0.5 transition-all ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
-                >
-                  <div className="flex-shrink-0 rounded-[12px] bg-white/15 p-3 group-hover:scale-110 transition-transform">
-                    <Icon size={22} />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold leading-tight">{a.label}</span>
-                    <span className="text-[10px] text-white/75 font-medium mt-1">{a.sub}</span>
-                  </div>
-                </button>
-              );
-            }
             return (
               <button
                 key={a.id}
                 id={a.id}
                 onClick={a.onClick}
-                className={`group flex items-center gap-4 rounded-[18px] border border-stone-200 bg-white p-4 hover:border-rose-300 hover:-translate-y-0.5 hover:shadow-sm transition-all ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+                className={`group flex items-center gap-3 rounded-3xl bg-neutral-50 p-3.5 transition-all hover:-translate-y-1 hover:bg-white hover:shadow-lg ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
               >
-                <div className="flex-shrink-0 rounded-full border border-stone-200 bg-stone-50 p-2.5 text-rose-600 group-hover:border-rose-200 group-hover:bg-rose-50 transition-colors">
-                  <Icon size={20} />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold text-stone-800 leading-tight truncate group-hover:text-rose-700 transition-colors">{a.label}</span>
-                  <span className="text-[10px] text-stone-400 font-medium mt-1">{a.sub}</span>
-                </div>
+                <span className={`grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${a.grad} text-white shadow-lg ${a.shadow} transition-transform group-hover:scale-110`}>
+                  <Icon size={19} />
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-[13px] font-extrabold leading-tight text-neutral-900">{a.label}</span>
+                  <span className="mt-0.5 truncate text-[10px] font-medium text-neutral-400">{a.sub}</span>
+                </span>
               </button>
             );
           })}
@@ -373,57 +312,49 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
       </section>
 
       {/* ── Alerts & Activity ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Alerts */}
-        <div className="rounded-[22px] border border-stone-200 bg-white p-6 flex flex-col">
-          <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <h3 className="font-display text-xl text-stone-900">{t.important_alerts}</h3>
-            <span className="h-px flex-1 bg-stone-200" />
+        <div className="flex flex-col rounded-[30px] bg-white p-5 shadow-lg shadow-neutral-300/40 sm:p-6">
+          <div className={`mb-4 flex items-center justify-between gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className={`flex items-center gap-2 font-display text-lg font-extrabold text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <AlertTriangle size={17} className="text-rose-500" />
+              {t.important_alerts}
+            </h3>
             {alerts.length > 0 && (
-              <span className="text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-2.5 py-0.5 tabular-nums">
+              <span className="rounded-full bg-gradient-to-r from-rose-500 to-amber-400 px-2.5 py-0.5 text-[11px] font-extrabold tabular-nums text-white shadow-md shadow-rose-500/30">
                 {alerts.length}
               </span>
             )}
           </div>
 
           {alerts.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-stone-200 bg-stone-50/50">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">✓</div>
-              <p className="text-sm font-medium text-stone-500">
+            <div className="flex flex-1 flex-col items-center justify-center rounded-[24px] bg-neutral-50 py-12">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-500/30">
+                ✓
+              </div>
+              <p className="mt-3 text-sm font-semibold text-neutral-400">
                 {language === 'fr' ? 'Aucune alerte importante' : 'لا توجد تنبيهات هامة'}
               </p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+            <div className="max-h-[350px] space-y-2.5 overflow-y-auto pr-1">
               {alerts.map((alert) => {
                 const isError = alert.type === 'error';
                 const isWarning = alert.type === 'warning';
-                const tone = isError
-                  ? 'bg-red-50/70 border-red-100 text-red-900'
-                  : isWarning
-                    ? 'bg-amber-50/70 border-amber-100 text-amber-900'
-                    : 'bg-blue-50/70 border-blue-100 text-blue-900';
-                const chip = isError
-                  ? 'bg-red-100 text-red-600'
-                  : isWarning
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-blue-100 text-blue-600';
+                const grad = isError ? 'from-red-500 to-rose-500' : isWarning ? 'from-amber-400 to-rose-500' : 'from-blue-500 to-teal-400';
+                const tint = isError ? 'bg-red-50' : isWarning ? 'bg-amber-50' : 'bg-blue-50';
+                const link = isError ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-blue-600';
                 return (
-                  <div key={alert.id} className={`p-4 rounded-2xl border flex gap-3.5 items-start ${tone} ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${chip}`}>
+                  <div key={alert.id} className={`flex items-start gap-3 rounded-[22px] p-4 ${tint} ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                    <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${grad} text-white shadow-md`}>
                       <AlertTriangle size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-relaxed">{alert.text}</p>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-relaxed text-neutral-800">{alert.text}</p>
                       {alert.phone && (
-                        <div className={`flex gap-3 mt-2.5 text-xs font-semibold ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          <a
-                            href={`tel:${alert.phone}`}
-                            className={`hover:underline flex items-center gap-1 ${isError ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-blue-700'}`}
-                          >
-                            📞 {alert.phone}
-                          </a>
-                        </div>
+                        <a href={`tel:${alert.phone}`} className={`mt-2 inline-flex items-center gap-1 text-xs font-bold ${link} hover:underline`}>
+                          📞 {alert.phone}
+                        </a>
                       )}
                     </div>
                   </div>
@@ -433,41 +364,39 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           )}
         </div>
 
-        {/* Recent activity timeline */}
-        <div className="rounded-[22px] border border-stone-200 bg-white p-6 flex flex-col">
-          <div className={`flex items-center gap-4 mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <h3 className="font-display text-xl text-stone-900">{t.recent_activity}</h3>
-            <span className="h-px flex-1 bg-stone-200" />
+        {/* Activity */}
+        <div className="flex flex-col rounded-[30px] bg-white p-5 shadow-lg shadow-neutral-300/40 sm:p-6">
+          <div className={`mb-4 flex items-center justify-between gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className={`flex items-center gap-2 font-display text-lg font-extrabold text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <Activity size={17} className="text-violet-500" />
+              {t.recent_activity}
+            </h3>
             <button
               onClick={() => setCurrentTab('statistiques')}
-              className={`inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-800 ${isRtl ? 'flex-row-reverse' : ''}`}
+              className={`inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-3 py-1 text-[11px] font-extrabold text-neutral-600 transition-colors hover:bg-neutral-200 ${isRtl ? 'flex-row-reverse' : ''}`}
             >
               {language === 'fr' ? 'Voir tout' : 'عرض الكل'}
-              <ArrowUpRight size={13} />
+              <ChevronRight size={13} className={isRtl ? 'rotate-180' : ''} />
             </button>
           </div>
 
-          <div className="space-y-6 max-h-[350px] overflow-y-auto pr-1">
-            {db.history.slice(0, 5).map((log, index) => {
-              const { icon, bg } = getHistoryIcon(log.action);
-              const isLast = index >= db.history.slice(0, 5).length - 1;
+          <div className="max-h-[350px] space-y-2 overflow-y-auto pr-1">
+            {db.history.slice(0, 5).map((log) => {
+              const { icon, grad } = getHistoryIcon(log.action);
               return (
-                <div key={log.id} className={`flex gap-4 relative ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                  {!isLast && (
-                    <div className={`absolute top-10 bottom-[-24px] w-px bg-stone-200 ${isRtl ? 'right-5' : 'left-5'}`} />
-                  )}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 ${bg}`}>
+                <div key={log.id} className={`flex gap-3 rounded-[22px] p-3 transition-colors hover:bg-neutral-50 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <span className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${grad} text-white shadow-md`}>
                     {icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`flex flex-wrap justify-between items-baseline gap-2 mb-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <h4 className="text-sm font-semibold text-stone-900 leading-none">{log.action}</h4>
-                      <span className="text-[10px] text-stone-400 font-medium font-mono tabular-nums">
-                        {log.date} @ {log.heure}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className={`flex flex-wrap items-baseline justify-between gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                      <h4 className="text-[13px] font-extrabold leading-none text-neutral-900">{log.action}</h4>
+                      <span className="text-[10px] font-semibold tabular-nums text-neutral-300">
+                        {log.date} · {log.heure}
                       </span>
                     </div>
-                    <p className="text-xs text-stone-500 leading-relaxed">{log.details}</p>
-                    <span className="text-[10px] bg-stone-50 border border-stone-200 text-stone-500 font-semibold px-1.5 py-0.5 rounded-md mt-1.5 inline-block">
+                    <p className="mt-1 text-xs leading-relaxed text-neutral-500">{log.details}</p>
+                    <span className="mt-1.5 inline-block rounded-lg bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold text-neutral-500">
                       👤 {log.utilisateur}
                     </span>
                   </div>

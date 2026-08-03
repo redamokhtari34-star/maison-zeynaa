@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  Home, 
-  Layers, 
-  Gem, 
-  Users, 
-  CalendarDays, 
+import {
+  Home,
+  Layers,
+  Gem,
+  Users,
+  CalendarDays,
   Calendar,
-  Wallet, 
-  BarChart3, 
-  RotateCcw, 
-  FileText, 
-  Settings, 
-  Menu, 
+  Wallet,
+  BarChart3,
+  RotateCcw,
+  FileText,
+  Settings,
   X,
-  Crown
+  MoreHorizontal,
+  Sparkles
 } from 'lucide-react';
 import { Language, Transaction } from '../types';
 import { translations } from '../translations';
@@ -26,7 +26,7 @@ interface SidebarProps {
   transactions?: Transaction[];
 }
 
-export default function Sidebar({ currentTab, setCurrentTab, language, setLanguage, transactions = [] }: SidebarProps) {
+export default function Sidebar({ currentTab, setCurrentTab, language, transactions = [] }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -53,68 +53,64 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
     }).format(amount) + ' DA';
   };
 
+  // Each entry carries its own gradient so the rail reads as a colourful stack
   const menuItems = [
-    { id: 'accueil', label: t.accueil, icon: Home },
-    { id: 'robes', label: t.robes, icon: Layers },
-    { id: 'bijoux', label: t.bijoux, icon: Gem },
-    { id: 'clientes', label: t.clientes, icon: Users },
-    { id: 'reservations', label: t.reservations, icon: CalendarDays },
-    { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: Calendar },
-    { id: 'caisse', label: t.caisse, icon: Wallet },
-    { id: 'statistiques', label: t.statistiques, icon: BarChart3 },
-    { id: 'retours', label: t.retours, icon: RotateCcw },
-    { id: 'documents', label: t.documents, icon: FileText },
-    { id: 'parametres', label: t.parametres, icon: Settings },
+    { id: 'accueil', label: t.accueil, icon: Home, grad: 'from-violet-500 to-indigo-500' },
+    { id: 'robes', label: t.robes, icon: Layers, grad: 'from-fuchsia-500 to-violet-500' },
+    { id: 'bijoux', label: t.bijoux, icon: Gem, grad: 'from-amber-400 to-rose-500' },
+    { id: 'clientes', label: t.clientes, icon: Users, grad: 'from-blue-500 to-teal-400' },
+    { id: 'reservations', label: t.reservations, icon: CalendarDays, grad: 'from-indigo-500 to-blue-500' },
+    { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: Calendar, grad: 'from-violet-500 to-fuchsia-500' },
+    { id: 'caisse', label: t.caisse, icon: Wallet, grad: 'from-emerald-500 to-teal-400' },
+    { id: 'statistiques', label: t.statistiques, icon: BarChart3, grad: 'from-teal-400 to-blue-500' },
+    { id: 'retours', label: t.retours, icon: RotateCcw, grad: 'from-rose-500 to-amber-400' },
+    { id: 'documents', label: t.documents, icon: FileText, grad: 'from-blue-500 to-indigo-500' },
+    { id: 'parametres', label: t.parametres, icon: Settings, grad: 'from-neutral-500 to-neutral-700' },
   ];
 
-  const activeClass = 'bg-rose-100/80 text-rose-800 font-semibold rounded-2xl';
-  const inactiveClass = 'text-stone-500 hover:bg-stone-100/70 hover:text-stone-900 rounded-2xl transition-all duration-200';
+  // Mobile bottom bar shows the four most-used destinations + a "more" sheet
+  const primaryIds = ['accueil', 'robes', 'reservations', 'caisse'];
+  const primary = menuItems.filter(m => primaryIds.includes(m.id));
 
-  const sidebarContent = (
-    <div className="h-full flex flex-col justify-between p-6 bg-white border-r border-gray-200/80 shadow-sm overflow-y-auto">
-      {/* Brand Logo & Name */}
-      <div>
-        <div className="flex items-center gap-3.5 mb-7">
-          <div className="w-11 h-11 bg-gradient-to-br from-rose-600 to-rose-400 rounded-2xl flex items-center justify-center text-white font-display font-semibold text-2xl shadow-sm shadow-rose-600/20">
+  const go = (id: string) => {
+    setCurrentTab(id);
+    setIsOpen(false);
+  };
+
+  /* ── Desktop: floating rounded dark rail ─────────────────────────── */
+  const desktopRail = (
+    <div className="h-full flex flex-col gap-4">
+      {/* Brand */}
+      <div className="rounded-[26px] bg-neutral-950 p-5 text-white shadow-xl shadow-violet-900/20">
+        <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-lg font-extrabold shadow-lg shadow-fuchsia-500/40">
             Z
           </div>
-          <div>
-            <h1 className="font-display text-2xl leading-none tracking-tight text-stone-900">Maison Zeyna</h1>
-            <p className="text-[10px] text-rose-500 uppercase font-semibold tracking-[0.22em] mt-1">Alger, DZ · Couture</p>
+          <div className={isRtl ? 'text-right' : 'text-left'}>
+            <h1 className="font-display text-[17px] font-extrabold leading-none">Maison Zeyna</h1>
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-300">Alger · DZ</p>
           </div>
         </div>
 
-        {/* Treasury Widget (Top-Left Sidebar) */}
+        {/* Treasury */}
         <button
           id="top-left-tresorerie-card"
-          onClick={() => {
-            setCurrentTab('caisse');
-            setIsOpen(false);
-          }}
-          className={`w-full mb-6 p-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl shadow-md hover:shadow-lg hover:brightness-105 transition-all group cursor-pointer ${
-            isRtl ? 'text-right' : 'text-left'
-          }`}
+          onClick={() => go('caisse')}
+          className={`mt-5 w-full rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 p-4 shadow-lg shadow-emerald-500/30 transition-transform hover:-translate-y-0.5 ${isRtl ? 'text-right' : 'text-left'}`}
         >
-          <div className={`flex items-center justify-between mb-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <div className="p-1 bg-white/20 rounded-lg">
-                <Wallet size={14} className="text-white" />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-100">
-                {language === 'fr' ? 'Trésorerie / Caisse' : 'الرصيد / الصندوق'}
-              </span>
-            </div>
-            <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold group-hover:bg-white/30 transition-colors">
-              {language === 'fr' ? 'Caisse' : 'الصندوق'}
+          <div className={`flex items-center gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <Wallet size={13} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/85">
+              {language === 'fr' ? 'Trésorerie' : 'الرصيد'}
             </span>
           </div>
-          <div className="text-lg font-black tracking-tight font-mono text-white">
-            {formatDa(caisseBalance)}
-          </div>
+          <div className="mt-1.5 font-display text-xl font-extrabold tabular-nums">{formatDa(caisseBalance)}</div>
         </button>
+      </div>
 
-        {/* Menu Items */}
-        <nav className="space-y-1.5">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto rounded-[26px] bg-white p-3 shadow-lg shadow-neutral-300/40">
+        <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -122,32 +118,37 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
               <button
                 key={item.id}
                 id={`menu-item-${item.id}`}
-                onClick={() => {
-                  setCurrentTab(item.id);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-[20px] text-sm font-medium cursor-pointer transition-all ${
-                  isActive ? activeClass : inactiveClass
+                onClick={() => go(item.id)}
+                className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-all ${
+                  isActive
+                    ? 'bg-neutral-950 font-bold text-white shadow-md'
+                    : 'font-medium text-neutral-500 hover:bg-neutral-100'
                 } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
               >
-                <Icon size={18} className={isActive ? 'text-rose-700' : 'text-stone-400 group-hover:text-rose-600'} />
+                <span
+                  className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-xl transition-all ${
+                    isActive
+                      ? `bg-gradient-to-br ${item.grad} text-white shadow-md`
+                      : 'bg-neutral-100 text-neutral-500 group-hover:bg-white'
+                  }`}
+                >
+                  <Icon size={16} />
+                </span>
                 <span className="truncate">{item.label}</span>
               </button>
             );
           })}
-        </nav>
-      </div>
+        </div>
+      </nav>
 
       {/* Profile */}
-      <div className="pt-6 border-t border-gray-200/80 mt-6">
-        <div className={`flex items-center gap-3 p-2.5 bg-slate-50 rounded-2xl ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-500 to-fuchsia-400 flex items-center justify-center text-white font-bold text-base shadow-sm">
-            Z
-          </div>
-          <div className={isRtl ? 'text-right' : 'text-left'}>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">Zeyna</p>
-            <p className="text-xs text-gray-500">Gérante</p>
-          </div>
+      <div className={`flex items-center gap-3 rounded-[22px] bg-white p-3 shadow-lg shadow-neutral-300/40 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 font-bold text-white shadow-md shadow-fuchsia-500/30">
+          Z
+        </div>
+        <div>
+          <p className="text-sm font-bold leading-tight text-neutral-900">Zeyna</p>
+          <p className="text-xs text-neutral-400">{language === 'fr' ? 'Gérante' : 'المديرة'}</p>
         </div>
       </div>
     </div>
@@ -155,56 +156,129 @@ export default function Sidebar({ currentTab, setCurrentTab, language, setLangua
 
   return (
     <>
-      {/* Mobile Header */}
-      <header className={`lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200/80 flex items-center justify-between px-4 z-40 ${
-        isRtl ? 'flex-row-reverse' : ''
-      }`}>
+      {/* ── Mobile top bar: brand + treasury pill ─────────────────────── */}
+      <header
+        className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-neutral-200/70 bg-white/85 px-4 backdrop-blur-xl lg:hidden ${
+          isRtl ? 'flex-row-reverse' : ''
+        }`}
+      >
         <div className={`flex items-center gap-2.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <div className="p-1.5 bg-gradient-to-br from-rose-600 to-rose-400 rounded-lg text-white">
-            <Crown size={16} />
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-extrabold text-white shadow-md shadow-fuchsia-500/30">
+            Z
           </div>
-          <span className="font-display text-lg text-stone-900 hidden sm:inline">Maison Zeyna</span>
-          <button
-            id="mobile-tresorerie-pill"
-            onClick={() => setCurrentTab('caisse')}
-            className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2.5 py-1 rounded-xl text-xs font-black font-mono hover:bg-emerald-100 transition-colors cursor-pointer"
-          >
-            <Wallet size={13} className="text-emerald-600" />
-            <span>{formatDa(caisseBalance)}</span>
-          </button>
+          <span className="font-display text-[15px] font-extrabold text-neutral-900">Maison Zeyna</span>
         </div>
-        
+
         <button
-          id="sidebar-toggle-btn"
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-gray-600 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-all"
+          id="mobile-tresorerie-pill"
+          onClick={() => setCurrentTab('caisse')}
+          className={`flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 px-3 py-1.5 text-xs font-extrabold tabular-nums text-white shadow-md shadow-emerald-500/30 ${
+            isRtl ? 'flex-row-reverse' : ''
+          }`}
         >
-          {isOpen ? <X size={22} /> : <Menu size={22} />}
+          <Wallet size={13} />
+          <span>{formatDa(caisseBalance)}</span>
         </button>
       </header>
 
-      {/* Desktop Sidebar (Floating/Fixed) */}
-      <aside className={`hidden lg:block fixed top-0 bottom-0 w-72 h-screen z-30 transition-all ${
-        isRtl ? 'right-0 border-l border-gray-200/80' : 'left-0 border-r border-gray-200/80'
-      }`}>
-        {sidebarContent}
+      {/* ── Desktop floating rail ─────────────────────────────────────── */}
+      <aside
+        className={`fixed top-0 z-30 hidden h-screen w-[268px] p-4 lg:block ${isRtl ? 'right-0' : 'left-0'}`}
+      >
+        {desktopRail}
       </aside>
 
-      {/* Mobile Drawer Overlay */}
+      {/* ── Mobile bottom tab bar ─────────────────────────────────────── */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <div className="mx-3 mb-3 flex items-center justify-around rounded-[26px] border border-neutral-200/70 bg-white/90 p-2 shadow-2xl shadow-neutral-400/30 backdrop-blur-xl">
+          {primary.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                id={`tab-${item.id}`}
+                onClick={() => go(item.id)}
+                className="flex flex-1 flex-col items-center gap-1 py-1.5"
+              >
+                <span
+                  className={`grid h-9 w-9 place-items-center rounded-2xl transition-all ${
+                    isActive
+                      ? `bg-gradient-to-br ${item.grad} text-white shadow-lg`
+                      : 'text-neutral-400'
+                  }`}
+                >
+                  <Icon size={18} />
+                </span>
+                <span className={`text-[10px] font-bold ${isActive ? 'text-neutral-900' : 'text-neutral-400'}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+
+          <button
+            id="sidebar-toggle-btn"
+            onClick={() => setIsOpen(true)}
+            className="flex flex-1 flex-col items-center gap-1 py-1.5"
+          >
+            <span className="grid h-9 w-9 place-items-center rounded-2xl text-neutral-400">
+              <MoreHorizontal size={18} />
+            </span>
+            <span className="text-[10px] font-bold text-neutral-400">
+              {language === 'fr' ? 'Plus' : 'المزيد'}
+            </span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Mobile "more" sheet ───────────────────────────────────────── */}
       {isOpen && (
-        <div 
+        <div
           onClick={() => setIsOpen(false)}
-          className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-neutral-950/50 backdrop-blur-sm lg:hidden"
         />
       )}
+      <div
+        className={`fixed inset-x-0 bottom-0 z-50 rounded-t-[30px] bg-white p-5 pb-8 shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+          isOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className={`mb-4 flex items-center justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <h2 className={`flex items-center gap-2 font-display text-lg font-extrabold text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <Sparkles size={16} className="text-violet-500" />
+            {language === 'fr' ? 'Tout le menu' : 'القائمة'}
+          </h2>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="grid h-9 w-9 place-items-center rounded-full bg-neutral-100 text-neutral-500"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      {/* Mobile Drawer Menu */}
-      <aside className={`lg:hidden fixed top-0 bottom-0 w-72 h-full bg-white z-50 transition-all duration-300 ease-out shadow-2xl ${
-        isOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'
-      } ${isRtl ? 'right-0' : 'left-0'}`}>
-        {sidebarContent}
-      </aside>
+        <div className="grid grid-cols-3 gap-2.5">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                id={`menu-item-${item.id}`}
+                onClick={() => go(item.id)}
+                className={`flex flex-col items-center gap-2 rounded-3xl p-4 transition-all ${
+                  isActive ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-600'
+                }`}
+              >
+                <span className={`grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br ${item.grad} text-white shadow-md`}>
+                  <Icon size={19} />
+                </span>
+                <span className="text-[11px] font-bold leading-tight">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 }
-

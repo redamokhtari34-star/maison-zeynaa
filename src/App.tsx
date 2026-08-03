@@ -275,9 +275,9 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-50 flex ${isRtl ? 'flex-row-reverse' : 'flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-neutral-100 flex ${isRtl ? 'flex-row-reverse' : 'flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
-      <Sidebar 
+      <Sidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         language={language}
@@ -285,9 +285,10 @@ export default function App() {
         transactions={db.transactions}
       />
 
-      {/* Main Container viewport */}
-      <main className={`flex-1 p-6 lg:p-10 pt-24 lg:pt-10 transition-all ${
-        isRtl ? 'lg:pr-[312px]' : 'lg:pl-[312px]'
+      {/* Main Container viewport — clears the mobile top bar and bottom tab bar,
+          and the floating desktop rail. */}
+      <main className={`flex-1 px-4 pt-20 pb-32 sm:px-6 lg:p-8 lg:pb-8 transition-all ${
+        isRtl ? 'lg:pr-[268px]' : 'lg:pl-[268px]'
       }`}>
         {renderTabContent()}
       </main>
