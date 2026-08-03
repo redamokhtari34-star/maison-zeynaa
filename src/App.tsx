@@ -15,6 +15,8 @@ import Parametres from './components/Parametres';
 import BlocNotes from './components/BlocNotes';
 import Equipe from './components/Equipe';
 import Toaster from './components/Toaster';
+import SplashScreen from './components/SplashScreen';
+import InstallPrompt from './components/InstallPrompt';
 
 import { 
   Language, 
@@ -48,6 +50,8 @@ export default function App() {
   // NB: this must never wipe anything — resetting the shop's records is an
   // explicit action from Paramètres, not a side effect of opening the app.
   const [db, setDb] = useState(() => getFullDatabaseState());
+  // The splash covers the first paint only; it is skipped for reduced motion.
+  const [booting, setBooting] = useState(true);
   const [supabaseSyncing, setSupabaseSyncing] = useState(false);
   // Whether the last sync actually reached the cloud. Drives the status pill,
   // which must never claim "synchronised" when it isn't.
@@ -325,6 +329,8 @@ export default function App() {
         transactions={db.transactions}
       />
 
+      {booting && <SplashScreen onDone={() => setBooting(false)} />}
+      <InstallPrompt language={language} />
       <Toaster />
 
       <TopBar

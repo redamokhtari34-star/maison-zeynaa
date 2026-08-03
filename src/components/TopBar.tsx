@@ -74,12 +74,15 @@ export default function TopBar({
 
   return (
     <header
-      className={`fixed top-0 z-20 flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 sm:px-6 ${
+      className={`fixed top-0 z-20 flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 lg:px-6 ${
         isRtl ? 'right-0 left-0 lg:right-[272px]' : 'left-0 right-0 lg:left-[272px]'
       }`}
     >
-      {/* Brand (mobile shifts right of the menu button) */}
-      <div className={`hidden shrink-0 sm:block ${isRtl ? 'mr-12 lg:mr-0 text-right' : 'ml-12 lg:ml-0'}`}>
+      {/* Keeps the floating menu button (below lg) from sitting on top of the
+          search field. Flex order follows the writing direction on its own. */}
+      <div className="w-10 shrink-0 lg:hidden" aria-hidden="true" />
+
+      <div className={`hidden shrink-0 sm:block ${isRtl ? 'text-right' : ''}`}>
         <p className="font-display text-[15px] font-semibold leading-none text-neutral-900">Maison Zeyna</p>
         <p className="eyebrow mt-1 leading-none">
           {language === 'fr' ? 'Gestion haute couture' : 'إدارة الأزياء الراقية'}

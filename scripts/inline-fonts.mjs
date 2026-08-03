@@ -2,7 +2,7 @@
  * woff2 payload embedded as data: URIs. The artifact CSP blocks font CDNs, so
  * the preview would silently fall back to a system face without this.
  *
- *   node _fontinline.mjs <out.css> [google-fonts-family-query]
+ *   node scripts/inline-fonts.mjs <out.css> [google-fonts-family-query]
  */
 import { writeFileSync } from 'fs';
 
