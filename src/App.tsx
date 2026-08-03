@@ -216,6 +216,7 @@ export default function App() {
             reservations={db.reservations}
             onSaveReservations={handleSaveReservations}
             clientes={db.clientes}
+            onSaveClientes={handleSaveClientes}
             dresses={db.dresses}
             bijoux={db.bijoux}
             language={language}

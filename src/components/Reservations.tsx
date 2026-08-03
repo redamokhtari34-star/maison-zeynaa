@@ -22,6 +22,7 @@ interface ReservationsProps {
   reservations: Reservation[];
   onSaveReservations: (reservations: Reservation[]) => void;
   clientes: Cliente[];
+  onSaveClientes: (clientes: Cliente[]) => void;
   dresses: Dress[];
   bijoux: Bijou[];
   language: Language;
@@ -36,9 +37,10 @@ interface ReservationsProps {
 export default function Reservations({ 
   reservations, 
   onSaveReservations, 
-  clientes, 
-  dresses, 
-  bijoux, 
+  clientes,
+  onSaveClientes,
+  dresses,
+  bijoux,
   language,
   onAddTransaction,
   setCurrentTab,
@@ -66,6 +68,7 @@ export default function Reservations({
     }
   }, [initialOpenForm, onFormOpenHandled]);
   const [clientNameInput, setClientNameInput] = useState('');
+  const [clientPhoneInput, setClientPhoneInput] = useState('');
   const [dateSortie, setDateSortie] = useState(todayStr);
   const [dateRetour, setDateRetour] = useState('2026-07-24');
   const [selectedDresses, setSelectedDresses] = useState<Dress[]>([]);
@@ -86,6 +89,20 @@ export default function Reservations({
 
   const getClientPhone = (id: string) => {
     return clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.telephone || '';
+  };
+
+  const findClientByName = (name: string) =>
+    clientes.find(c => c.nom_complet.trim().toLowerCase() === name.trim().toLowerCase());
+
+  // The client already on file for the name currently typed, if any.
+  const knownClient = clientNameInput.trim() ? findClientByName(clientNameInput) : undefined;
+
+  // Typing (or picking) a known client pulls her number in, so the operator
+  // never has to retype it; an unknown name leaves whatever was entered.
+  const handleClientNameChange = (name: string) => {
+    setClientNameInput(name);
+    const match = findClientByName(name);
+    if (match?.telephone) setClientPhoneInput(match.telephone);
   };
 
   const formatDa = (amount: number) => {
@@ -197,6 +214,7 @@ export default function Reservations({
   // Open creation wizard
   const openNewWizard = () => {
     setClientNameInput('');
+    setClientPhoneInput('');
     setDateSortie(todayStr);
     setDateRetour('2026-07-24');
     setSelectedDresses([]);
@@ -260,6 +278,27 @@ export default function Reservations({
       return;
     }
 
+    const clientPhone = clientPhoneInput.trim();
+
+    // Keep the local client file in step with what was typed: record a new
+    // client, or fill in / correct the number of one already on file.
+    const localMatch = findClientByName(clientName);
+    if (!localMatch) {
+      onSaveClientes([
+        ...clientes,
+        {
+          id: `cl-${Date.now()}`,
+          nom_complet: clientName,
+          telephone: clientPhone,
+          date_creation: new Date().toISOString().split('T')[0]
+        }
+      ]);
+    } else if (clientPhone && clientPhone !== localMatch.telephone) {
+      onSaveClientes(
+        clientes.map(c => (c.id === localMatch.id ? { ...c, telephone: clientPhone } : c))
+      );
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       alert("Erreur Supabase : Client Supabase non initialisé");
@@ -288,7 +327,7 @@ export default function Reservations({
         const { data: newClientData, error: clientErr } = await supabase.from('clients').insert([{
           nom,
           prenom,
-          telephone: existingClient?.telephone || '',
+          telephone: clientPhone || existingClient?.telephone || '',
           adresse: existingClient?.adresse || ''
         }]).select();
 
@@ -302,6 +341,13 @@ export default function Reservations({
           validUuidClientId = newClientData[0].id;
         }
       }
+    } else if (clientPhone && clientPhone !== existingClient?.telephone) {
+      // Client already on file: keep her number up to date with what was typed.
+      const { error: phoneErr } = await supabase
+        .from('clients')
+        .update({ telephone: clientPhone })
+        .eq('id', validUuidClientId);
+      if (phoneErr) console.warn('Could not update client phone:', phoneErr);
     }
 
     const robeItem = selectedDresses[0];
@@ -674,19 +720,51 @@ export default function Reservations({
               {/* STEP 1: Dates & Client selection */}
               {wizardStep === 1 && (
                 <div className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-700 block">{t.select_client} *</label>
-                    <input
-                      id="wizard-client-name-input"
-                      type="text"
-                      required
-                      placeholder="Prénom et Nom de la cliente"
-                      value={clientNameInput}
-                      onChange={(e) => setClientNameInput(e.target.value)}
-                      className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
-                        isRtl ? 'text-right' : 'text-left'
-                      }`}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-700 block">{t.select_client} *</label>
+                      <input
+                        id="wizard-client-name-input"
+                        type="text"
+                        required
+                        list="wizard-client-suggestions"
+                        autoComplete="off"
+                        placeholder={language === 'fr' ? 'Prénom et Nom de la cliente' : 'اسم ولقب الزبونة'}
+                        value={clientNameInput}
+                        onChange={(e) => handleClientNameChange(e.target.value)}
+                        className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
+                          isRtl ? 'text-right' : 'text-left'
+                        }`}
+                      />
+                      {/* Picking a known client fills in her number automatically */}
+                      <datalist id="wizard-client-suggestions">
+                        {clientes.map(c => (
+                          <option key={c.id} value={c.nom_complet}>{c.telephone}</option>
+                        ))}
+                      </datalist>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-700 block">
+                        {language === 'fr' ? 'Téléphone' : 'رقم الهاتف'}
+                      </label>
+                      <input
+                        id="wizard-client-phone-input"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="05 55 12 34 56"
+                        value={clientPhoneInput}
+                        onChange={(e) => setClientPhoneInput(e.target.value)}
+                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white text-left"
+                        dir="ltr"
+                      />
+                      {knownClient && (
+                        <p className="text-[11px] text-emerald-700 font-semibold">
+                          {language === 'fr' ? 'Cliente déjà enregistrée' : 'زبونة مسجلة مسبقاً'}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -867,6 +945,9 @@ export default function Reservations({
                     <div>
                       <p className="text-gray-400 font-bold uppercase">{language === 'fr' ? 'Cliente' : 'الزبونة'}</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{clientNameInput || 'Inconnue'}</p>
+                      {clientPhoneInput.trim() && (
+                        <p className="text-gray-500 mt-0.5" dir="ltr">📞 {clientPhoneInput.trim()}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-gray-400 font-bold uppercase">{language === 'fr' ? 'Dates de location' : 'فترة الكراء'}</p>
