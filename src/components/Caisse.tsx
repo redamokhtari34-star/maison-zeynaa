@@ -22,6 +22,10 @@ import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapTransactionToDb, updateTresorerieInDb } from '../lib/storage';
 import { todayIso } from '../lib/dates';
 import { notifyError } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface CaisseProps {
   transactions: Transaction[];
@@ -116,18 +120,18 @@ export default function Caisse({
       source_argent: sourceArgent
     };
 
+    // Post it to the till immediately; the cloud copy follows in the background
+    // so a slow network never holds up the button.
+    onSaveTransactions([newTr, ...transactions]);
+
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { error } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase insert transaction error:', error);
-      }
-      await updateTresorerieInDb();
+      mirrorToCloud(async () => {
+        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        await updateTresorerieInDb();
+        return res;
+      }, LOCAL_SYNC_FAIL);
     }
-
-    onSaveTransactions([newTr, ...transactions]);
-    onRefreshData?.();
 
     addHistoryEntry(
       language === 'fr' ? 'Dépense enregistrée' : 'مصاريف مسجلة',
@@ -186,18 +190,18 @@ export default function Caisse({
       beneficiaire: finalBeneficiaire || undefined
     };
 
+    // Post it to the till immediately; the cloud copy follows in the background
+    // so a slow network never holds up the button.
+    onSaveTransactions([newTr, ...transactions]);
+
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { error } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase insert transaction error:', error);
-      }
-      await updateTresorerieInDb();
+      mirrorToCloud(async () => {
+        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        await updateTresorerieInDb();
+        return res;
+      }, LOCAL_SYNC_FAIL);
     }
-
-    onSaveTransactions([newTr, ...transactions]);
-    onRefreshData?.();
 
     addHistoryEntry(
       language === 'fr' ? 'Retrait de caisse' : 'سحب من الصندوق',

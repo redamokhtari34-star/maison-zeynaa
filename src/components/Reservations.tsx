@@ -19,6 +19,10 @@ import { translations } from '../translations';
 import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactions, getSupabaseClient, mapReservationToDb, mapTransactionToDb, isUuid } from '../lib/storage';
 import { todayIso, isoInDays, nowTime } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface ReservationsProps {
   reservations: Reservation[];
@@ -135,16 +139,11 @@ export default function Reservations({
     if (window.confirm(msg)) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('reservations').delete().eq('id', id);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase delete reservation error:', error);
-        }
+        mirrorToCloud(() => supabase.from('reservations').delete().eq('id', id), LOCAL_SYNC_FAIL);
       }
 
       const updated = reservations.filter(r => r.id !== id);
       onSaveReservations(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Annulation de réservation' : 'إلغاء حجز',
@@ -171,11 +170,7 @@ export default function Reservations({
 
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', res.id);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase update reservation balance error:', error);
-        }
+        mirrorToCloud(() => supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', res.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = reservations.map(r => r.id === res.id ? updatedResObj : r);
@@ -195,15 +190,10 @@ export default function Reservations({
       };
 
       if (supabase) {
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
-        if (trError) {
-          notifyError(`Erreur Supabase (Ajout mouvement caisse): ${trError.message}`);
-          console.error('Supabase insert transaction error:', trError);
-        }
+        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]), LOCAL_SYNC_FAIL);
       }
 
       onAddTransaction(newTr);
-      onRefreshData?.();
 
       // Log to history
       addHistoryEntry(
@@ -474,7 +464,6 @@ export default function Reservations({
 
       // Only pull the cloud copy back once it holds this booking, otherwise the
       // refresh would overwrite the local record we just committed.
-      await onRefreshData?.();
     } catch (err) {
       console.error('Could not sync reservation to Supabase:', err);
       notifyError(language === 'fr'

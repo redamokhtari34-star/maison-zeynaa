@@ -17,6 +17,10 @@ import { addHistoryEntry, getSupabaseClient, mapBijouToDb, uploadImageToSupabase
 import { generate200Bijoux } from '../data/sampleData';
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface BijouxProps {
   bijoux: Bijou[];
@@ -171,7 +175,6 @@ export default function Bijoux({
         ? `La collection a été mise à jour avec succès à 200 bijoux !` 
         : `تم تحديث المجموعة بنجاح إلى 200 قطعة إكسسوار!`);
 
-      onRefreshData?.();
     } catch (err) {
       console.error('Error generating 200 bijoux:', err);
     } finally {
@@ -218,16 +221,11 @@ export default function Bijoux({
     if (window.confirm(msg)) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('bijoux').delete().eq('id', bijouId);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase delete bijou error:', error);
-        }
+        mirrorToCloud(() => supabase.from('bijoux').delete().eq('id', bijouId), LOCAL_SYNC_FAIL);
       }
 
       const updated = bijoux.filter(b => b.id !== bijouId);
       onSaveBijoux(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Suppression d’accessoire' : 'حذف إكسسوار',
@@ -242,11 +240,7 @@ export default function Bijoux({
 
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { error } = await supabase.from('bijoux').update({ statut: targetStatus }).eq('id', bijouId);
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase update bijou status error:', error);
-      }
+      mirrorToCloud(() => supabase.from('bijoux').update({ statut: targetStatus }).eq('id', bijouId), LOCAL_SYNC_FAIL);
     }
 
     const updated: Bijou[] = bijoux.map(b => {
@@ -256,7 +250,6 @@ export default function Bijoux({
       return b;
     });
     onSaveBijoux(updated);
-    onRefreshData?.();
 
     const bijou = bijoux.find(b => b.id === bijouId);
     if (bijou) {
@@ -324,7 +317,6 @@ export default function Bijoux({
 
       const updated: Bijou[] = bijoux.map(b => b.id === editingBijou.id ? updatedBijouObj : b);
       onSaveBijoux(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Modification d’accessoire' : 'تعديل إكسسوار',
@@ -380,7 +372,6 @@ export default function Bijoux({
             : 'تمت إضافة الإكسسوار محلياً، لكن فشلت المزامنة مع السحابة.');
         } else {
           notifySuccess(language === 'fr' ? 'Accessoire ajouté et synchronisé.' : 'تمت إضافة الإكسسوار ومزامنته.');
-          await onRefreshData?.();
         }
       }
     }

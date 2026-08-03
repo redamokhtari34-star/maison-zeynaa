@@ -17,6 +17,10 @@ import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapReservationToDb, mapTransactionToDb } from '../lib/storage';
 import { todayIso } from '../lib/dates';
 import { notifyError } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface RetoursProps {
   reservations: Reservation[];
@@ -118,11 +122,7 @@ export default function Retours({
     };
 
     if (supabase) {
-      const { error: resErr } = await supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', selectedRes.id);
-      if (resErr) {
-        notifyError(`Erreur Supabase (Retour réservation): ${resErr.message}`);
-        console.error('Supabase return reservation error:', resErr);
-      }
+      mirrorToCloud(() => supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', selectedRes.id), LOCAL_SYNC_FAIL);
     }
 
     const updatedReservations = reservations.map(r => r.id === selectedRes.id ? updatedResObj : r);
@@ -143,7 +143,7 @@ export default function Retours({
             statut: nextStatus
           };
           if (supabase) {
-            await supabase.from('robes').update({ statut: nextStatus }).eq('id', item.article_id);
+            mirrorToCloud(() => supabase.from('robes').update({ statut: nextStatus }).eq('id', item.article_id), LOCAL_SYNC_FAIL);
           }
         }
       } else if (item.type_article === 'bijou') {
@@ -154,7 +154,7 @@ export default function Retours({
             statut: nextStatus
           };
           if (supabase) {
-            await supabase.from('bijoux').update({ statut: nextStatus }).eq('id', item.article_id);
+            mirrorToCloud(() => supabase.from('bijoux').update({ statut: nextStatus }).eq('id', item.article_id), LOCAL_SYNC_FAIL);
           }
         }
       }
@@ -179,7 +179,7 @@ export default function Retours({
       };
 
       if (supabase) {
-        await supabase.from('mouvements_caisse').insert([mapTransactionToDb(balanceTr)]);
+        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(balanceTr)]), LOCAL_SYNC_FAIL);
       }
       onAddTransaction(balanceTr);
     }
@@ -199,12 +199,11 @@ export default function Retours({
       };
 
       if (supabase) {
-        await supabase.from('mouvements_caisse').insert([mapTransactionToDb(penTr)]);
+        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(penTr)]), LOCAL_SYNC_FAIL);
       }
       onAddTransaction(penTr);
     }
 
-    onRefreshData?.();
 
     // 4. Log to history
     addHistoryEntry(

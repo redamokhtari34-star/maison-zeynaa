@@ -21,6 +21,10 @@ import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase
 import { generateAdditionalDresses } from '../data/sampleData';
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface RobesProps {
   dresses: Dress[];
@@ -214,7 +218,6 @@ export default function Robes({
         ? `70 nouvelles robes ont été ajoutées avec succès ! Total : ${updatedList.length} robes.` 
         : `تمت إضافة 70 فستان جديد بنجاح! المجموع: ${updatedList.length} فستان.`);
 
-      onRefreshData?.();
     } catch (err) {
       console.error('Error adding bulk dresses:', err);
     } finally {
@@ -277,7 +280,6 @@ export default function Robes({
       }
 
       onSaveDresses(updatedList);
-      onRefreshData?.();
     } catch (err) {
       console.error('Error setting 70 dresses:', err);
     } finally {
@@ -314,16 +316,11 @@ export default function Robes({
     if (window.confirm(msg)) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('robes').delete().eq('id', dressId);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase delete error:', error);
-        }
+        mirrorToCloud(() => supabase.from('robes').delete().eq('id', dressId), LOCAL_SYNC_FAIL);
       }
 
       const updated = dresses.filter(d => d.id !== dressId);
       onSaveDresses(updated);
-      onRefreshData?.();
       addHistoryEntry(
         language === 'fr' ? 'Suppression de robe' : 'حذف فستان',
         `La robe "${dress.nom}" (ID: ${dress.id}) a été retirée de l'inventaire.`
@@ -338,11 +335,7 @@ export default function Robes({
     
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { error } = await supabase.from('robes').update({ statut: targetStatus }).eq('id', dressId);
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase update status error:', error);
-      }
+      mirrorToCloud(() => supabase.from('robes').update({ statut: targetStatus }).eq('id', dressId), LOCAL_SYNC_FAIL);
     }
 
     const updated = dresses.map(d => {
@@ -352,7 +345,6 @@ export default function Robes({
       return d;
     });
     onSaveDresses(updated);
-    onRefreshData?.();
 
     const dress = dresses.find(d => d.id === dressId);
     if (dress) {
@@ -404,16 +396,11 @@ export default function Robes({
       };
 
       if (supabase) {
-        const { error } = await supabase.from('robes').update(mapDressToDb(updatedDressObj)).eq('id', editingDress.id);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase update robe error:', error);
-        }
+        mirrorToCloud(() => supabase.from('robes').update(mapDressToDb(updatedDressObj)).eq('id', editingDress.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = dresses.map(d => d.id === editingDress.id ? updatedDressObj : d);
       onSaveDresses(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Modification de robe' : 'تعديل فستان',
@@ -471,7 +458,6 @@ export default function Robes({
         } else {
           notifySuccess(language === 'fr' ? 'Robe ajoutée et synchronisée.' : 'تمت إضافة الفستان ومزامنته.');
           // Only pull the cloud copy back once it actually holds this dress.
-          await onRefreshData?.();
         }
       }
     }

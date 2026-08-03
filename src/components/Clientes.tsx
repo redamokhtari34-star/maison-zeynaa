@@ -21,6 +21,10 @@ import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapClientToDb } from '../lib/storage';
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface ClientesProps {
   clientes: Cliente[];
@@ -126,16 +130,11 @@ export default function Clientes({
     if (window.confirm(msg)) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('clients').delete().eq('id', clientId);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase delete client error:', error);
-        }
+        mirrorToCloud(() => supabase.from('clients').delete().eq('id', clientId), LOCAL_SYNC_FAIL);
       }
 
       const updated = clientes.filter(c => c.id !== clientId);
       onSaveClientes(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Suppression de cliente' : 'حذف زبونة',
@@ -167,16 +166,11 @@ export default function Clientes({
       };
 
       if (supabase) {
-        const { error } = await supabase.from('clients').update(mapClientToDb(updatedClientObj)).eq('id', editingCliente.id);
-        if (error) {
-          notifyError("Erreur Supabase : " + error.message);
-          console.error('Supabase update client error:', error);
-        }
+        mirrorToCloud(() => supabase.from('clients').update(mapClientToDb(updatedClientObj)).eq('id', editingCliente.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = clientes.map(c => c.id === editingCliente.id ? updatedClientObj : c);
       onSaveClientes(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Modification de cliente' : 'تعديل زبونة',
@@ -223,7 +217,6 @@ export default function Clientes({
         } else {
           notifySuccess(language === 'fr' ? 'Cliente enregistrée et synchronisée.' : 'تم حفظ الزبونة ومزامنتها.');
           if (data && data[0]) setSelectedClientId(data[0].id);
-          await onRefreshData?.();
         }
       }
     }
