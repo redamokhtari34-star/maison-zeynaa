@@ -104,14 +104,14 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            ⚙️ {language === 'fr' ? 'Paramètres Généraux du Salon' : 'إعدادات الصالون والمحل'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Paramètres Généraux du Salon' : 'إعدادات الصالون والمحل'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Personnalisez le fonctionnement de votre boutique, sauvegardez ou réinitialisez vos données.`
               : `قومي بتخصيص صالونك، إدارة لغة الواجهة، وتحميل أو استيراد النسخ الاحتياطية للسلامة.`}
@@ -122,7 +122,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Left: General Info Settings Form */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-6">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
             <Store size={18} className="text-violet-600" />
             <span>{language === 'fr' ? 'Coordonnées de la boutique' : 'معلومات وتفاصيل المحل'}</span>
@@ -136,7 +136,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={salonName}
                 onChange={(e) => setSalonName(e.target.value)}
-                className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-bold ${
+                className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-bold ${
                   isRtl ? 'text-right' : 'text-left'
                 }`}
               />
@@ -149,7 +149,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
+                className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
               />
             </div>
 
@@ -160,7 +160,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                   isRtl ? 'text-right' : 'text-left'
                 }`}
               />
@@ -173,7 +173,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={openingHours}
                 onChange={(e) => setOpeningHours(e.target.value)}
-                className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-mono"
+                className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-mono"
               />
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
         <div className="space-y-8">
 
           {/* Backup Database management */}
-          <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm space-y-5">
+          <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-5">
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <FileJson size={18} className="text-violet-600" />
               <span>{language === 'fr' ? 'Sauvegarde & Sécurité' : 'حفظ واستيراد البيانات'}</span>
@@ -230,7 +230,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
             </div>
 
             {/* Advanced danger zone reset */}
-            <div className="pt-4 border-t border-dashed border-gray-200/80">
+            <div className="pt-4 border-t border-dashed border-neutral-200">
               <div className={`flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div>
                   <span className="text-xs font-bold text-red-600 uppercase block">{language === 'fr' ? 'Zone de danger' : 'منطقة الخطر'}</span>

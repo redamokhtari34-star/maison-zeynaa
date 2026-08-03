@@ -326,12 +326,12 @@ export default function Calendrier({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[24px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[24px] border border-neutral-200 ${
         isRtl ? 'md:flex-row-reverse text-right' : 'text-left'
       }`}>
         <div>
           <div className={`flex items-center gap-3 mb-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <div className="p-2.5 bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-xl shadow-md shadow-violet-500/20">
+            <div className="p-2.5 bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-xl">
               <CalendarIcon size={22} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -356,7 +356,7 @@ export default function Calendrier({
             {isRtl ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </button>
 
-          <div className="px-4 py-2 bg-slate-50 border border-gray-200/80 rounded-xl font-extrabold text-gray-800 text-base min-w-[160px] text-center shadow-inner">
+          <div className="px-4 py-2 bg-slate-50 border border-neutral-200 rounded-xl font-extrabold text-gray-800 text-base min-w-[160px] text-center shadow-inner">
             {monthLabel} {year}
           </div>
 
@@ -372,7 +372,7 @@ export default function Calendrier({
           <button
             id="cal-today-btn"
             onClick={handleToday}
-            className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer ml-1"
+            className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer ml-1"
           >
             {language === 'fr' ? "Aujourd'hui" : 'اليوم'}
           </button>
@@ -381,7 +381,7 @@ export default function Calendrier({
 
       {/* Stats Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-[20px] border border-gray-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-400 font-bold uppercase">{language === 'fr' ? 'Réservations ce mois' : 'حجوزات هذا الشهر'}</p>
             <p className="text-2xl font-extrabold text-gray-900 mt-1">{monthReservations.length}</p>
@@ -391,7 +391,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-[20px] border border-gray-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-rose-500 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
             <p className="text-2xl font-extrabold text-rose-600 mt-1">{activeRentalsCount}</p>
@@ -401,7 +401,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-[20px] border border-gray-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-indigo-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
             <p className="text-2xl font-extrabold text-indigo-600 mt-1">{futureRentalsCount}</p>
@@ -411,7 +411,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-[20px] border border-gray-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-emerald-500 font-bold uppercase">{language === 'fr' ? 'Retours effectués' : 'مرتجعات مكتملة'}</p>
             <p className="text-2xl font-extrabold text-emerald-600 mt-1">{returnedCount}</p>
@@ -423,7 +423,7 @@ export default function Calendrier({
       </div>
 
       {/* Filters & Search Toolbar */}
-      <div className={`bg-white p-4 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 ${
+      <div className={`bg-white p-4 rounded-2xl border border-neutral-200 flex flex-col md:flex-row items-center justify-between gap-4 ${
         isRtl ? 'md:flex-row-reverse' : ''
       }`}>
         {/* Search */}
@@ -447,7 +447,7 @@ export default function Calendrier({
             onClick={() => setStatusFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               statusFilter === 'all' 
-                ? 'bg-slate-900 text-white shadow-sm' 
+                ? 'bg-slate-900 text-white' 
                 : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
             }`}
           >
@@ -458,7 +458,7 @@ export default function Calendrier({
             onClick={() => setStatusFilter('en_cours')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'en_cours' 
-                ? 'bg-rose-600 text-white shadow-sm' 
+                ? 'bg-rose-600 text-white' 
                 : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
             }`}
           >
@@ -470,7 +470,7 @@ export default function Calendrier({
             onClick={() => setStatusFilter('future')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'future' 
-                ? 'bg-violet-600 text-white shadow-sm' 
+                ? 'bg-violet-600 text-white' 
                 : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
             }`}
           >
@@ -482,7 +482,7 @@ export default function Calendrier({
             onClick={() => setStatusFilter('retourne')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'retourne' 
-                ? 'bg-emerald-600 text-white shadow-sm' 
+                ? 'bg-emerald-600 text-white' 
                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
             }`}
           >
@@ -495,7 +495,7 @@ export default function Calendrier({
       {/* Main Grid + Side Details View */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Calendar Grid (2 columns on lg) */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-[24px] border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white p-5 rounded-[24px] border border-neutral-200 overflow-hidden">
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 gap-1 text-center mb-2">
             {(language === 'fr' ? daysHeaderFr : daysHeaderAr).map((day, idx) => (
@@ -519,7 +519,7 @@ export default function Calendrier({
                   onClick={() => setSelectedDay(cell.dateStr)}
                   className={`min-h-[85px] sm:min-h-[95px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
                     isSelected 
-                      ? 'border-violet-600 bg-violet-50/50 shadow-sm ring-2 ring-violet-500/20' 
+                      ? 'border-violet-600 bg-violet-50/50 ring-2 ring-violet-500/20' 
                       : cell.isCurrentMonth 
                         ? 'border-gray-100 bg-white hover:border-violet-300 hover:bg-slate-50/80' 
                         : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'
@@ -529,7 +529,7 @@ export default function Calendrier({
                   <div className="flex items-center justify-between">
                     <span className={`text-xs font-bold rounded-lg w-6 h-6 flex items-center justify-center ${
                       isToday 
-                        ? 'bg-violet-600 text-white font-extrabold shadow-sm' 
+                        ? 'bg-violet-600 text-white font-extrabold' 
                         : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
                     }`}>
                       {cell.dayNum}
@@ -594,7 +594,7 @@ export default function Calendrier({
         </div>
 
         {/* Selected Day Details Panel (1 column on lg) */}
-        <div className="bg-white p-6 rounded-[24px] border border-gray-200/80 shadow-sm space-y-4">
+        <div className="bg-white p-6 rounded-[24px] border border-neutral-200 space-y-4">
           <div className={`flex items-center justify-between pb-4 border-b border-gray-100 ${
             isRtl ? 'flex-row-reverse text-right' : 'text-left'
           }`}>
@@ -652,14 +652,14 @@ export default function Calendrier({
                     key={res.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-2xl bg-slate-50 border border-gray-200/80 hover:border-violet-300 transition-all space-y-3 group"
+                    className="p-4 rounded-2xl bg-slate-50 border border-neutral-200 hover:border-violet-300 transition-all space-y-3 group"
                   >
                     {/* Header: Photo, Dress Name & Status */}
                     <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
                       <img
                         src={dressPhoto}
                         alt={dressName}
-                        className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0 shadow-sm"
+                        className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-1">

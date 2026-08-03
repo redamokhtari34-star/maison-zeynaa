@@ -426,14 +426,14 @@ export default function Bijoux({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            💍 {language === 'fr' ? 'Gestion des Bijoux & Accessoires' : 'إدارة الحلي والإكسسوارات'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Bijoux & Accessoires' : 'إدارة الحلي والإكسسوارات'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Gérez la collection d'accessoires traditionnels associés aux parures (${bijoux.length} pièces).`
               : `أديري الحلي التقليدية التي تكمل الفساتين وتزيد من هيبة العروس (${bijoux.length} قطعة).`}
@@ -444,7 +444,7 @@ export default function Bijoux({
             id="set-200-bijoux-btn"
             onClick={handleSet200Bijoux}
             disabled={isSetting200}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer hover:shadow-md active:scale-95 transition-all text-xs border border-slate-700"
+            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border border-slate-700"
             title={language === 'fr' ? 'Générer et synchroniser 200 bijoux dans le catalogue' : 'تحديث القائمة إلى 200 قطعة إكسسوار'}
           >
             <Sparkles size={15} className="text-amber-400" />
@@ -454,7 +454,7 @@ export default function Bijoux({
           <button
             id="add-bijou-top-btn"
             onClick={openAddForm}
-            className="flex items-center gap-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 transition-all text-sm"
+            className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
           >
             <Plus size={16} />
             <span>{language === 'fr' ? 'Ajouter un bijou' : 'إضافة إكسسوار جديد'}</span>
@@ -463,7 +463,7 @@ export default function Bijoux({
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search */}
           <div className="relative flex-1">
@@ -476,7 +476,7 @@ export default function Bijoux({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-gray-200/80 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-neutral-200 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -526,7 +526,7 @@ export default function Bijoux({
 
       {/* Grid */}
       {filteredBijoux.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <Search size={28} />
           </div>
@@ -540,7 +540,7 @@ export default function Bijoux({
           {filteredBijoux.map(bijou => (
             <div
               key={bijou.id}
-              className="bg-white rounded-[20px] overflow-hidden border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col justify-between"
+              className="bg-white rounded-2xl overflow-hidden border border-neutral-200 transition-all duration-300 group flex flex-col justify-between"
             >
               <div className="relative aspect-square bg-slate-100 overflow-hidden shrink-0">
                 <img
@@ -573,7 +573,7 @@ export default function Bijoux({
                     <span className="text-base font-extrabold text-violet-600">{formatDa(bijou.prix_location_da)}</span>
                   </div>
 
-                  <div className={`flex gap-1.5 pt-1 border-t border-dashed border-gray-200/80 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex gap-1.5 pt-1 border-t border-dashed border-neutral-200 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <button
                       id={`edit-bijou-btn-${bijou.id}`}
                       onClick={(e) => openEditForm(bijou, e)}
@@ -599,7 +599,7 @@ export default function Bijoux({
                     <button
                       id={`delete-bijou-btn-${bijou.id}`}
                       onClick={(e) => handleDelete(bijou.id, e)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200/80 hover:border-red-200/80 rounded-lg cursor-pointer flex items-center justify-center transition-all duration-200"
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-lg cursor-pointer flex items-center justify-center transition-all duration-200"
                     >
                       <X size={12} />
                     </button>
@@ -616,7 +616,7 @@ export default function Bijoux({
         <div className="fixed inset-0 z-50 flex justify-end">
           <div onClick={() => setIsFormOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
           <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {editingBijou 
@@ -639,7 +639,7 @@ export default function Bijoux({
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Ex: Khit Errouh Royale"
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -655,7 +655,7 @@ export default function Bijoux({
                     value={categorie}
                     onChange={(e) => setCategorie(e.target.value)}
                     placeholder="Ex: Collier, Ceinture..."
-                    className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                       isRtl ? 'text-right' : 'text-left'
                     }`}
                   />
@@ -670,7 +670,7 @@ export default function Bijoux({
                     required
                     value={prix}
                     onChange={(e) => setPrix(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
@@ -681,7 +681,7 @@ export default function Bijoux({
                   id="form-bijou-status"
                   value={statut}
                   onChange={(e) => setStatut(e.target.value as typeof statut)}
-                  className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
                 >
                   <option value="disponible">{t.statut_disponible}</option>
                   <option value="en_entretien">{t.statut_en_entretien}</option>
@@ -698,7 +698,7 @@ export default function Bijoux({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Détails du métal, ornements..."
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -729,7 +729,7 @@ export default function Bijoux({
                     </div>
                   ) : photo ? (
                     <div className="space-y-3">
-                      <div className="relative w-28 h-28 mx-auto rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                      <div className="relative w-28 h-28 mx-auto rounded-xl overflow-hidden border border-neutral-200">
                         <img src={photo} alt="Preview" className="w-full h-full object-cover" />
                         <button
                           type="button"
@@ -766,7 +766,7 @@ export default function Bijoux({
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {photosList.map((url, idx) => (
-                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-neutral-200">
                           <img src={url} alt={`Secondary bijou ${idx}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
@@ -789,7 +789,7 @@ export default function Bijoux({
                     value={photo.startsWith('data:') ? '' : photo}
                     onChange={(e) => setPhoto(e.target.value)}
                     placeholder="https://example.com/jewelry.jpg"
-                    className="w-full p-2.5 border border-gray-200/80 rounded-xl text-xs focus:outline-none"
+                    className="w-full p-2.5 border border-neutral-200 rounded-xl text-xs focus:outline-none"
                   />
                 </div>
               </div>
@@ -806,7 +806,7 @@ export default function Bijoux({
                 <button
                   type="submit"
                   id="submit-bijou-form"
-                  className="flex-1 py-3 px-4 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-sm font-bold rounded-xl cursor-pointer"
+                  className="flex-1 py-3 px-4 bg-orange-600 text-white text-sm font-bold rounded-xl cursor-pointer"
                 >
                   {t.save}
                 </button>

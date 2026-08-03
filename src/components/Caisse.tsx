@@ -224,14 +224,14 @@ export default function Caisse({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            💰 {language === 'fr' ? 'Suivi de la Caisse & Trésorerie' : 'دفتر الصندوق وحساب المال'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Suivi de la Caisse & Trésorerie' : 'دفتر الصندوق وحساب المال'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Suivez en temps réel les liquidités de la caisse du magasin.`
               : `تابعي حركة السيولة المالية بالتفصيل لضمان سلامة حسابات صالونك.`}
@@ -254,7 +254,7 @@ export default function Caisse({
             onClick={openRetraitModal}
             disabled={currentBalance <= 0}
             title={currentBalance <= 0 ? (language === 'fr' ? 'La caisse est vide (0 DA)' : 'الصندوق فارغ (0 دج)') : undefined}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-sm shadow-amber-500/10 transition-all"
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-amber-500/10 transition-all"
           >
             <Wallet size={14} />
             <span>{language === 'fr' ? 'Effectuer un retrait' : 'إجراء سحب'}</span>
@@ -265,8 +265,8 @@ export default function Caisse({
       {/* Grid: 4 Big KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Balance */}
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-violet-600 to-fuchsia-500" />
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 left-0 h-1 bg-orange-600" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
               {language === 'fr' ? 'Solde disponible' : 'الرصيد المتوفر'}
@@ -282,7 +282,7 @@ export default function Caisse({
         </div>
 
         {/* Card 2: Inputs */}
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-emerald-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -299,7 +299,7 @@ export default function Caisse({
         </div>
 
         {/* Card 3: Outputs (Expenses) */}
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-rose-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -316,7 +316,7 @@ export default function Caisse({
         </div>
 
         {/* Card 4: Withdrawals (Retraits) */}
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-amber-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -337,7 +337,7 @@ export default function Caisse({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: General Ledger logs */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5">{t.latest_operations}</h3>
 
           <div className="overflow-x-auto">
@@ -402,14 +402,14 @@ export default function Caisse({
         </div>
 
         {/* Right: Cash Empties Historical trace logs */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
             <History size={16} className="text-amber-500" />
             <span>{language === 'fr' ? 'Journal des vidages' : 'سجل تفريغ الصندوق'}</span>
           </h3>
 
           {cashEmpties.length === 0 ? (
-            <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-gray-200/80 flex-1 flex flex-col items-center justify-center">
+            <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-neutral-200 flex-1 flex flex-col items-center justify-center">
               <Wallet size={20} className="text-gray-300 mb-2" />
               <p className="text-xs text-gray-400 font-semibold">{language === 'fr' ? 'Aucun vidage de caisse effectué.' : 'لا توجد أي سحوبات أو تفريغ بعد.'}</p>
             </div>
@@ -446,8 +446,8 @@ export default function Caisse({
       {isExpenseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsExpenseOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-          <form onSubmit={handleAddExpense} className="relative w-full max-w-md bg-white rounded-[20px] overflow-hidden shadow-2xl z-10 animate-scale-up">
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <form onSubmit={handleAddExpense} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up">
+            <div className={`p-6 border-b border-neutral-200 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-base font-bold text-gray-900">{language === 'fr' ? 'Enregistrer une dépense' : 'تسجيل مصاريف جديدة'}</h3>
               <button type="button" onClick={() => setIsExpenseOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
                 <X size={18} />
@@ -464,7 +464,7 @@ export default function Caisse({
                     min="1"
                     value={montant}
                     onChange={(e) => setMontant(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none font-mono font-bold"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none font-mono font-bold"
                   />
                 </div>
 
@@ -474,7 +474,7 @@ export default function Caisse({
                     id="form-exp-cat"
                     value={expCategory}
                     onChange={(e) => setExpCategory(e.target.value)}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm bg-white focus:outline-none"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none"
                   >
                     <option value="Entretien des robes">{t.exp_entretien}</option>
                     <option value="Achat d'accessoires">{t.exp_achat}</option>
@@ -494,7 +494,7 @@ export default function Caisse({
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   placeholder="Ex: pressing Karakou Royal, achat fil d'or..."
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -508,7 +508,7 @@ export default function Caisse({
                   id="form-exp-source"
                   value={sourceArgent}
                   onChange={(e) => setSourceArgent(e.target.value as 'caisse' | 'tresorerie')}
-                  className="w-full p-3 border border-gray-200/80 rounded-xl text-sm bg-white focus:outline-none font-medium"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none font-medium"
                 >
                   <option value="caisse">
                     {language === 'fr' ? "Caisse principale (Liquidités du jour)" : "الصندوق الرئيسي (سيولة اليوم)"}
@@ -526,7 +526,7 @@ export default function Caisse({
                   type="text"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -548,7 +548,7 @@ export default function Caisse({
       {isEmptyCaisseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsEmptyCaisseOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-          <form onSubmit={handleEmptyCaisse} className="relative w-full max-w-md bg-white rounded-[20px] overflow-hidden shadow-2xl z-10 animate-scale-up border border-amber-100">
+          <form onSubmit={handleEmptyCaisse} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-amber-100">
             <div className={`p-5 border-b border-amber-100 bg-amber-50/80 flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div className={`flex items-center gap-2.5 text-amber-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
@@ -570,7 +570,7 @@ export default function Caisse({
 
             <div className="p-6 space-y-4">
               {/* Card showing current available balance */}
-              <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl shadow-sm flex items-center justify-between">
+              <div className="p-4 bg-amber-600 text-white rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-[11px] uppercase font-bold text-amber-100 block">
                     {language === 'fr' ? 'Solde disponible en caisse' : 'الرصيد المتوفر في الصندوق'}
@@ -627,7 +627,7 @@ export default function Caisse({
                     className={`w-full p-3.5 pr-14 border rounded-xl text-base font-extrabold font-mono focus:outline-none transition-colors ${
                       typeof retraitMontant === 'number' && retraitMontant > currentBalance
                         ? 'border-rose-400 bg-rose-50/30 text-rose-700'
-                        : 'border-gray-200/80 focus:border-amber-500'
+                        : 'border-neutral-200 focus:border-amber-500'
                     } ${isRtl ? 'text-right' : 'text-left'}`}
                   />
                   <span className="absolute right-3.5 top-3.5 text-xs font-bold text-gray-400 font-mono pointer-events-none">
@@ -664,7 +664,7 @@ export default function Caisse({
                   value={beneficiaire}
                   onChange={(e) => setBeneficiaire(e.target.value)}
                   placeholder={language === 'fr' ? "Ex: Meriem, Gérant, Zeyna..." : "مثال: مريم، المسير..."}
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-amber-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -681,7 +681,7 @@ export default function Caisse({
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={language === 'fr' ? "Ex: Retrait partiel, dépôt coffre..." : "مثال: سحب جزئي، إيداع..."}
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-amber-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -704,7 +704,7 @@ export default function Caisse({
                   Number(retraitMontant) <= 0 || 
                   Number(retraitMontant) > currentBalance
                 }
-                className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+                className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
               >
                 {language === 'fr' ? 'Valider le retrait' : 'تأكيد السحب'}
               </button>

@@ -524,14 +524,14 @@ export default function Robes({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header Panel */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            👗 {language === 'fr' ? 'Gestion des Robes' : 'إدارة الفساتين'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Robes' : 'إدارة الفساتين'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Affichez, filtrez et modifiez l'inventaire des robes du magasin (${dresses.length} modèles).`
               : `اعرض، صنف وعدل قائمة فساتين المحل الحالية (${dresses.length} موديل).`}
@@ -543,7 +543,7 @@ export default function Robes({
               id="set-exact-70-robes-btn"
               onClick={handleSetExactly70Dresses}
               disabled={isSetting70 || isAddingBulk}
-              className={`flex items-center gap-2 font-bold px-4 py-3 rounded-2xl cursor-pointer hover:shadow-md active:scale-95 transition-all text-xs border ${
+              className={`flex items-center gap-2 font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border ${
                 dresses.length > 70 
                   ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' 
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -565,7 +565,7 @@ export default function Robes({
             id="add-bulk-70-robes-btn"
             onClick={handleAdd70Dresses}
             disabled={isAddingBulk || isSetting70}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer hover:shadow-md active:scale-95 transition-all text-xs border border-slate-700"
+            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border border-slate-700"
             title={language === 'fr' ? 'Générer et rajouter 70 robes instantanément sur Supabase' : 'إضافة 70 فستان جديد فوراً'}
           >
             <Sparkles size={15} className="text-amber-400" />
@@ -575,7 +575,7 @@ export default function Robes({
           <button
             id="add-dress-top-btn"
             onClick={openAddForm}
-            className="flex items-center gap-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 transition-all text-sm"
+            className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
           >
             <Plus size={16} />
             <span>{language === 'fr' ? 'Ajouter une robe' : 'إضافة فستان جديد'}</span>
@@ -584,7 +584,7 @@ export default function Robes({
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search bar */}
           <div className="relative flex-1">
@@ -597,7 +597,7 @@ export default function Robes({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-gray-200/80 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-neutral-200 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -609,7 +609,7 @@ export default function Robes({
               id="dress-sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full py-3 px-4 bg-slate-50 border border-gray-200/80 rounded-2xl text-sm text-gray-700 font-medium focus:outline-none focus:border-violet-500 cursor-pointer"
+              className="w-full py-3 px-4 bg-slate-50 border border-neutral-200 rounded-2xl text-sm text-gray-700 font-medium focus:outline-none focus:border-violet-500 cursor-pointer"
             >
               <option value="recent">{language === 'fr' ? 'Plus récents' : 'أضيف مؤخراً'}</option>
               <option value="price-asc">{language === 'fr' ? 'Prix : Ordre croissant' : 'السعر: من الأقل للأعلى'}</option>
@@ -665,7 +665,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('all')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'all'
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
               }`}
             >
@@ -676,7 +676,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('disponible')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'disponible'
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
               }`}
             >
@@ -687,7 +687,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('reservee')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'reservee'
-                  ? 'bg-amber-500 text-white shadow-sm'
+                  ? 'bg-amber-500 text-white'
                   : 'bg-slate-50 text-amber-500 hover:bg-amber-50'
               }`}
             >
@@ -698,7 +698,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('en_location')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'en_location'
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-slate-50 text-violet-600 hover:bg-violet-50'
               }`}
             >
@@ -709,7 +709,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('en_entretien')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'en_entretien'
-                  ? 'bg-gray-600 text-white shadow-sm'
+                  ? 'bg-gray-600 text-white'
                   : 'bg-slate-50 text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -721,7 +721,7 @@ export default function Robes({
 
       {/* Dresses Grid */}
       {sortedDresses.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <Search size={28} />
           </div>
@@ -735,7 +735,7 @@ export default function Robes({
           {sortedDresses.map(dress => (
             <div
               key={dress.id}
-              className="bg-white rounded-[20px] overflow-hidden border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-350 group flex flex-col justify-between"
+              className="bg-white rounded-2xl overflow-hidden border border-neutral-200 transition-all duration-350 group flex flex-col justify-between"
             >
               {/* Image Header with status badges */}
               <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden shrink-0">
@@ -789,7 +789,7 @@ export default function Robes({
                   </div>
 
                   {/* Operational Buttons */}
-                  <div className={`flex gap-2 pt-1 border-t border-dashed border-gray-200/80 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex gap-2 pt-1 border-t border-dashed border-neutral-200 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <button
                       id={`edit-dress-btn-${dress.id}`}
                       onClick={(e) => openEditForm(dress, e)}
@@ -815,7 +815,7 @@ export default function Robes({
                     <button
                       id={`delete-dress-btn-${dress.id}`}
                       onClick={(e) => handleDelete(dress.id, e)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200/80 hover:border-red-200/80 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200"
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200"
                     >
                       <X size={13} />
                     </button>
@@ -839,7 +839,7 @@ export default function Robes({
           {/* Sliding panel */}
           <div className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
             {/* Header */}
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {editingDress 
@@ -871,7 +871,7 @@ export default function Robes({
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Ex: Caftan d’Or Royal"
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -885,7 +885,7 @@ export default function Robes({
                     id="form-dress-cat"
                     value={categorie}
                     onChange={(e) => setCategorie(e.target.value as DressCategory)}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
                   >
                     {categoriesList.map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -902,7 +902,7 @@ export default function Robes({
                     value={taille}
                     onChange={(e) => setTaille(e.target.value)}
                     placeholder="Ex: 38 (M)"
-                    className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                       isRtl ? 'text-right' : 'text-left'
                     }`}
                   />
@@ -920,7 +920,7 @@ export default function Robes({
                     value={couleur}
                     onChange={(e) => setCouleur(e.target.value)}
                     placeholder="Ex: Rose Poudré"
-                    className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                       isRtl ? 'text-right' : 'text-left'
                     }`}
                   />
@@ -932,7 +932,7 @@ export default function Robes({
                     id="form-dress-status"
                     value={statut}
                     onChange={(e) => setStatut(e.target.value as DressStatus)}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
                   >
                     <option value="disponible">{t.statut_disponible}</option>
                     <option value="en_entretien">{t.statut_en_entretien}</option>
@@ -953,7 +953,7 @@ export default function Robes({
                     required
                     value={prix}
                     onChange={(e) => setPrix(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500"
                   />
                 </div>
 
@@ -966,7 +966,7 @@ export default function Robes({
                     required
                     value={caution}
                     onChange={(e) => setCaution(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
@@ -980,7 +980,7 @@ export default function Robes({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Matériaux, broderies, accessoires inclus..."
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -1023,7 +1023,7 @@ export default function Robes({
                     </div>
                   ) : photoMain ? (
                     <div className="space-y-3">
-                      <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                      <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden border border-neutral-200">
                         <img src={photoMain} alt="Preview" className="w-full h-full object-cover" />
                         <button
                           type="button"
@@ -1062,7 +1062,7 @@ export default function Robes({
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {photosList.map((url, idx) => (
-                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-neutral-200">
                           <img src={url} alt={`Secondary ${idx}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
@@ -1088,7 +1088,7 @@ export default function Robes({
                     value={photoMain.startsWith('data:') ? '' : photoMain}
                     onChange={(e) => setPhotoMain(e.target.value)}
                     placeholder="https://example.com/dress.jpg"
-                    className="w-full p-2.5 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500"
+                    className="w-full p-2.5 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
@@ -1106,7 +1106,7 @@ export default function Robes({
                 <button
                   type="submit"
                   id="submit-form-btn"
-                  className="flex-1 py-3 px-4 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/10 transition-all"
+                  className="flex-1 py-3 px-4 bg-orange-600 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-violet-500/10 transition-all"
                 >
                   {t.save}
                 </button>

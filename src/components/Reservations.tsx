@@ -497,14 +497,14 @@ export default function Reservations({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            📅 {language === 'fr' ? 'Gestion des Réservations & Locations' : 'إدارة الحجوزات والتأجير'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Réservations & Locations' : 'إدارة الحجوزات والتأجير'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Planifiez les sorties de robes, suivez les acomptes et évitez les conflits de calendrier.`
               : `خططي لخرجات الفساتين، تابعي الدفعات المسبقة وتجنبي تداخل المواعيد.`}
@@ -513,7 +513,7 @@ export default function Reservations({
         <button
           id="open-wizard-btn"
           onClick={openNewWizard}
-          className="flex items-center gap-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 transition-all text-sm"
+          className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
         >
           <Plus size={16} />
           <span>{language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد'}</span>
@@ -521,7 +521,7 @@ export default function Reservations({
       </div>
 
       {/* Toolbar filters */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search */}
           <div className="relative flex-1">
@@ -534,7 +534,7 @@ export default function Reservations({
               placeholder={language === 'fr' ? 'Rechercher cliente...' : 'بحث عن زبونة...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -546,7 +546,7 @@ export default function Reservations({
               id="res-filter-all"
               onClick={() => setStatusFilter('all')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'all' ? 'bg-violet-600 text-white shadow-sm' : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
+                statusFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
               }`}
             >
               {t.all}
@@ -555,7 +555,7 @@ export default function Reservations({
               id="res-filter-fut"
               onClick={() => setStatusFilter('future')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'future' ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-50 text-amber-600 hover:bg-amber-50'
+                statusFilter === 'future' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-amber-600 hover:bg-amber-50'
               }`}
             >
               {t.statut_future}
@@ -564,7 +564,7 @@ export default function Reservations({
               id="res-filter-loc"
               onClick={() => setStatusFilter('en_cours')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_cours' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'
+                statusFilter === 'en_cours' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'
               }`}
             >
               {t.statut_en_cours}
@@ -573,7 +573,7 @@ export default function Reservations({
               id="res-filter-ret"
               onClick={() => setStatusFilter('retourne')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'retourne' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
+                statusFilter === 'retourne' ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
               }`}
             >
               {t.statut_retourne}
@@ -582,7 +582,7 @@ export default function Reservations({
               id="res-filter-lat"
               onClick={() => setStatusFilter('en_retard')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_retard' ? 'bg-red-600 text-white shadow-sm' : 'bg-slate-50 text-red-600 hover:bg-red-50'
+                statusFilter === 'en_retard' ? 'bg-red-600 text-white' : 'bg-slate-50 text-red-600 hover:bg-red-50'
               }`}
             >
               {t.statut_en_retard}
@@ -593,7 +593,7 @@ export default function Reservations({
 
       {/* Booking cards list */}
       {filteredReservations.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <Calendar size={36} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Aucune réservation trouvée' : 'لا توجد حجوزات'}</h3>
           <p className="text-sm text-gray-400 mt-1">
@@ -615,7 +615,7 @@ export default function Reservations({
             return (
               <div
                 key={res.id}
-                className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+                className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -643,7 +643,7 @@ export default function Reservations({
                       <button
                         id={`delete-res-btn-${res.id}`}
                         onClick={(e) => handleDeleteBooking(res.id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200/80 hover:border-red-200/80 rounded-lg cursor-pointer transition-all duration-200"
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-lg cursor-pointer transition-all duration-200"
                       >
                         <X size={14} />
                       </button>
@@ -693,13 +693,13 @@ export default function Reservations({
                 </div>
 
                 {/* Pricing summary */}
-                <div className="pt-4 border-t border-dashed border-gray-200/80">
+                <div className="pt-4 border-t border-dashed border-neutral-200">
                   <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <div className="p-2">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.total_price}</span>
                       <span className="font-extrabold text-violet-600 font-mono">{formatDa(res.montant_total_da)}</span>
                     </div>
-                    <div className="p-2 border-x border-gray-200/80">
+                    <div className="p-2 border-x border-neutral-200">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.amount_paid}</span>
                       <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
                     </div>
@@ -745,10 +745,10 @@ export default function Reservations({
           <div onClick={() => setIsWizardOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
           {/* Dialog Panel */}
-          <div className="relative w-full max-w-xl bg-white rounded-[20px] overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
+          <div className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
             
             {/* Header */}
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {language === 'fr' ? 'Assistant de Réservation' : 'مساعد تسجيل الحجوزات'}
@@ -792,7 +792,7 @@ export default function Reservations({
                         placeholder={language === 'fr' ? 'Prénom et Nom de la cliente' : 'اسم ولقب الزبونة'}
                         value={clientNameInput}
                         onChange={(e) => handleClientNameChange(e.target.value)}
-                        className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
+                        className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
                           isRtl ? 'text-right' : 'text-left'
                         }`}
                       />
@@ -816,7 +816,7 @@ export default function Reservations({
                         placeholder="05 55 12 34 56"
                         value={clientPhoneInput}
                         onChange={(e) => setClientPhoneInput(e.target.value)}
-                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white text-left"
                         dir="ltr"
                       />
                       {knownClient && (
@@ -836,7 +836,7 @@ export default function Reservations({
                         required
                         value={dateSortie}
                         onChange={(e) => setDateSortie(e.target.value)}
-                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none font-mono text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none font-mono text-left"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -847,7 +847,7 @@ export default function Reservations({
                         required
                         value={dateRetour}
                         onChange={(e) => setDateRetour(e.target.value)}
-                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none font-mono text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none font-mono text-left"
                       />
                     </div>
                   </div>
@@ -878,7 +878,7 @@ export default function Reservations({
                     placeholder={language === 'fr' ? 'Filtrer par nom, couleur, taille...' : 'البحث عن فستان...'}
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none"
+                    className="w-full p-2.5 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none"
                   />
 
                   {/* List dresses */}
@@ -899,10 +899,10 @@ export default function Reservations({
                             onClick={() => !disabled && toggleDressSelect(dress)}
                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                               isSelected 
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
+                                ? 'bg-violet-600 text-white border-violet-600' 
                                 : disabled 
-                                  ? 'bg-slate-50 text-gray-300 border-gray-200/80 opacity-60 cursor-not-allowed' 
-                                  : 'bg-slate-50/40 border-gray-200/80 hover:bg-slate-50 cursor-pointer text-gray-800'
+                                  ? 'bg-slate-50 text-gray-300 border-neutral-200 opacity-60 cursor-not-allowed' 
+                                  : 'bg-slate-50/40 border-neutral-200 hover:bg-slate-50 cursor-pointer text-gray-800'
                             }`}
                           >
                             <div className={`flex gap-3 items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
@@ -944,7 +944,7 @@ export default function Reservations({
                     placeholder={language === 'fr' ? 'Filtrer par nom...' : 'البحث عن حلي...'}
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-gray-200/80 rounded-xl text-xs"
+                    className="w-full p-2.5 bg-slate-50 border border-neutral-200 rounded-xl text-xs"
                   />
 
                   <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
@@ -962,10 +962,10 @@ export default function Reservations({
                             onClick={() => !disabled && toggleBijouSelect(bijou)}
                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                               isSelected 
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
+                                ? 'bg-violet-600 text-white border-violet-600' 
                                 : disabled 
-                                  ? 'bg-slate-50 text-gray-300 border-gray-200/80 opacity-60 cursor-not-allowed' 
-                                  : 'bg-slate-50/40 border-gray-200/80 hover:bg-slate-50 cursor-pointer text-gray-800'
+                                  ? 'bg-slate-50 text-gray-300 border-neutral-200 opacity-60 cursor-not-allowed' 
+                                  : 'bg-slate-50/40 border-neutral-200 hover:bg-slate-50 cursor-pointer text-gray-800'
                             }`}
                           >
                             <div className={`flex gap-3 items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
@@ -996,7 +996,7 @@ export default function Reservations({
               {/* STEP 4: Payment & summary review */}
               {wizardStep === 4 && (
                 <div className="space-y-5">
-                  <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200/80 pb-2">
+                  <h4 className="text-sm font-bold text-gray-900 border-b border-neutral-200 pb-2">
                     {language === 'fr' ? 'Récapitulatif & Paiement' : 'الخلاصة والدفع'}
                   </h4>
 
@@ -1073,7 +1073,7 @@ export default function Reservations({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Ex: Demande pressing, modification d’ourlet..."
-                      className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                      className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                         isRtl ? 'text-right' : 'text-left'
                       }`}
                     />
@@ -1084,7 +1084,7 @@ export default function Reservations({
             </div>
 
             {/* Wizard Navigation Footer */}
-            <div className="p-6 border-t border-gray-200/80 flex justify-between bg-slate-50 gap-3">
+            <div className="p-6 border-t border-neutral-200 flex justify-between bg-slate-50 gap-3">
               
               {/* Back button */}
               <button
@@ -1119,7 +1119,7 @@ export default function Reservations({
                     setItemSearch('');
                     setWizardStep(wizardStep + 1);
                   }}
-                  className="py-3 px-5 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="py-3 px-5 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{language === 'fr' ? 'Suivant' : 'التالي'}</span>
                   <ChevronRight size={14} />
@@ -1129,7 +1129,7 @@ export default function Reservations({
                   type="button"
                   id="wizard-submit-btn"
                   onClick={handleCreateReservation}
-                  className="py-3 px-6 bg-gradient-to-tr from-violet-600 to-emerald-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all cursor-pointer"
+                  className="py-3 px-6 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
                   {language === 'fr' ? 'Valider la réservation' : 'تأكيد وحفظ الحجز'}
                 </button>

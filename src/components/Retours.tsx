@@ -219,14 +219,14 @@ export default function Retours({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            ↩️ {language === 'fr' ? 'Gestion des Retours de Robes' : 'إدارة إرجاع الفساتين'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Retours de Robes' : 'إدارة إرجاع الفساتين'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Enregistrez le retour des articles, appliquez des pénalités si nécessaire et libérez la caution.`
               : `سجلي إرجاع الملابس، افحصي حالتها، واخصمي من العربون أو الكفالة في حال حدوث أي تلف.`}
@@ -235,7 +235,7 @@ export default function Retours({
       </div>
 
       {/* Search Input filter */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200">
         <div className="relative">
           <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'left-3' : 'left-3'}`}>
             <Search size={18} />
@@ -246,7 +246,7 @@ export default function Retours({
             placeholder={language === 'fr' ? 'Rechercher par nom de cliente...' : 'بحث باسم الزبونة...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+            className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
               isRtl ? 'text-right' : 'text-left'
             }`}
           />
@@ -255,7 +255,7 @@ export default function Retours({
 
       {/* List of out rentals */}
       {filteredRentals.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <CheckCircle size={36} className="text-emerald-500 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Tous les articles sont en magasin !' : 'كل الملابس متوفرة حالياً في الصالون !'}</h3>
           <p className="text-sm text-gray-400 mt-1">
@@ -267,7 +267,7 @@ export default function Retours({
           {filteredRentals.map(res => (
             <div
               key={res.id}
-              className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+              className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
             >
               <div>
                 <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -305,7 +305,7 @@ export default function Retours({
               <button
                 id={`return-action-btn-${res.id}`}
                 onClick={() => openReturnModal(res)}
-                className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm shadow-violet-500/10"
+                className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-violet-500/10"
               >
                 <span>{language === 'fr' ? 'Enregistrer le retour' : 'تسجيل الإرجاع وفحص الحالة'}</span>
               </button>
@@ -319,8 +319,8 @@ export default function Retours({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsReturnModalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
           
-          <form onSubmit={handleSubmitReturn} className="relative w-full max-w-lg bg-white rounded-[20px] overflow-hidden shadow-2xl z-10 animate-scale-up">
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <form onSubmit={handleSubmitReturn} className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up">
+            <div className={`p-6 border-b border-neutral-200 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-base font-bold text-gray-900">
                 {language === 'fr' ? `Retour de la location #${selectedRes.id.toUpperCase()}` : `تسجيل إرجاع الحجز #${selectedRes.id.toUpperCase()}`}
               </h3>
@@ -362,7 +362,7 @@ export default function Retours({
                             className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg border cursor-pointer text-center ${
                               conditionItems[item.id] === 'excellent' 
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
-                                : 'bg-white border-gray-200/80 text-gray-500 hover:bg-slate-50'
+                                : 'bg-white border-neutral-200 text-gray-500 hover:bg-slate-50'
                             }`}
                           >
                             ✓ {language === 'fr' ? 'Intact' : 'سليم'}
@@ -373,7 +373,7 @@ export default function Retours({
                             className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg border cursor-pointer text-center ${
                               conditionItems[item.id] === 'degrade' 
                                 ? 'bg-red-50 border-red-200 text-red-700' 
-                                : 'bg-white border-gray-200/80 text-gray-500 hover:bg-slate-50'
+                                : 'bg-white border-neutral-200 text-gray-500 hover:bg-slate-50'
                             }`}
                           >
                             ⚠️ {language === 'fr' ? 'Abîmé' : 'تالف'}
@@ -391,7 +391,7 @@ export default function Retours({
                             className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg border cursor-pointer text-center ${
                               maintenanceItems[item.id] === 'disponible' 
                                 ? 'bg-violet-50 border-violet-200 text-violet-700' 
-                                : 'bg-white border-gray-200/80 text-gray-500 hover:bg-slate-50'
+                                : 'bg-white border-neutral-200 text-gray-500 hover:bg-slate-50'
                             }`}
                           >
                             💍 {language === 'fr' ? 'Rayon' : 'الرف'}
@@ -402,7 +402,7 @@ export default function Retours({
                             className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-lg border cursor-pointer text-center ${
                               maintenanceItems[item.id] === 'en_entretien' 
                                 ? 'bg-gray-200 border-gray-300 text-gray-700' 
-                                : 'bg-white border-gray-200/80 text-gray-500 hover:bg-slate-50'
+                                : 'bg-white border-neutral-200 text-gray-500 hover:bg-slate-50'
                             }`}
                           >
                             🧼 {language === 'fr' ? 'Nettoyage' : 'تنظيف'}

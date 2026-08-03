@@ -145,14 +145,14 @@ export default function Statistiques({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            📊 {language === 'fr' ? 'Analyses & Statistiques Commerciales' : 'لوحة التحليلات والإحصائيات للصالون'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Analyses & Statistiques Commerciales' : 'لوحة التحليلات والإحصائيات للصالون'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Visualisez l'évolution du chiffre d'affaires et identifiez vos meilleures ventes.`
               : `تابعي نمو مداخيلك، واعرفي السلع الأكثر طلباً وتأجيراً لزيادة أرباحك.`}
@@ -162,7 +162,7 @@ export default function Statistiques({
 
       {/* Grid numbers */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus Aujourd'hui</span>
           <p className="text-xl font-black text-violet-600 font-mono">{formatDa(revenueToday)}</p>
           <span className="text-[9px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-bold inline-block mt-2">
@@ -170,19 +170,19 @@ export default function Statistiques({
           </span>
         </div>
 
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus de la Semaine</span>
           <p className="text-xl font-black text-gray-900 font-mono">{formatDa(revenueWeek)}</p>
           <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? 'Derniers 7 jours' : 'آخر 7 أيام'}</span>
         </div>
 
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus du Mois</span>
           <p className="text-xl font-black text-gray-900 font-mono">{formatDa(revenueMonth)}</p>
           <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? 'Juillet 2026' : 'جويلية 2026'}</span>
         </div>
 
-        <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus Annuels (Cumul)</span>
           <p className="text-xl font-black text-gray-900 font-mono">{formatDa(revenueYear)}</p>
           <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? 'Année civile 2026' : 'سنة 2026'}</span>
@@ -193,7 +193,7 @@ export default function Statistiques({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: Monthly Revenue Evolution Graph */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-neutral-200">
           <div className={`flex justify-between items-center mb-6 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <div>
               <h3 className="text-base font-bold text-gray-900">{t.revenue_chart}</h3>
@@ -290,7 +290,7 @@ export default function Statistiques({
         </div>
 
         {/* Right: Key metrics summary overview */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-gray-900 mb-5">{t.stats_overview}</h3>
 
@@ -327,7 +327,7 @@ export default function Statistiques({
             </div>
           </div>
 
-          <div className="pt-6 border-t border-dashed border-gray-200/80 text-xs text-gray-400 text-center font-medium leading-relaxed mt-6">
+          <div className="pt-6 border-t border-dashed border-neutral-200 text-xs text-gray-400 text-center font-medium leading-relaxed mt-6">
             {language === 'fr' 
               ? 'Toutes les statistiques sont basées sur le registre de ventes réelles du magasin Maison Zeyna.' 
               : 'جميع الإحصائيات دقيقة ومستخرجة من سجلات البيع الفعلية للمحل.'}
@@ -340,7 +340,7 @@ export default function Statistiques({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* Popular Dresses */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
+        <div className="bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
             <Layers size={16} className="text-purple-600" />
             <span>{t.popular_dresses}</span>
@@ -365,7 +365,7 @@ export default function Statistiques({
         </div>
 
         {/* Popular Accessories */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
+        <div className="bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
             <Gem size={16} className="text-blue-500" />
             <span>{t.popular_jewelry}</span>
@@ -390,7 +390,7 @@ export default function Statistiques({
         </div>
 
         {/* Active Clients */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col">
+        <div className="bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
             <Users size={16} className="text-emerald-500" />
             <span>{t.active_clients}</span>
