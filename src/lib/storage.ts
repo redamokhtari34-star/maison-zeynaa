@@ -805,6 +805,33 @@ export function getFullDatabaseState() {
   };
 }
 
+// Download the whole database as a timestamped JSON backup. Everything lives
+// in the browser (and, when configured, Supabase), so this is the escape hatch
+// that lets the shop keep a copy of its own records.
+export function exportDatabaseToFile() {
+  const state = getFullDatabaseState();
+  const payload = {
+    application: 'Maison Zeyna',
+    exported_at: new Date().toISOString(),
+    version: 1,
+    ...state
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `maison-zeyna-${stamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  return payload;
+}
+
 // Log a business action
 export function addHistoryEntry(action: string, details: string, user: string = 'Zeyna') {
   const history = getHistory();

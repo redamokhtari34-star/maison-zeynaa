@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
 import Robes from './components/Robes';
 import Bijoux from './components/Bijoux';
@@ -44,15 +45,31 @@ export default function App() {
     return getFullDatabaseState();
   });
   const [supabaseSyncing, setSupabaseSyncing] = useState(false);
+  // Whether the last sync actually reached the cloud. Drives the status pill,
+  // which must never claim "synchronised" when it isn't.
+  const [cloudReachable, setCloudReachable] = useState(false);
 
   const refreshFromSupabase = async () => {
     setSupabaseSyncing(true);
     try {
-      await cleanFinancialsAndReservationsForProduction();
-      const remoteState = await fetchFullDatabaseStateFromSupabase();
+      // A dropped connection can leave these requests pending indefinitely, so
+      // cap the wait — otherwise the status would spin forever and the app
+      // would look stuck rather than simply offline.
+      const withTimeout = <T,>(p: Promise<T>, ms = 12000) =>
+        Promise.race([
+          p,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Supabase sync timed out')), ms)
+          )
+        ]);
+
+      await withTimeout(cleanFinancialsAndReservationsForProduction());
+      const remoteState = await withTimeout(fetchFullDatabaseStateFromSupabase());
       setDb(remoteState);
+      setCloudReachable(true);
     } catch (err) {
       console.warn('Could not sync with Supabase:', err);
+      setCloudReachable(false);
     } finally {
       setSupabaseSyncing(false);
     }
@@ -92,6 +109,15 @@ export default function App() {
   };
 
   const isRtl = language === 'ar';
+
+  // Feeds the top bar: what actually needs the manager's attention today.
+  const todayStr = '2026-07-21';
+  const alertCount = db.reservations.filter(
+    r => r.statut === 'en_retard' || (r.date_retour === todayStr && r.statut === 'en_cours')
+  ).length;
+
+  // Configured *and* proven reachable by the last sync.
+  const cloudConnected = getSupabaseClient() !== null && cloudReachable;
 
   // Dynamic Save and update proxies
   const handleSaveDresses = (updatedDresses: Dress[]) => {
@@ -275,7 +301,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-neutral-100 flex ${isRtl ? 'flex-row-reverse' : 'flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-neutral-50 ${isRtl ? 'flex flex-row-reverse' : 'flex flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
       <Sidebar
         currentTab={currentTab}
@@ -285,10 +311,20 @@ export default function App() {
         transactions={db.transactions}
       />
 
-      {/* Main Container viewport — clears the mobile top bar and bottom tab bar,
-          and the floating desktop rail. */}
-      <main className={`flex-1 px-4 pt-20 pb-32 sm:px-6 lg:p-8 lg:pb-8 transition-all ${
-        isRtl ? 'lg:pr-[268px]' : 'lg:pl-[268px]'
+      <TopBar
+        language={language}
+        dresses={db.dresses}
+        bijoux={db.bijoux}
+        clientes={db.clientes}
+        alertCount={alertCount}
+        syncing={supabaseSyncing}
+        cloudConnected={cloudConnected}
+        setCurrentTab={setCurrentTab}
+      />
+
+      {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
+      <main className={`flex-1 px-4 pt-24 pb-12 sm:px-6 lg:px-8 ${
+        isRtl ? 'lg:pr-[272px]' : 'lg:pl-[272px]'
       }`}>
         {renderTabContent()}
       </main>
