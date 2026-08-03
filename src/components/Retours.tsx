@@ -15,6 +15,8 @@ import {
 import { Reservation, Dress, Bijou, Language, Transaction } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapReservationToDb, mapTransactionToDb } from '../lib/storage';
+import { todayIso } from '../lib/dates';
+import { notifyError } from '../lib/toast';
 
 interface RetoursProps {
   reservations: Reservation[];
@@ -44,7 +46,7 @@ export default function Retours({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -118,7 +120,7 @@ export default function Retours({
     if (supabase) {
       const { error: resErr } = await supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', selectedRes.id);
       if (resErr) {
-        alert(`Erreur Supabase (Retour réservation): ${resErr.message}`);
+        notifyError(`Erreur Supabase (Retour réservation): ${resErr.message}`);
         console.error('Supabase return reservation error:', resErr);
       }
     }

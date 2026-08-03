@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Reservation, Dress, Cliente, Bijou, Language } from '../types';
 import { translations } from '../translations';
 import { getSupabaseClient } from '../lib/storage';
+import { todayIso } from '../lib/dates';
 
 interface CalendrierProps {
   reservations: Reservation[];
@@ -48,7 +49,7 @@ export default function Calendrier({
 
   // Current viewed date for month/year navigation
   const [currentDate, setCurrentDate] = useState(() => new Date(2026, 6, 1)); // Default July 2026
-  const [selectedDay, setSelectedDay] = useState<string | null>('2026-07-22');
+  const [selectedDay, setSelectedDay] = useState<string | null>(todayIso());
   const [statusFilter, setStatusFilter] = useState<'all' | 'en_cours' | 'future' | 'retourne'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredRes, setHoveredRes] = useState<Reservation | null>(null);
@@ -184,7 +185,7 @@ export default function Calendrier({
   const handleToday = () => {
     const now = new Date(2026, 6, 22); // July 2026
     setCurrentDate(now);
-    setSelectedDay('2026-07-22');
+    setSelectedDay(todayIso());
   };
 
   const monthNamesFr = [
@@ -508,7 +509,7 @@ export default function Calendrier({
           <div className="grid grid-cols-7 gap-1.5">
             {calendarCells.map((cell, index) => {
               const dayReservations = getReservationsForDate(cell.dateStr);
-              const isToday = cell.dateStr === '2026-07-22';
+              const isToday = cell.dateStr === todayIso();
               const isSelected = cell.dateStr === selectedDay;
               const hasReservations = dayReservations.length > 0;
 
@@ -614,7 +615,7 @@ export default function Calendrier({
               </p>
             </div>
 
-            {selectedDay === '2026-07-22' && (
+            {selectedDay === todayIso() && (
               <span className="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-lg">
                 {language === 'fr' ? "Aujourd'hui" : 'اليوم'}
               </span>

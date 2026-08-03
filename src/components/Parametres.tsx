@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
-import { 
-  resetDatabaseToDefaults, 
+import {
+  resetDatabaseToDefaults,
   addHistoryEntry, 
   getFullDatabaseState, 
   saveDresses, 
@@ -24,6 +24,7 @@ import {
   saveReservations, 
   saveTransactions 
 } from '../lib/storage';
+import { notifyError } from '../lib/toast';
 
 interface ParametresProps {
   language: Language;
@@ -79,11 +80,11 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
             if (parsed.reservations) saveReservations(parsed.reservations);
             if (parsed.transactions) saveTransactions(parsed.transactions);
 
-            alert(language === 'fr' ? 'Restauration réussie !' : 'تم استيراد البيانات بنجاح !');
+            notifyError(language === 'fr' ? 'Restauration réussie !' : 'تم استيراد البيانات بنجاح !');
             window.location.reload();
           }
         } catch (err) {
-          alert(language === 'fr' ? 'Format de fichier de sauvegarde non valide !' : 'صيغة ملف غير صحيحة !');
+          notifyError(language === 'fr' ? 'Format de fichier de sauvegarde non valide !' : 'صيغة ملف غير صحيحة !');
         }
       };
     }

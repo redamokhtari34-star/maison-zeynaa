@@ -20,6 +20,8 @@ import {
 import { Transaction, TransactionType, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapTransactionToDb, updateTresorerieInDb } from '../lib/storage';
+import { todayIso } from '../lib/dates';
+import { notifyError } from '../lib/toast';
 
 interface CaisseProps {
   transactions: Transaction[];
@@ -41,7 +43,7 @@ export default function Caisse({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // Forms states
   const [isExpenseOpen, setIsExpenseOpen] = useState(initialOpenExpense || false);
@@ -97,7 +99,7 @@ export default function Caisse({
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (montant <= 0 || !desc) {
-      alert(language === 'fr' ? 'Saisissez un montant et une description valides.' : 'يرجى إدخال مبلغ ووصف صحيحين.');
+      notifyError(language === 'fr' ? 'Saisissez un montant et une description valides.' : 'يرجى إدخال مبلغ ووصف صحيحين.');
       return;
     }
 
@@ -118,7 +120,7 @@ export default function Caisse({
     if (supabase) {
       const { error } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase insert transaction error:', error);
       }
       await updateTresorerieInDb();
@@ -155,12 +157,12 @@ export default function Caisse({
     const amountToWithdraw = Number(retraitMontant);
 
     if (isNaN(amountToWithdraw) || amountToWithdraw <= 0) {
-      alert(language === 'fr' ? 'Le montant doit être supérieur à 0 DA.' : 'يجب أن يكون المبلغ أكبر من 0 دج.');
+      notifyError(language === 'fr' ? 'Le montant doit être supérieur à 0 DA.' : 'يجب أن يكون المبلغ أكبر من 0 دج.');
       return;
     }
 
     if (amountToWithdraw > currentBalance) {
-      alert(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
+      notifyError(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
       return;
     }
 
@@ -188,7 +190,7 @@ export default function Caisse({
     if (supabase) {
       const { error } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase insert transaction error:', error);
       }
       await updateTresorerieInDb();

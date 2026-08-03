@@ -16,14 +16,17 @@ const KEYS = {
   NOTEBOOK: 'zeyna_notebook_v1'
 };
 
-// Global in-memory state store
+// Global in-memory state store.
+// The catalogues ship with the app so the shop has something to work with
+// before the first cloud sync — the ledgers (clients, bookings, cash) start
+// empty and are only ever filled by real activity.
 const memoryState = {
-  dresses: [] as Dress[],
-  bijoux: [] as Bijou[],
+  dresses: sampleDresses as Dress[],
+  bijoux: sampleBijoux as Bijou[],
   clientes: [] as Cliente[],
   reservations: [] as Reservation[],
   transactions: [] as Transaction[],
-  history: sampleHistory as HistoriqueAction[],
+  history: [] as HistoriqueAction[],
   profile: defaultStoreProfile as StoreProfile
 };
 
@@ -101,7 +104,7 @@ function autoUpdateStatuses(
   dresses: Dress[],
   bijoux: Bijou[]
 ): { reservations: Reservation[]; dresses: Dress[]; bijoux: Bijou[] } {
-  const todayStr = new Date('2026-07-21T02:23:27-07:00').toISOString().split('T')[0]; // Current mock date from metadata
+  const todayStr = todayIso();
 
   // Create lookup maps or deep copies
   const updatedReservations = reservations.map(r => {
@@ -172,6 +175,8 @@ function autoUpdateStatuses(
 }
 
 import { DressCategory, DressStatus, ReservationStatus, ReservationItem, TransactionType } from '../types';
+import { todayIso } from './dates';
+import { notifyError } from './toast';
 
 // Helper to check if string is a valid UUID
 export function isUuid(val: any): boolean {
@@ -490,7 +495,7 @@ export async function syncTableToSupabase<TLocal, TDb>(
     const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id');
     if (fetchError) {
       console.error(`Failed to fetch IDs from ${tableName} for sync:`, fetchError);
-      alert(`Erreur Supabase (${tableName} Sync): ${fetchError.message}`);
+      notifyError(`Erreur Supabase (${tableName} Sync): ${fetchError.message}`);
       return;
     }
 
@@ -503,7 +508,7 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: deleteError } = await supabase.from(tableName).delete().in('id', idsToDelete);
       if (deleteError) {
         console.error(`Failed to delete removed rows from ${tableName}:`, deleteError);
-        alert(`Erreur Supabase (${tableName} Delete): ${deleteError.message}`);
+        notifyError(`Erreur Supabase (${tableName} Delete): ${deleteError.message}`);
       }
     }
 
@@ -513,12 +518,12 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: upsertError } = await supabase.from(tableName).upsert(dbRows as any);
       if (upsertError) {
         console.error(`Failed to upsert to ${tableName}:`, upsertError);
-        alert(`Erreur Supabase (${tableName} Upsert): ${upsertError.message}`);
+        notifyError(`Erreur Supabase (${tableName} Upsert): ${upsertError.message}`);
       }
     }
   } catch (err: any) {
     console.error(`Error in syncTableToSupabase for ${tableName}:`, err);
-    alert(`Erreur de connexion Supabase (${tableName}): ${err?.message || err}`);
+    notifyError(`Erreur de connexion Supabase (${tableName}): ${err?.message || err}`);
   }
 }
 
@@ -685,23 +690,18 @@ export async function fetchFullDatabaseStateFromSupabase() {
 
   if (dressesErr) {
     console.error('Error loading robes from Supabase:', dressesErr);
-    alert("Erreur Supabase (Chargement robes) : " + dressesErr.message);
   }
   if (bijouxErr) {
     console.error('Error loading bijoux from Supabase:', bijouxErr);
-    alert("Erreur Supabase (Chargement bijoux) : " + bijouxErr.message);
   }
   if (clientsErr) {
     console.error('Error loading clients from Supabase:', clientsErr);
-    alert("Erreur Supabase (Chargement clients) : " + clientsErr.message);
   }
   if (reservationsErr) {
     console.error('Error loading reservations from Supabase:', reservationsErr);
-    alert("Erreur Supabase (Chargement réservations) : " + reservationsErr.message);
   }
   if (transactionsErr) {
     console.error('Error loading mouvements_caisse from Supabase:', transactionsErr);
-    alert("Erreur Supabase (Chargement caisse) : " + transactionsErr.message);
   }
 
   // Load dresses, bijoux, clientes, reservations, transactions ONLY and DIRECTLY from Supabase
@@ -864,7 +864,7 @@ export function exportDatabaseToFile() {
 // Log a business action
 export function addHistoryEntry(action: string, details: string, user: string = 'Zeyna') {
   const history = getHistory();
-  const today = new Date('2026-07-21T02:23:27-07:00');
+  const today = new Date();
   const dateStr = today.toISOString().split('T')[0];
   const timeStr = today.toTimeString().split(' ')[0].substring(0, 5);
 

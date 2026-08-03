@@ -17,6 +17,8 @@ import {
 import { Reservation, Cliente, Dress, Bijou, Language, ReservationItem, Transaction } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactions, getSupabaseClient, mapReservationToDb, mapTransactionToDb, isUuid } from '../lib/storage';
+import { todayIso, isoInDays, nowTime } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
 
 interface ReservationsProps {
   reservations: Reservation[];
@@ -52,7 +54,7 @@ export default function Reservations({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,7 +72,7 @@ export default function Reservations({
   const [clientNameInput, setClientNameInput] = useState('');
   const [clientPhoneInput, setClientPhoneInput] = useState('');
   const [dateSortie, setDateSortie] = useState(todayStr);
-  const [dateRetour, setDateRetour] = useState('2026-07-24');
+  const [dateRetour, setDateRetour] = useState(isoInDays(3));
   const [selectedDresses, setSelectedDresses] = useState<Dress[]>([]);
   const [selectedBijoux, setSelectedBijoux] = useState<Bijou[]>([]);
   const [montantPaye, setMontantPaye] = useState<number>(0);
@@ -135,7 +137,7 @@ export default function Reservations({
       if (supabase) {
         const { error } = await supabase.from('reservations').delete().eq('id', id);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase delete reservation error:', error);
         }
       }
@@ -171,7 +173,7 @@ export default function Reservations({
       if (supabase) {
         const { error } = await supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', res.id);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase update reservation balance error:', error);
         }
       }
@@ -195,7 +197,7 @@ export default function Reservations({
       if (supabase) {
         const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
         if (trError) {
-          alert(`Erreur Supabase (Ajout mouvement caisse): ${trError.message}`);
+          notifyError(`Erreur Supabase (Ajout mouvement caisse): ${trError.message}`);
           console.error('Supabase insert transaction error:', trError);
         }
       }
@@ -216,7 +218,7 @@ export default function Reservations({
     setClientNameInput('');
     setClientPhoneInput('');
     setDateSortie(todayStr);
-    setDateRetour('2026-07-24');
+    setDateRetour(isoInDays(3));
     setSelectedDresses([]);
     setSelectedBijoux([]);
     setMontantPaye(0);
@@ -238,7 +240,7 @@ export default function Reservations({
         const warningMsg = language === 'fr'
           ? `La robe "${dress.nom}" est déjà réservée par ${conflictClient} du ${avail.conflictingReservation!.date_sortie} au ${avail.conflictingReservation!.date_retour}.`
           : `الفستان "${dress.nom}" محجوز بالفعل للزبونة ${conflictClient} من ${avail.conflictingReservation!.date_sortie} إلى ${avail.conflictingReservation!.date_retour}.`;
-        alert(warningMsg);
+        notifyError(warningMsg);
         return;
       }
       setSelectedDresses([...selectedDresses, dress]);
@@ -257,7 +259,7 @@ export default function Reservations({
         const warningMsg = language === 'fr'
           ? `L'accessoire "${bijou.nom}" est déjà réservé par ${conflictClient} du ${avail.conflictingReservation!.date_sortie} au ${avail.conflictingReservation!.date_retour}.`
           : `الإكسسوار "${bijou.nom}" محجوز بالفعل للزبونة ${conflictClient} من ${avail.conflictingReservation!.date_sortie} إلى ${avail.conflictingReservation!.date_retour}.`;
-        alert(warningMsg);
+        notifyError(warningMsg);
         return;
       }
       setSelectedBijoux([...selectedBijoux, bijou]);
@@ -268,13 +270,13 @@ export default function Reservations({
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedDresses.length === 0 && selectedBijoux.length === 0) {
-      alert(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
+      notifyError(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
       return;
     }
 
     const clientName = clientNameInput.trim();
     if (!clientName) {
-      alert(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
+      notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
       return;
     }
 
@@ -283,14 +285,15 @@ export default function Reservations({
     // Keep the local client file in step with what was typed: record a new
     // client, or fill in / correct the number of one already on file.
     const localMatch = findClientByName(clientName);
+    const localClientId = localMatch?.id ?? `cl-${Date.now()}`;
     if (!localMatch) {
       onSaveClientes([
         ...clientes,
         {
-          id: `cl-${Date.now()}`,
+          id: localClientId,
           nom_complet: clientName,
           telephone: clientPhone,
-          date_creation: new Date().toISOString().split('T')[0]
+          date_creation: todayStr
         }
       ]);
     } else if (clientPhone && clientPhone !== localMatch.telephone) {
@@ -299,11 +302,76 @@ export default function Reservations({
       );
     }
 
+    // ── Record locally first ────────────────────────────────────────────
+    // The shop must be able to take a booking with the network down, so the
+    // reservation is committed on the device before the cloud is contacted.
+    const localResId = `r-${Date.now()}`;
+    const localItems: ReservationItem[] = [
+      ...selectedDresses.map(d => ({
+        id: `it-${d.id}`,
+        reservation_id: localResId,
+        type_article: 'robe' as const,
+        article_id: d.id,
+        prix_da: d.prix_location_da,
+        nom_article: d.nom
+      })),
+      ...selectedBijoux.map(b => ({
+        id: `it-${b.id}`,
+        reservation_id: localResId,
+        type_article: 'bijou' as const,
+        article_id: b.id,
+        prix_da: b.prix_location_da,
+        nom_article: b.nom
+      }))
+    ];
+
+    const localReservation: Reservation = {
+      id: localResId,
+      cliente_id: localClientId,
+      date_sortie: dateSortie,
+      date_retour: dateRetour,
+      montant_total_da: totalCost,
+      caution_da: totalCaution,
+      montant_paye_da: montantPaye,
+      reste_a_payer_da: remainingCost,
+      statut: dateSortie > todayStr ? 'future' : 'en_cours',
+      notes,
+      date_creation: todayStr,
+      items: localItems
+    };
+    onSaveReservations([localReservation, ...reservations]);
+
+    if (montantPaye > 0) {
+      onAddTransaction({
+        id: `t-${Date.now()}`,
+        type: 'entree',
+        montant_da: montantPaye,
+        description: `Acompte Réservation - ${clientName}`,
+        categorie: 'Réservation',
+        date: todayStr,
+        heure: nowTime(),
+        utilisateur: 'Zeyna',
+        source_argent: 'caisse'
+      } as Transaction);
+    }
+
+    addHistoryEntry(
+      language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد',
+      `Réservation créée pour ${clientName}. Total: ${formatDa(totalCost)}.`
+    );
+
+    setIsWizardOpen(false);
+
+    // ── Then mirror it to the cloud, best effort ────────────────────────
     const supabase = getSupabaseClient();
     if (!supabase) {
-      alert("Erreur Supabase : Client Supabase non initialisé");
+      notifySuccess(language === 'fr'
+        ? 'Réservation enregistrée sur cet appareil (cloud non configuré).'
+        : 'تم حفظ الحجز على هذا الجهاز (السحابة غير مهيأة).');
       return;
     }
+
+    try {
 
     const existingClient = clientes.find(c => c.nom_complet.trim().toLowerCase() === clientName.toLowerCase() || c.id === clientName);
     let validUuidClientId = existingClient && isUuid(existingClient.id) ? existingClient.id : null;
@@ -331,11 +399,7 @@ export default function Reservations({
           adresse: existingClient?.adresse || ''
         }]).select();
 
-        if (clientErr) {
-          alert("Erreur Supabase (Création cliente) : " + clientErr.message);
-          console.error('Supabase client insert error:', clientErr);
-          return;
-        }
+        if (clientErr) throw new Error(clientErr.message);
 
         if (newClientData && newClientData[0] && isUuid(newClientData[0].id)) {
           validUuidClientId = newClientData[0].id;
@@ -389,38 +453,34 @@ export default function Reservations({
       }
     }
 
-    if (resError) {
-      alert("Erreur Supabase (Création réservation) : " + resError.message);
-      console.error('Supabase insert reservation error:', resError);
-      return;
-    }
+      if (resError) throw new Error(resError.message);
 
-    if (montantPaye > 0) {
-      const trRowToInsert = {
-        type: 'entree',
-        montant: montantPaye,
-        source: 'caisse',
-        beneficiaire: null,
-        motif: `Acompte Réservation - ${clientName}`
-      };
+      if (montantPaye > 0) {
+        const trRowToInsert = {
+          type: 'entree',
+          montant: montantPaye,
+          source: 'caisse',
+          beneficiaire: null,
+          motif: `Acompte Réservation - ${clientName}`
+        };
 
-      const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
-      if (trError) {
-        alert("Erreur Supabase : " + trError.message);
-        console.error('Supabase insert transaction error:', trError);
+        const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
+        if (trError) throw new Error(trError.message);
       }
+
+      notifySuccess(language === 'fr'
+        ? 'Réservation enregistrée et synchronisée.'
+        : 'تم حفظ الحجز ومزامنته.');
+
+      // Only pull the cloud copy back once it holds this booking, otherwise the
+      // refresh would overwrite the local record we just committed.
+      await onRefreshData?.();
+    } catch (err) {
+      console.error('Could not sync reservation to Supabase:', err);
+      notifyError(language === 'fr'
+        ? "Réservation enregistrée sur cet appareil, mais la synchronisation avec le cloud a échoué. Elle sera visible ici en attendant."
+        : 'تم حفظ الحجز على هذا الجهاز، لكن فشلت المزامنة مع السحابة.');
     }
-
-    alert("Réservation enregistrée avec succès !");
-    await onRefreshData?.();
-
-    // Log in activity history
-    addHistoryEntry(
-      language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد',
-      `Réservation créée pour ${clientName}. Total: ${formatDa(totalCost)}.`
-    );
-
-    setIsWizardOpen(false);
   };
 
   // Filter reservations
@@ -1048,11 +1108,11 @@ export default function Reservations({
                   onClick={() => {
                     if (wizardStep === 1) {
                       if (!clientNameInput.trim() || !dateSortie || !dateRetour) {
-                        alert(language === 'fr' ? 'Veuillez renseigner le nom de la cliente et toutes les dates.' : 'يرجى كتابة اسم الزبونة وتحديد التواريخ.');
+                        notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente et toutes les dates.' : 'يرجى كتابة اسم الزبونة وتحديد التواريخ.');
                         return;
                       }
                       if (dateSortie > dateRetour) {
-                        alert(language === 'fr' ? 'La date de retour doit être après la date de sortie !' : 'تاريخ الإرجاع يجب أن يكون بعد تاريخ الخروج !');
+                        notifyError(language === 'fr' ? 'La date de retour doit être après la date de sortie !' : 'تاريخ الإرجاع يجب أن يكون بعد تاريخ الخروج !');
                         return;
                       }
                     }

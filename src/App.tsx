@@ -14,6 +14,7 @@ import Documents from './components/Documents';
 import Parametres from './components/Parametres';
 import BlocNotes from './components/BlocNotes';
 import Equipe from './components/Equipe';
+import Toaster from './components/Toaster';
 
 import { 
   Language, 
@@ -39,13 +40,14 @@ import {
   seedSupabaseWithSampleData,
   cleanFinancialsAndReservationsForProduction
 } from './lib/storage';
+import { todayIso } from './lib/dates';
+import { notifySuccess } from './lib/toast';
 
 export default function App() {
-  // Lazily load full database state once on mount
-  const [db, setDb] = useState(() => {
-    cleanFinancialsAndReservationsForProduction();
-    return getFullDatabaseState();
-  });
+  // Lazily load full database state once on mount.
+  // NB: this must never wipe anything — resetting the shop's records is an
+  // explicit action from Paramètres, not a side effect of opening the app.
+  const [db, setDb] = useState(() => getFullDatabaseState());
   const [supabaseSyncing, setSupabaseSyncing] = useState(false);
   // Whether the last sync actually reached the cloud. Drives the status pill,
   // which must never claim "synchronised" when it isn't.
@@ -65,7 +67,6 @@ export default function App() {
           )
         ]);
 
-      await withTimeout(cleanFinancialsAndReservationsForProduction());
       const remoteState = await withTimeout(fetchFullDatabaseStateFromSupabase());
       setDb(remoteState);
       setCloudReachable(true);
@@ -113,7 +114,7 @@ export default function App() {
   const isRtl = language === 'ar';
 
   // Feeds the top bar: what actually needs the manager's attention today.
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
   const alertCount = db.reservations.filter(
     r => r.statut === 'en_retard' || (r.date_retour === todayStr && r.statut === 'en_cours')
   ).length;
@@ -155,15 +156,21 @@ export default function App() {
     setDb(prev => ({ ...prev, transactions: updated }));
   };
 
-  // Reset database back to production mode
+  // Wipe reservations, clients and cash records — irreversible, so it is
+  // confirmed explicitly and never runs on its own.
   const handleResetDatabase = async () => {
+    const warning = language === 'fr'
+      ? 'Cette action supprime définitivement toutes les réservations, les clientes et tous les mouvements de caisse, y compris dans le cloud. Les catalogues de robes et de bijoux sont conservés.\n\nVoulez-vous vraiment continuer ?'
+      : 'سيؤدي هذا إلى حذف جميع الحجوزات والزبونات وحركات الصندوق نهائياً، بما في ذلك في السحابة. سيتم الاحتفاظ بكتالوج الفساتين والمجوهرات.\n\nهل تريد المتابعة؟';
+    if (!window.confirm(warning)) return;
+
     await cleanFinancialsAndReservationsForProduction();
     const freshDb = getFullDatabaseState();
     setDb(freshDb);
     setCurrentTab('accueil');
-    alert(language === 'fr' 
-      ? 'Mise en production effectuée : Trésorerie et réservations réinitialisées à 0 DA. L’intégralité des catalogues de robes (78) et bijoux (400) a été conservée intacte avec le statut "Disponible".' 
-      : 'تمت التهيئة للإنتاج: تم إعادة ضبط الخزينة والحجوزات إلى 0 د.ج مع الحفاظ على الكتالوج كاملاً.');
+    notifySuccess(language === 'fr'
+      ? 'Réinitialisation effectuée : trésorerie et réservations remises à zéro, catalogues conservés.'
+      : 'تمت إعادة الضبط: الخزينة والحجوزات صفر، مع الحفاظ على الكتالوج.');
   };
 
   // Switch rendered tabs
@@ -317,6 +324,8 @@ export default function App() {
         setLanguage={setLanguage}
         transactions={db.transactions}
       />
+
+      <Toaster />
 
       <TopBar
         language={language}

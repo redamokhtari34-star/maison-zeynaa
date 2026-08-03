@@ -15,6 +15,7 @@ import { Bijou, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapBijouToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
 import { generate200Bijoux } from '../data/sampleData';
+import { notifyError } from '../lib/toast';
 
 interface BijouxProps {
   bijoux: Bijou[];
@@ -100,7 +101,7 @@ export default function Bijoux({
           }
         } catch (err: any) {
           console.error(`Erreur upload bijou ${i + 1}/${files.length} sur Supabase:`, err);
-          alert(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
+          notifyError(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
 
           const base64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
@@ -165,7 +166,7 @@ export default function Bijoux({
         `La collection d'accessoires a été mise à jour à 200 pièces.`
       );
 
-      alert(language === 'fr' 
+      notifyError(language === 'fr' 
         ? `La collection a été mise à jour avec succès à 200 bijoux !` 
         : `تم تحديث المجموعة بنجاح إلى 200 قطعة إكسسوار!`);
 
@@ -218,7 +219,7 @@ export default function Bijoux({
       if (supabase) {
         const { error } = await supabase.from('bijoux').delete().eq('id', bijouId);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase delete bijou error:', error);
         }
       }
@@ -242,7 +243,7 @@ export default function Bijoux({
     if (supabase) {
       const { error } = await supabase.from('bijoux').update({ statut: targetStatus }).eq('id', bijouId);
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase update bijou status error:', error);
       }
     }
@@ -269,7 +270,7 @@ export default function Bijoux({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom || !categorie) {
-      alert(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
+      notifyError(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
       return;
     }
 
@@ -315,7 +316,7 @@ export default function Bijoux({
           error = retry.error;
         }
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase update bijou error:', error);
         }
       }
@@ -330,7 +331,7 @@ export default function Bijoux({
       );
     } else {
       if (!supabase) {
-        alert("Erreur Supabase : Client Supabase non initialisé");
+        notifyError("Erreur Supabase : Client Supabase non initialisé");
         return;
       }
 
@@ -352,12 +353,12 @@ export default function Bijoux({
       }
 
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase insert bijou error:', error);
         return;
       }
 
-      alert("Accessoire ajouté avec succès !");
+      notifyError("Accessoire ajouté avec succès !");
 
       await onRefreshData?.();
 

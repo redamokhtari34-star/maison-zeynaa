@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
+import { todayIso, isoInDays } from '../lib/dates';
 
 interface DashboardProps {
   db: ReturnType<typeof import('../lib/storage').getFullDatabaseState>;
@@ -36,7 +37,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21'; // App static date for calculation consistency
+  const todayStr = todayIso();
   const [period, setPeriod] = useState<Period>('mois');
 
   // A transaction counts towards the selected period when its date falls in it.
@@ -118,7 +119,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     }
   });
 
-  const soonStr = '2026-07-25';
+  const soonStr = isoInDays(4);
   db.reservations.forEach(r => {
     if (r.date_sortie > todayStr && r.date_sortie <= soonStr && r.statut === 'future') {
       const client = db.clientes.find(c => c.id === r.cliente_id);

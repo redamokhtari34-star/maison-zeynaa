@@ -19,6 +19,7 @@ import { Dress, DressCategory, DressStatus, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
 import { generateAdditionalDresses } from '../data/sampleData';
+import { notifyError } from '../lib/toast';
 
 interface RobesProps {
   dresses: Dress[];
@@ -121,7 +122,7 @@ export default function Robes({
           }
         } catch (err: any) {
           console.error(`Erreur d'envoi de l'image ${i + 1}/${files.length} sur Supabase Storage:`, err);
-          alert(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
+          notifyError(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
 
           // Sequential fallback read base64 if upload failed
           const base64 = await new Promise<string>((resolve) => {
@@ -208,7 +209,7 @@ export default function Robes({
         `70 nouvelles robes ont été ajoutées au catalogue (Total: ${updatedList.length}).`
       );
 
-      alert(language === 'fr' 
+      notifyError(language === 'fr' 
         ? `70 nouvelles robes ont été ajoutées avec succès ! Total : ${updatedList.length} robes.` 
         : `تمت إضافة 70 فستان جديد بنجاح! المجموع: ${updatedList.length} فستان.`);
 
@@ -245,7 +246,7 @@ export default function Robes({
           `${dressesToRemove.length} robes ont été retirées du catalogue (Total restants: 70).`
         );
 
-        alert(language === 'fr' 
+        notifyError(language === 'fr' 
           ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes ! (${dressesToRemove.length} robes en trop supprimées)` 
           : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
       } else if (dresses.length < 70) {
@@ -266,11 +267,11 @@ export default function Robes({
           `${needed} robes ont été ajoutées au catalogue (Total: 70).`
         );
 
-        alert(language === 'fr' 
+        notifyError(language === 'fr' 
           ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes !` 
           : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
       } else {
-        alert(language === 'fr' ? 'Il y a déjà exactement 70 robes.' : 'يوجد بالفعل 70 فستان بالضبط.');
+        notifyError(language === 'fr' ? 'Il y a déjà exactement 70 robes.' : 'يوجد بالفعل 70 فستان بالضبط.');
         return;
       }
 
@@ -314,7 +315,7 @@ export default function Robes({
       if (supabase) {
         const { error } = await supabase.from('robes').delete().eq('id', dressId);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase delete error:', error);
         }
       }
@@ -338,7 +339,7 @@ export default function Robes({
     if (supabase) {
       const { error } = await supabase.from('robes').update({ statut: targetStatus }).eq('id', dressId);
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase update status error:', error);
       }
     }
@@ -365,7 +366,7 @@ export default function Robes({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom || !couleur || !taille) {
-      alert(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
+      notifyError(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
       return;
     }
 
@@ -404,7 +405,7 @@ export default function Robes({
       if (supabase) {
         const { error } = await supabase.from('robes').update(mapDressToDb(updatedDressObj)).eq('id', editingDress.id);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase update robe error:', error);
         }
       }
@@ -420,7 +421,7 @@ export default function Robes({
     } else {
       // Create new dress directly in Supabase
       if (!supabase) {
-        alert("Erreur Supabase : Client Supabase non initialisé");
+        notifyError("Erreur Supabase : Client Supabase non initialisé");
         return;
       }
 
@@ -439,12 +440,12 @@ export default function Robes({
       const { error } = await supabase.from('robes').insert([rowToInsert]).select();
 
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase insert robe error:', error);
         return; // Stop execution on error
       }
 
-      alert("Robe ajoutée avec succès !");
+      notifyError("Robe ajoutée avec succès !");
 
       await onRefreshData?.();
 

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Language, Reservation, Dress, Bijou, Cliente } from '../types';
 import { translations } from '../translations';
+import { todayIso, isoInDays, currentMonth, currentYear } from '../lib/dates';
 
 interface StatistiquesProps {
   reservations: Reservation[];
@@ -34,7 +35,7 @@ export default function Statistiques({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // Math on revenues
   const totalRentalsCount = reservations.length;
@@ -45,18 +46,18 @@ export default function Statistiques({
     .filter(tr => tr.date === todayStr)
     .reduce((sum, tr) => sum + tr.montant_da, 0);
 
-  // Week calculation (July 15 to July 21, 2026)
-  const last7Days = ['2026-07-15', '2026-07-16', '2026-07-17', '2026-07-18', '2026-07-19', '2026-07-20', '2026-07-21'];
+  // The seven days ending today
+  const last7Days = Array.from({ length: 7 }, (_, i) => isoInDays(-6 + i));
   const revenueWeek = entriesOnly
     .filter(tr => last7Days.includes(tr.date))
     .reduce((sum, tr) => sum + tr.montant_da, 0);
 
-  const currentMonthStr = '2026-07';
+  const currentMonthStr = currentMonth();
   const revenueMonth = entriesOnly
     .filter(tr => tr.date.startsWith(currentMonthStr))
     .reduce((sum, tr) => sum + tr.montant_da, 0);
 
-  const currentYearStr = '2026';
+  const currentYearStr = currentYear();
   const revenueYear = entriesOnly
     .filter(tr => tr.date.startsWith(currentYearStr))
     .reduce((sum, tr) => sum + tr.montant_da, 0);
@@ -122,16 +123,15 @@ export default function Statistiques({
     }).format(amount) + ' DA';
   };
 
-  // Dynamic monthly revenue calculated directly from real cash transactions (Jan to Jul 2026)
-  const monthKeys = [
-    { label: language === 'fr' ? 'Jan' : 'جان', key: '2026-01' },
-    { label: language === 'fr' ? 'Fév' : 'فيف', key: '2026-02' },
-    { label: language === 'fr' ? 'Mar' : 'مار', key: '2026-03' },
-    { label: language === 'fr' ? 'Avr' : 'أفر', key: '2026-04' },
-    { label: language === 'fr' ? 'Mai' : 'ماي', key: '2026-05' },
-    { label: language === 'fr' ? 'Jun' : 'جوا', key: '2026-06' },
-    { label: language === 'fr' ? 'Jul' : 'جوي', key: '2026-07' }
-  ];
+  // Monthly revenue for the year in progress, up to the current month
+  const monthLabels = language === 'fr'
+    ? ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+    : ['جان', 'فيف', 'مار', 'أفر', 'ماي', 'جوا', 'جوي', 'أوت', 'سبت', 'أكت', 'نوف', 'ديس'];
+  const monthsElapsed = Number(currentMonthStr.slice(5, 7));
+  const monthKeys = monthLabels.slice(0, monthsElapsed).map((label, i) => ({
+    label,
+    key: `${currentYearStr}-${String(i + 1).padStart(2, '0')}`
+  }));
 
   const monthlyRevenueData = monthKeys.map(m => {
     const monthTotal = entriesOnly

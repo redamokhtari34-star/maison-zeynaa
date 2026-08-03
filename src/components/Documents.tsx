@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Reservation, Language, Cliente } from '../types';
 import { translations } from '../translations';
+import { todayIso } from '../lib/dates';
 
 interface DocumentsProps {
   reservations: Reservation[];
@@ -33,7 +34,7 @@ export default function Documents({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // Selection
   const [selectedResId, setSelectedResId] = useState<string>(

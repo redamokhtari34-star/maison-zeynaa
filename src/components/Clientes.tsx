@@ -19,6 +19,7 @@ import {
 import { Cliente, Reservation, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapClientToDb } from '../lib/storage';
+import { notifyError } from '../lib/toast';
 
 interface ClientesProps {
   clientes: Cliente[];
@@ -126,7 +127,7 @@ export default function Clientes({
       if (supabase) {
         const { error } = await supabase.from('clients').delete().eq('id', clientId);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase delete client error:', error);
         }
       }
@@ -149,7 +150,7 @@ export default function Clientes({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomComplet || !telephone) {
-      alert(language === 'fr' ? 'Le nom complet et le téléphone sont obligatoires' : 'الاسم الكامل ورقم الهاتف إجباريان');
+      notifyError(language === 'fr' ? 'Le nom complet et le téléphone sont obligatoires' : 'الاسم الكامل ورقم الهاتف إجباريان');
       return;
     }
 
@@ -167,7 +168,7 @@ export default function Clientes({
       if (supabase) {
         const { error } = await supabase.from('clients').update(mapClientToDb(updatedClientObj)).eq('id', editingCliente.id);
         if (error) {
-          alert("Erreur Supabase : " + error.message);
+          notifyError("Erreur Supabase : " + error.message);
           console.error('Supabase update client error:', error);
         }
       }
@@ -182,7 +183,7 @@ export default function Clientes({
       );
     } else {
       if (!supabase) {
-        alert("Erreur Supabase : Client Supabase non initialisé");
+        notifyError("Erreur Supabase : Client Supabase non initialisé");
         return;
       }
 
@@ -201,12 +202,12 @@ export default function Clientes({
       const { data, error } = await supabase.from('clients').insert([clientRow]).select();
 
       if (error) {
-        alert("Erreur Supabase : " + error.message);
+        notifyError("Erreur Supabase : " + error.message);
         console.error('Supabase insert client error:', error);
         return;
       }
 
-      alert("Client ajouté avec succès !");
+      notifyError("Client ajouté avec succès !");
 
       if (data && data[0]) {
         setSelectedClientId(data[0].id);
