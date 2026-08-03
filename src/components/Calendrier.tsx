@@ -48,7 +48,11 @@ export default function Calendrier({
   const isRtl = language === 'ar';
 
   // Current viewed date for month/year navigation
-  const [currentDate, setCurrentDate] = useState(() => new Date(2026, 6, 1)); // Default July 2026
+  // Opens on the month in progress, not on a month frozen at build time.
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [selectedDay, setSelectedDay] = useState<string | null>(todayIso());
   const [statusFilter, setStatusFilter] = useState<'all' | 'en_cours' | 'future' | 'retourne'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -183,7 +187,7 @@ export default function Calendrier({
   };
 
   const handleToday = () => {
-    const now = new Date(2026, 6, 22); // July 2026
+    const now = new Date();
     setCurrentDate(now);
     setSelectedDay(todayIso());
   };
