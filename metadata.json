@@ -1,0 +1,6 @@
+{
+  "name": "Maison Zeyna",
+  "description": "Logiciel premium de gestion de location de robes et accessoires en Algérie.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
