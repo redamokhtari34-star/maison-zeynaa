@@ -19,7 +19,8 @@ import { Dress, DressCategory, DressStatus, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
 import { generateAdditionalDresses } from '../data/sampleData';
-import { notifyError } from '../lib/toast';
+import { todayIso } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
 
 interface RobesProps {
   dresses: Dress[];
@@ -419,40 +420,60 @@ export default function Robes({
         `La robe "${nom}" a été modifiée.`
       );
     } else {
-      // Create new dress directly in Supabase
-      if (!supabase) {
-        notifyError("Erreur Supabase : Client Supabase non initialisé");
-        return;
-      }
-
-      // Payload matching Supabase robes table columns: nom, categorie, taille, couleur, prix_location, caution, statut, photo_url (without id)
-      const rowToInsert = {
+      // Record the dress locally first. Writing only to Supabase and then
+      // refetching meant the new dress vanished from the list whenever the
+      // insert or the refetch did not go through.
+      const newDress: Dress = {
+        id: `d-${Date.now()}`,
         nom,
         categorie,
-        taille,
         couleur,
-        prix_location: Number(prix),
-        caution: Number(caution),
+        taille,
+        prix_location_da: Number(prix),
+        caution_da: Number(caution),
+        description,
+        photo_principale: finalPhoto,
+        photos: photosList,
         statut: 'disponible',
-        photo_url: finalPhoto
+        date_creation: todayIso()
       };
-
-      const { error } = await supabase.from('robes').insert([rowToInsert]).select();
-
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase insert robe error:', error);
-        return; // Stop execution on error
-      }
-
-      notifyError("Robe ajoutée avec succès !");
-
-      await onRefreshData?.();
+      onSaveDresses([newDress, ...dresses]);
 
       addHistoryEntry(
         language === 'fr' ? 'Ajout de robe' : 'إضافة فستان',
         `Nouvelle robe "${nom}" ajoutée avec succès.`
       );
+
+      // Then mirror it to the cloud, best effort.
+      if (!supabase) {
+        notifySuccess(language === 'fr'
+          ? 'Robe ajoutée sur cet appareil (cloud non configuré).'
+          : 'تمت إضافة الفستان على هذا الجهاز (السحابة غير مهيأة).');
+      } else {
+        const rowToInsert = {
+          nom,
+          categorie,
+          taille,
+          couleur,
+          prix_location: Number(prix),
+          caution: Number(caution),
+          statut: 'disponible',
+          photo_url: finalPhoto
+        };
+
+        const { error } = await supabase.from('robes').insert([rowToInsert]).select();
+
+        if (error) {
+          console.error('Supabase insert robe error:', error);
+          notifyError(language === 'fr'
+            ? "Robe ajoutée sur cet appareil, mais la synchronisation avec le cloud a échoué."
+            : 'تمت إضافة الفستان محلياً، لكن فشلت المزامنة مع السحابة.');
+        } else {
+          notifySuccess(language === 'fr' ? 'Robe ajoutée et synchronisée.' : 'تمت إضافة الفستان ومزامنته.');
+          // Only pull the cloud copy back once it actually holds this dress.
+          await onRefreshData?.();
+        }
+      }
     }
 
     setIsFormOpen(false);

@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Dress, Bijou, Cliente, Reservation, Transaction, HistoriqueAction, SupabaseConfig, StoreProfile, NotebookSheet } from '../types';
 import { sampleDresses, sampleBijoux, sampleClientes, sampleReservations, sampleTransactions, sampleHistory, defaultStoreProfile } from '../data/sampleData';
 
-// Keys for LocalStorage - unused as all storage is Supabase / in-memory
+// LocalStorage keys — the device-side mirror of the shop's records
 const KEYS = {
   DRESSES: 'zeyna_dresses_v1',
   BIJOUX: 'zeyna_bijoux_v1',
@@ -16,17 +16,36 @@ const KEYS = {
   NOTEBOOK: 'zeyna_notebook_v1'
 };
 
-// Global in-memory state store.
-// The catalogues ship with the app so the shop has something to work with
-// before the first cloud sync — the ledgers (clients, bookings, cash) start
-// empty and are only ever filled by real activity.
+// Records are mirrored to the device so that anything entered while the
+// network is down survives a reload instead of living only in this tab.
+function loadLocal<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
+  } catch (err) {
+    console.warn(`Could not read ${key} from storage:`, err);
+  }
+  return fallback;
+}
+
+function persist(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Could not persist ${key}:`, err);
+  }
+}
+
+// Global state store, hydrated from the device. The catalogues ship with the
+// app so the shop has something to work with before the first cloud sync; the
+// ledgers start empty and are only ever filled by real activity.
 const memoryState = {
-  dresses: sampleDresses as Dress[],
-  bijoux: sampleBijoux as Bijou[],
-  clientes: [] as Cliente[],
-  reservations: [] as Reservation[],
-  transactions: [] as Transaction[],
-  history: [] as HistoriqueAction[],
+  dresses: loadLocal<Dress[]>(KEYS.DRESSES, sampleDresses as Dress[]),
+  bijoux: loadLocal<Bijou[]>(KEYS.BIJOUX, sampleBijoux as Bijou[]),
+  clientes: loadLocal<Cliente[]>(KEYS.CLIENTES, []),
+  reservations: loadLocal<Reservation[]>(KEYS.RESERVATIONS, []),
+  transactions: loadLocal<Transaction[]>(KEYS.TRANSACTIONS, []),
+  history: loadLocal<HistoriqueAction[]>(KEYS.HISTORY, []),
   profile: defaultStoreProfile as StoreProfile
 };
 
@@ -620,6 +639,13 @@ export async function cleanFinancialsAndReservationsForProduction() {
   memoryState.transactions = [];
   memoryState.history = [];
 
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, []);
+  persist(KEYS.RESERVATIONS, []);
+  persist(KEYS.TRANSACTIONS, []);
+  persist(KEYS.HISTORY, []);
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
@@ -704,12 +730,36 @@ export async function fetchFullDatabaseStateFromSupabase() {
     console.error('Error loading mouvements_caisse from Supabase:', transactionsErr);
   }
 
-  // Load dresses, bijoux, clientes, reservations, transactions ONLY and DIRECTLY from Supabase
-  memoryState.dresses = dressesDb ? dressesDb.map(mapDressFromDb) : [];
-  memoryState.bijoux = bijouxDb ? bijouxDb.map(mapBijouFromDb) : [];
-  memoryState.clientes = clientsDb ? clientsDb.map(mapClientFromDb) : [];
-  memoryState.reservations = reservationsDb ? reservationsDb.map(mapReservationFromDb) : [];
-  memoryState.transactions = transactionsDb ? transactionsDb.map(mapTransactionFromDb) : [];
+  // Adopt the cloud copy only when it actually carries something.
+  //
+  // A failed request yields null, and a table that is empty (or unreadable
+  // because of row-level security) yields zero rows. Writing either straight
+  // into memory wiped the catalogue and every record created on this device —
+  // the shop watched its dresses vanish seconds after adding them. An empty
+  // remote result is therefore never allowed to erase a non-empty local list;
+  // real deletions still propagate, since they come back as fewer rows rather
+  // than as none at all.
+  const adopt = <TRow, TLocal>(
+    rows: TRow[] | null,
+    map: (row: TRow) => TLocal,
+    current: TLocal[]
+  ): TLocal[] => {
+    if (!rows) return current;              // request failed
+    if (rows.length === 0 && current.length > 0) return current;
+    return rows.map(map);
+  };
+
+  memoryState.dresses = adopt(dressesDb, mapDressFromDb, memoryState.dresses);
+  memoryState.bijoux = adopt(bijouxDb, mapBijouFromDb, memoryState.bijoux);
+  memoryState.clientes = adopt(clientsDb, mapClientFromDb, memoryState.clientes);
+  memoryState.reservations = adopt(reservationsDb, mapReservationFromDb, memoryState.reservations);
+  memoryState.transactions = adopt(transactionsDb, mapTransactionFromDb, memoryState.transactions);
+
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, memoryState.clientes);
+  persist(KEYS.RESERVATIONS, memoryState.reservations);
+  persist(KEYS.TRANSACTIONS, memoryState.transactions);
 
   return getFullDatabaseState();
 }
@@ -721,6 +771,7 @@ export function getDresses(): Dress[] {
 
 export function saveDresses(dresses: Dress[]) {
   memoryState.dresses = dresses;
+  persist(KEYS.DRESSES, dresses);
   syncTableToSupabase('robes', dresses, mapDressToDb, d => d.id);
 }
 
@@ -730,6 +781,7 @@ export function getBijoux(): Bijou[] {
 
 export function saveBijoux(bijoux: Bijou[]) {
   memoryState.bijoux = bijoux;
+  persist(KEYS.BIJOUX, bijoux);
   syncTableToSupabase('bijoux', bijoux, mapBijouToDb, b => b.id);
 }
 
@@ -739,6 +791,7 @@ export function getClientes(): Cliente[] {
 
 export function saveClientes(clientes: Cliente[]) {
   memoryState.clientes = clientes;
+  persist(KEYS.CLIENTES, clientes);
   syncTableToSupabase('clients', clientes, mapClientToDb, c => c.id);
 }
 
@@ -748,6 +801,7 @@ export function getReservations(): Reservation[] {
 
 export function saveReservations(reservations: Reservation[]) {
   memoryState.reservations = reservations;
+  persist(KEYS.RESERVATIONS, reservations);
   syncTableToSupabase('reservations', reservations, mapReservationToDb, r => r.id);
 }
 
@@ -757,6 +811,7 @@ export function getTransactions(): Transaction[] {
 
 export function saveTransactions(transactions: Transaction[]) {
   memoryState.transactions = transactions;
+  persist(KEYS.TRANSACTIONS, transactions);
   syncTableToSupabase('mouvements_caisse', transactions, mapTransactionToDb, t => t.id).then(() => {
     updateTresorerieInDb();
   });
@@ -768,6 +823,7 @@ export function getHistory(): HistoriqueAction[] {
 
 export function saveHistory(history: HistoriqueAction[]) {
   memoryState.history = history;
+  persist(KEYS.HISTORY, history);
 }
 
 // The notebook is the one thing the shop authors by hand, so it is persisted
@@ -922,5 +978,12 @@ export function resetDatabaseToDefaults() {
   memoryState.reservations = [];
   memoryState.transactions = [];
   memoryState.history = [];
+
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, []);
+  persist(KEYS.RESERVATIONS, []);
+  persist(KEYS.TRANSACTIONS, []);
+  persist(KEYS.HISTORY, []);
   memoryState.profile = { ...defaultStoreProfile };
 }

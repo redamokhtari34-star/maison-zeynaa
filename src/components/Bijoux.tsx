@@ -15,7 +15,8 @@ import { Bijou, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapBijouToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
 import { generate200Bijoux } from '../data/sampleData';
-import { notifyError } from '../lib/toast';
+import { todayIso } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
 
 interface BijouxProps {
   bijoux: Bijou[];
@@ -330,42 +331,58 @@ export default function Bijoux({
         `L'accessoire "${nom}" a été mis à jour.`
       );
     } else {
-      if (!supabase) {
-        notifyError("Erreur Supabase : Client Supabase non initialisé");
-        return;
-      }
-
-      const rowToInsert: any = {
+      // Record locally first, so the accessory cannot vanish from the list when
+      // the cloud write or the refetch that follows it does not go through.
+      const newBijou: Bijou = {
+        id: `b-${Date.now()}`,
         nom,
-        type: categorie,
-        prix_location: Number(prix),
-        caution: 0,
+        categorie,
+        prix_location_da: Number(prix),
+        description,
+        photo: finalPhoto,
+        photos: cleanPhotosList,
         statut: 'disponible',
-        photo_url: finalPhoto,
-        photos: cleanPhotosList
+        date_creation: todayIso()
       };
-
-      let { error } = await supabase.from('bijoux').insert([rowToInsert]).select();
-      if (error && (error.message?.includes('photos') || error.code === 'PGRST204')) {
-        delete rowToInsert.photos;
-        const retry = await supabase.from('bijoux').insert([rowToInsert]).select();
-        error = retry.error;
-      }
-
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase insert bijou error:', error);
-        return;
-      }
-
-      notifyError("Accessoire ajouté avec succès !");
-
-      await onRefreshData?.();
+      onSaveBijoux([newBijou, ...bijoux]);
 
       addHistoryEntry(
         language === 'fr' ? 'Ajout d’accessoire' : 'إضافة إكسسوار',
         `Nouvel accessoire "${nom}" ajouté à la collection.`
       );
+
+      if (!supabase) {
+        notifySuccess(language === 'fr'
+          ? 'Accessoire ajouté sur cet appareil (cloud non configuré).'
+          : 'تمت إضافة الإكسسوار على هذا الجهاز (السحابة غير مهيأة).');
+      } else {
+        const rowToInsert: any = {
+          nom,
+          type: categorie,
+          prix_location: Number(prix),
+          caution: 0,
+          statut: 'disponible',
+          photo_url: finalPhoto,
+          photos: cleanPhotosList
+        };
+
+        let { error } = await supabase.from('bijoux').insert([rowToInsert]).select();
+        if (error && (error.message?.includes('photos') || error.code === 'PGRST204')) {
+          delete rowToInsert.photos;
+          const retry = await supabase.from('bijoux').insert([rowToInsert]).select();
+          error = retry.error;
+        }
+
+        if (error) {
+          console.error('Supabase insert bijou error:', error);
+          notifyError(language === 'fr'
+            ? "Accessoire ajouté sur cet appareil, mais la synchronisation avec le cloud a échoué."
+            : 'تمت إضافة الإكسسوار محلياً، لكن فشلت المزامنة مع السحابة.');
+        } else {
+          notifySuccess(language === 'fr' ? 'Accessoire ajouté et synchronisé.' : 'تمت إضافة الإكسسوار ومزامنته.');
+          await onRefreshData?.();
+        }
+      }
     }
 
     setIsFormOpen(false);

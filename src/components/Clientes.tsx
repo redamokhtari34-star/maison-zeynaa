@@ -19,7 +19,8 @@ import {
 import { Cliente, Reservation, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapClientToDb } from '../lib/storage';
-import { notifyError } from '../lib/toast';
+import { todayIso } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
 
 interface ClientesProps {
   clientes: Cliente[];
@@ -182,42 +183,49 @@ export default function Clientes({
         `Les informations de la cliente "${nomComplet}" ont été mises à jour.`
       );
     } else {
-      if (!supabase) {
-        notifyError("Erreur Supabase : Client Supabase non initialisé");
-        return;
-      }
-
-      // Payload matching Supabase clients table columns (without id)
-      const parts = nomComplet.trim().split(' ');
-      const prenom = parts[0] || '';
-      const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
-
-      const clientRow = {
-        nom,
-        prenom,
+      // Record locally first, so a new client cannot disappear from the
+      // directory when the cloud write or the refetch after it fails.
+      const newCliente: Cliente = {
+        id: `cl-${Date.now()}`,
+        nom_complet: nomComplet,
         telephone,
-        adresse: adresse || ''
+        adresse: adresse || '',
+        notes,
+        date_creation: todayIso()
       };
-
-      const { data, error } = await supabase.from('clients').insert([clientRow]).select();
-
-      if (error) {
-        notifyError("Erreur Supabase : " + error.message);
-        console.error('Supabase insert client error:', error);
-        return;
-      }
-
-      notifyError("Client ajouté avec succès !");
-
-      if (data && data[0]) {
-        setSelectedClientId(data[0].id);
-      }
-      await onRefreshData?.();
+      onSaveClientes([newCliente, ...clientes]);
+      setSelectedClientId(newCliente.id);
 
       addHistoryEntry(
         language === 'fr' ? 'Création de cliente' : 'تسجيل زبونة جديدة',
         `Nouvelle fiche cliente créée pour "${nomComplet}".`
       );
+
+      if (!supabase) {
+        notifySuccess(language === 'fr'
+          ? 'Cliente enregistrée sur cet appareil (cloud non configuré).'
+          : 'تم حفظ الزبونة على هذا الجهاز (السحابة غير مهيأة).');
+      } else {
+        const parts = nomComplet.trim().split(' ');
+        const prenom = parts[0] || '';
+        const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([{ nom, prenom, telephone, adresse: adresse || '' }])
+          .select();
+
+        if (error) {
+          console.error('Supabase insert client error:', error);
+          notifyError(language === 'fr'
+            ? "Cliente enregistrée sur cet appareil, mais la synchronisation avec le cloud a échoué."
+            : 'تم حفظ الزبونة محلياً، لكن فشلت المزامنة مع السحابة.');
+        } else {
+          notifySuccess(language === 'fr' ? 'Cliente enregistrée et synchronisée.' : 'تم حفظ الزبونة ومزامنتها.');
+          if (data && data[0]) setSelectedClientId(data[0].id);
+          await onRefreshData?.();
+        }
+      }
     }
 
     setIsFormOpen(false);
