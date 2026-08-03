@@ -40,7 +40,9 @@ import {
   fetchFullDatabaseStateFromSupabase,
   getSupabaseClient,
   seedSupabaseWithSampleData,
-  cleanFinancialsAndReservationsForProduction
+  cleanFinancialsAndReservationsForProduction,
+  getHistory,
+  subscribeToHistory
 } from './lib/storage';
 import { todayIso } from './lib/dates';
 import { notifySuccess } from './lib/toast';
@@ -85,6 +87,12 @@ export default function App() {
   useEffect(() => {
     refreshFromSupabase();
   }, []);
+
+  // Actions logged from anywhere in the app land on screen straight away.
+  useEffect(
+    () => subscribeToHistory(() => setDb(prev => ({ ...prev, history: getHistory() }))),
+    []
+  );
 
   // App shell state
   const [currentTab, setCurrentTab] = useState<string>('accueil');

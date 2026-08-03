@@ -205,7 +205,7 @@ function autoUpdateStatuses(
 }
 
 import { DressCategory, DressStatus, ReservationStatus, ReservationItem, TransactionType } from '../types';
-import { todayIso } from './dates';
+import { todayIso, toIso } from './dates';
 import { notifyError } from './toast';
 
 // Helper to check if string is a valid UUID
@@ -716,13 +716,15 @@ export async function fetchFullDatabaseStateFromSupabase() {
     { data: bijouxDb, error: bijouxErr },
     { data: clientsDb, error: clientsErr },
     { data: reservationsDb, error: reservationsErr },
-    { data: transactionsDb, error: transactionsErr }
+    { data: transactionsDb, error: transactionsErr },
+    { data: historyDb, error: historyErr }
   ] = await Promise.all([
     supabase.from('robes').select('*'),
     supabase.from('bijoux').select('*'),
     supabase.from('clients').select('*'),
     supabase.from('reservations').select('*'),
-    supabase.from('mouvements_caisse').select('*')
+    supabase.from('mouvements_caisse').select('*'),
+    supabase.from('historique_actions').select('*').order('created_at', { ascending: false }).limit(300)
   ]);
 
   if (dressesErr) {
@@ -739,6 +741,9 @@ export async function fetchFullDatabaseStateFromSupabase() {
   }
   if (transactionsErr) {
     console.error('Error loading mouvements_caisse from Supabase:', transactionsErr);
+  }
+  if (historyErr) {
+    console.error('Error loading historique_actions from Supabase:', historyErr);
   }
 
   // Adopt the cloud copy only when it actually carries something.
@@ -765,12 +770,14 @@ export async function fetchFullDatabaseStateFromSupabase() {
   memoryState.clientes = adopt(clientsDb, mapClientFromDb, memoryState.clientes);
   memoryState.reservations = adopt(reservationsDb, mapReservationFromDb, memoryState.reservations);
   memoryState.transactions = adopt(transactionsDb, mapTransactionFromDb, memoryState.transactions);
+  memoryState.history = adopt(historyDb, mapHistoryFromDb, memoryState.history);
 
   persist(KEYS.DRESSES, memoryState.dresses);
   persist(KEYS.BIJOUX, memoryState.bijoux);
   persist(KEYS.CLIENTES, memoryState.clientes);
   persist(KEYS.RESERVATIONS, memoryState.reservations);
   persist(KEYS.TRANSACTIONS, memoryState.transactions);
+  persist(KEYS.HISTORY, memoryState.history);
 
   return getFullDatabaseState();
 }
@@ -832,9 +839,23 @@ export function getHistory(): HistoriqueAction[] {
   return memoryState.history;
 }
 
+// The activity log is written from deep inside the components, far from the
+// React tree that displays it. Listeners let those screens refresh instead of
+// showing a stale copy until the next page load.
+type HistoryListener = () => void;
+let historyListeners: HistoryListener[] = [];
+
+export function subscribeToHistory(listener: HistoryListener): () => void {
+  historyListeners.push(listener);
+  return () => {
+    historyListeners = historyListeners.filter(l => l !== listener);
+  };
+}
+
 export function saveHistory(history: HistoriqueAction[]) {
   memoryState.history = history;
   persist(KEYS.HISTORY, history);
+  historyListeners.forEach(l => l());
 }
 
 // The notebook is the one thing the shop authors by hand, so it is persisted
@@ -929,22 +950,44 @@ export function exportDatabaseToFile() {
 }
 
 // Log a business action
+export function mapHistoryFromDb(row: any): HistoriqueAction {
+  const at = row.created_at ? new Date(row.created_at) : new Date();
+  return {
+    id: String(row.id),
+    action: row.action || '',
+    utilisateur: row.utilisateur || 'Zeyna',
+    date: toIso(at),
+    heure: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
+    details: row.details || ''
+  };
+}
+
 export function addHistoryEntry(action: string, details: string, user: string = 'Zeyna') {
-  const history = getHistory();
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
-  const timeStr = today.toTimeString().split(' ')[0].substring(0, 5);
+  const now = new Date();
 
   const entry: HistoriqueAction = {
     id: `h-${Date.now()}`,
     action,
     utilisateur: user,
-    date: dateStr,
-    heure: timeStr,
+    date: toIso(now),
+    heure: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     details
   };
 
-  saveHistory([entry, ...history]);
+  saveHistory([entry, ...getHistory()]);
+
+  // Mirror the entry so the log follows the shop from one device to another,
+  // in the background: a slow network must never hold up the action that is
+  // being recorded.
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    void supabase
+      .from('historique_actions')
+      .insert([{ action, details, utilisateur: user }])
+      .then(({ error }) => {
+        if (error) console.warn('Could not record history entry in Supabase:', error.message);
+      });
+  }
 }
 
 // Check overlapping rentals for specific dress or jewelry
