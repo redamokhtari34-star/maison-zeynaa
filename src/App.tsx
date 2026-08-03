@@ -12,6 +12,8 @@ import Statistiques from './components/Statistiques';
 import Retours from './components/Retours';
 import Documents from './components/Documents';
 import Parametres from './components/Parametres';
+import BlocNotes from './components/BlocNotes';
+import Equipe from './components/Equipe';
 
 import { 
   Language, 
@@ -287,6 +289,10 @@ export default function App() {
             setInvoiceReservationId={setInvoiceReservationId}
           />
         );
+      case 'notes':
+        return <BlocNotes language={language} />;
+      case 'equipe':
+        return <Equipe language={language} history={db.history} />;
       case 'parametres':
         return (
           <Parametres 

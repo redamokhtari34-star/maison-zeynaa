@@ -14,7 +14,9 @@ import {
   Menu,
   X,
   Download,
-  Sparkles
+  Sparkles,
+  ClipboardList,
+  ShieldCheck
 } from 'lucide-react';
 import { Language, Transaction } from '../types';
 import { translations } from '../translations';
@@ -34,17 +36,25 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
   const t = translations[language];
   const isRtl = language === 'ar';
 
+  const fr = language === 'fr';
+
   const menuItems = [
-    { id: 'accueil', label: t.accueil, icon: LayoutGrid },
-    { id: 'reservations', label: t.reservations, icon: ShoppingBag },
-    { id: 'clientes', label: t.clientes, icon: Users },
-    { id: 'robes', label: t.robes, icon: FolderHeart },
+    { id: 'accueil', label: fr ? 'Tableau de bord' : 'لوحة القيادة', icon: LayoutGrid },
+    { id: 'reservations', label: fr ? 'Réservations' : 'الحجوزات', icon: ShoppingBag },
+    { id: 'clientes', label: fr ? 'Base Clientes' : 'قاعدة الزبونات', icon: Users },
+    { id: 'robes', label: fr ? 'Catalogue Robes' : 'كتالوج الفساتين', icon: FolderHeart },
+    { id: 'caisse', label: fr ? 'Finances & Caisse' : 'المالية والصندوق', icon: Wallet },
+    { id: 'documents', label: fr ? 'Documents' : 'الوثائق', icon: Archive },
+    { id: 'notes', label: fr ? 'Bloc-notes Excel' : 'دفتر الملاحظات', icon: ClipboardList },
+    { id: 'equipe', label: fr ? 'Équipe & Logs' : 'الفريق والسجلات', icon: ShieldCheck },
+  ];
+
+  // Kept reachable below the main menu so no feature becomes orphaned.
+  const secondaryItems = [
     { id: 'bijoux', label: t.bijoux, icon: Gem },
     { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: CalendarDays },
-    { id: 'caisse', label: t.caisse, icon: Wallet },
     { id: 'retours', label: t.retours, icon: RotateCcw },
     { id: 'statistiques', label: t.statistiques, icon: BarChart3 },
-    { id: 'documents', label: t.documents, icon: Archive },
     { id: 'parametres', label: t.parametres, icon: Settings },
   ];
 
@@ -96,6 +106,29 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
                 } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
               >
                 <Icon size={19} strokeWidth={1.6} className="flex-shrink-0 text-neutral-500" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="eyebrow mt-6 mb-2 px-3.5">{fr ? 'Plus' : 'المزيد'}</p>
+        <div className="space-y-0.5">
+          {secondaryItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+            return (
+              <button
+                key={item.id}
+                id={`menu-item-${item.id}`}
+                onClick={() => go(item.id)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-[13px] transition-colors ${
+                  isActive
+                    ? 'border border-neutral-200 bg-neutral-100 font-semibold text-neutral-900'
+                    : 'border border-transparent text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
+                } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
+              >
+                <Icon size={16} strokeWidth={1.6} className="flex-shrink-0 text-neutral-400" />
                 <span className="truncate">{item.label}</span>
               </button>
             );

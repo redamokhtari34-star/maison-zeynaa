@@ -101,6 +101,14 @@ export interface SupabaseConfig {
   isConnected: boolean;
 }
 
+/** A free-form grid in the notebook — the shop's own "Excel" sheet. */
+export interface NotebookSheet {
+  id: string;
+  nom: string;
+  colonnes: string[];
+  lignes: string[][];
+}
+
 export interface StoreProfile {
   nom: string;
   telephone: string;
