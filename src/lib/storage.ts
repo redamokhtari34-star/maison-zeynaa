@@ -53,14 +53,25 @@ const memoryState = {
 let supabaseClient: SupabaseClient | null = null;
 
 // Retrieve Supabase config
+// Project defaults, used when no environment variables are supplied. The
+// publishable key is meant to be shipped to the browser — the database is
+// protected by row-level security, not by hiding this string — but keeping the
+// values in .env lets the app be pointed at another project without a rebuild
+// of the source.
+const DEFAULT_SUPABASE_URL = 'https://ldmwnqbuwryqnoftbxfh.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_QHiv-07EQfrcarnHJQpb1g_Mt7rbRpe';
+
+/** Strips the stray quotes, spaces and /rest/v1 suffixes that break the client. */
+function cleanSetting(value: unknown): string {
+  return typeof value === 'string'
+    ? value.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '')
+    : '';
+}
+
 export function getSupabaseConfig(): SupabaseConfig {
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-  return { 
-    url: envUrl || 'https://ldmwnqbuwryqnoftbxfh.supabase.co', 
-    anonKey: envKey || 'sb_publishable_QHiv-07EQfrcarnHJQpb1g_Mt7rbRpe', 
-    isConnected: true 
-  };
+  const url = cleanSetting((import.meta as any).env?.VITE_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+  const anonKey = cleanSetting((import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_KEY;
+  return { url, anonKey, isConnected: Boolean(url && anonKey) };
 }
 
 // Save Supabase config and initialize client

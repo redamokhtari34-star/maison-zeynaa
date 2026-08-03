@@ -235,11 +235,22 @@ export default function Clientes({
             {language === 'fr' ? 'Annuaire des Clientes' : 'دليل الزبونات'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
-            {language === 'fr' 
+            {language === 'fr'
               ? `Consultez l'historique d'achat, les encours et gérez les coordonnées de vos clientes.`
               : `اطلعي على سجل كراء الزبونات، المدفوعات والديون العالقة، وأديري معلومات التواصل الخاصة بهن.`}
           </p>
         </div>
+
+        <button
+          id="add-client-btn"
+          onClick={openAddForm}
+          className={`flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-700 ${
+            isRtl ? 'flex-row-reverse' : ''
+          }`}
+        >
+          <Plus size={16} />
+          <span>{t.qa_add_cliente}</span>
+        </button>
       </div>
 
       {/* Main split layout: list on left (or right if RTL), details on right */}
