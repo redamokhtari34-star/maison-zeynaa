@@ -8,9 +8,20 @@ export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   if (!import.meta.env.PROD) return;
 
+  // A worker that never yields pins the shop to the build it was installed
+  // with: a fix can be deployed and simply never arrive. So we check for a new
+  // worker on every load, and reload once as soon as one takes control.
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js')
+      .then((registration) => registration.update())
       .catch((err) => console.warn('Service worker registration failed:', err));
   });
 }

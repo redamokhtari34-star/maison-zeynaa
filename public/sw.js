@@ -10,7 +10,7 @@
  *   - everything else (API calls, images) → straight to the network.
  */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `maison-zeyna-shell-${VERSION}`;
 const ASSET_CACHE = `maison-zeyna-assets-${VERSION}`;
 
