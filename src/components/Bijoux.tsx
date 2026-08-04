@@ -14,7 +14,6 @@ import {
 import { Bijou, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapBijouToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
-import { generate200Bijoux } from '../data/sampleData';
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
@@ -150,37 +149,6 @@ export default function Bijoux({
     }
   };
 
-  const [isSetting200, setIsSetting200] = useState(false);
-  const handleSet200Bijoux = async () => {
-    setIsSetting200(true);
-    try {
-      const list200 = generate200Bijoux();
-      onSaveBijoux(list200);
-
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const rowsToInsert = list200.map(mapBijouToDb);
-        const { error } = await supabase.from('bijoux').upsert(rowsToInsert as any);
-        if (error) {
-          console.warn('Supabase bulk bijoux upsert warning:', error);
-        }
-      }
-
-      addHistoryEntry(
-        language === 'fr' ? 'Génération 200 Bijoux' : 'إنشاء 200 إكسسوار',
-        `La collection d'accessoires a été mise à jour à 200 pièces.`
-      );
-
-      notifyError(language === 'fr' 
-        ? `La collection a été mise à jour avec succès à 200 bijoux !` 
-        : `تم تحديث المجموعة بنجاح إلى 200 قطعة إكسسوار!`);
-
-    } catch (err) {
-      console.error('Error generating 200 bijoux:', err);
-    } finally {
-      setIsSetting200(false);
-    }
-  };
 
   // Open forms
   const openAddForm = () => {
@@ -326,7 +294,7 @@ export default function Bijoux({
       // Record locally first, so the accessory cannot vanish from the list when
       // the cloud write or the refetch that follows it does not go through.
       const newBijou: Bijou = {
-        id: `b-${Date.now()}`,
+        id: crypto.randomUUID(),
         nom,
         categorie,
         prix_location_da: Number(prix),
@@ -448,16 +416,6 @@ export default function Bijoux({
           </p>
         </div>
         <div className={`flex flex-wrap items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <button
-            id="set-200-bijoux-btn"
-            onClick={handleSet200Bijoux}
-            disabled={isSetting200}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border border-slate-700"
-            title={language === 'fr' ? 'Générer et synchroniser 200 bijoux dans le catalogue' : 'تحديث القائمة إلى 200 قطعة إكسسوار'}
-          >
-            <Sparkles size={15} className="text-amber-400" />
-            <span>{isSetting200 ? '...' : (language === 'fr' ? 'Recharger 200 Bijoux' : 'تعبئة 200 إكسسوار')}</span>
-          </button>
 
           <button
             id="add-bijou-top-btn"

@@ -108,7 +108,7 @@ export default function Caisse({
     }
 
     const newTr: Transaction = {
-      id: `t-${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'depense',
       montant_da: Number(montant),
       description: desc,
@@ -176,7 +176,7 @@ export default function Caisse({
     const finalBeneficiaire = beneficiaire.trim();
 
     const newTr: Transaction = {
-      id: `t-${Date.now()}`,
+      id: crypto.randomUUID(),
       type: 'vidage_caisse',
       montant_da: amountToWithdraw,
       description: language === 'fr' 

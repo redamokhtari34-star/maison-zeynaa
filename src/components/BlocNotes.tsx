@@ -54,7 +54,7 @@ export default function BlocNotes({ language }: BlocNotesProps) {
 
   const addSheet = () => {
     const sheet: NotebookSheet = {
-      id: `sheet-${Date.now()}`,
+      id: crypto.randomUUID(),
       nom: language === 'fr' ? `Feuille ${sheets.length + 1}` : `ورقة ${sheets.length + 1}`,
       colonnes: language === 'fr'
         ? ['Désignation', 'Quantité', 'Montant (DA)', 'Remarque']

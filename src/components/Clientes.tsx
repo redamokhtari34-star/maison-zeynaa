@@ -180,7 +180,7 @@ export default function Clientes({
       // Record locally first, so a new client cannot disappear from the
       // directory when the cloud write or the refetch after it fails.
       const newCliente: Cliente = {
-        id: `cl-${Date.now()}`,
+        id: crypto.randomUUID(),
         nom_complet: nomComplet,
         telephone,
         adresse: adresse || '',

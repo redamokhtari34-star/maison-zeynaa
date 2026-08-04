@@ -167,7 +167,7 @@ export default function Retours({
     const balanceAmount = selectedRes.reste_a_payer_da;
     if (balanceAmount > 0) {
       const balanceTr: Transaction = {
-        id: `t-${Date.now()}-solde`,
+        id: crypto.randomUUID(),
         type: 'entree',
         montant_da: balanceAmount,
         description: `Règlement Solde au Retour - #${selectedRes.id.toUpperCase()} - ${getClientName(selectedRes.cliente_id)}`,
@@ -187,7 +187,7 @@ export default function Retours({
     // 3. Penalty transaction logging
     if (penalite > 0) {
       const penTr: Transaction = {
-        id: `t-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'entree',
         montant_da: penalite,
         description: `Pénalité dégradation - Retour #${selectedRes.id.toUpperCase()}`,

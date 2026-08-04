@@ -346,6 +346,7 @@ export default function App() {
         dresses={db.dresses}
         bijoux={db.bijoux}
         clientes={db.clientes}
+        reservations={db.reservations}
         alertCount={alertCount}
         syncing={supabaseSyncing}
         cloudConnected={cloudConnected}

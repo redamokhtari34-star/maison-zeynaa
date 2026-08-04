@@ -178,7 +178,7 @@ export default function Reservations({
 
       // Log transaction in Caisse
       const newTr: Transaction = {
-        id: `t-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'entree',
         montant_da: amountToPay,
         description: `Paiement Solde Réservation ${res.id.toUpperCase()} - ${getClientName(res.cliente_id)}`,
@@ -275,7 +275,7 @@ export default function Reservations({
     // Keep the local client file in step with what was typed: record a new
     // client, or fill in / correct the number of one already on file.
     const localMatch = findClientByName(clientName);
-    const localClientId = localMatch?.id ?? `cl-${Date.now()}`;
+    const localClientId = localMatch?.id ?? crypto.randomUUID();
     if (!localMatch) {
       onSaveClientes([
         ...clientes,
@@ -295,10 +295,10 @@ export default function Reservations({
     // ── Record locally first ────────────────────────────────────────────
     // The shop must be able to take a booking with the network down, so the
     // reservation is committed on the device before the cloud is contacted.
-    const localResId = `r-${Date.now()}`;
+    const localResId = crypto.randomUUID();
     const localItems: ReservationItem[] = [
       ...selectedDresses.map(d => ({
-        id: `it-${d.id}`,
+        id: crypto.randomUUID(),
         reservation_id: localResId,
         type_article: 'robe' as const,
         article_id: d.id,
@@ -306,7 +306,7 @@ export default function Reservations({
         nom_article: d.nom
       })),
       ...selectedBijoux.map(b => ({
-        id: `it-${b.id}`,
+        id: crypto.randomUUID(),
         reservation_id: localResId,
         type_article: 'bijou' as const,
         article_id: b.id,
@@ -333,7 +333,7 @@ export default function Reservations({
 
     if (montantPaye > 0) {
       onAddTransaction({
-        id: `t-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'entree',
         montant_da: montantPaye,
         description: `Acompte Réservation - ${clientName}`,
@@ -363,46 +363,35 @@ export default function Reservations({
 
     try {
 
-    const existingClient = clientes.find(c => c.nom_complet.trim().toLowerCase() === clientName.toLowerCase() || c.id === clientName);
-    let validUuidClientId = existingClient && isUuid(existingClient.id) ? existingClient.id : null;
+    // The local record already carries a UUID, so the same identifier is used
+    // on both sides. Matching on the phone number rather than on the spelling
+    // of a name is what stops the same person being filed twice.
+    let validUuidClientId = isUuid(localClientId) ? localClientId : null;
 
-    // Automatically register client if not already in clients table or if ID is not a valid UUID
-    if (!validUuidClientId && clientName) {
-      const parts = clientName.trim().split(' ');
-      const prenom = parts[0] || '';
-      const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
-
-      // Check if client already exists in Supabase
+    if (clientPhone) {
       const { data: foundClients } = await supabase
         .from('clients')
         .select('id')
-        .or(`nom.ilike.${nom},prenom.ilike.${prenom}`)
+        .eq('telephone', clientPhone)
         .limit(1);
-
-      if (foundClients && foundClients[0] && isUuid(foundClients[0].id)) {
+      if (foundClients?.[0] && isUuid(foundClients[0].id)) {
         validUuidClientId = foundClients[0].id;
-      } else {
-        const { data: newClientData, error: clientErr } = await supabase.from('clients').insert([{
-          nom,
-          prenom,
-          telephone: clientPhone || existingClient?.telephone || '',
-          adresse: existingClient?.adresse || ''
-        }]).select();
-
-        if (clientErr) throw new Error(clientErr.message);
-
-        if (newClientData && newClientData[0] && isUuid(newClientData[0].id)) {
-          validUuidClientId = newClientData[0].id;
-        }
       }
-    } else if (clientPhone && clientPhone !== existingClient?.telephone) {
-      // Client already on file: keep her number up to date with what was typed.
-      const { error: phoneErr } = await supabase
-        .from('clients')
-        .update({ telephone: clientPhone })
-        .eq('id', validUuidClientId);
-      if (phoneErr) console.warn('Could not update client phone:', phoneErr);
     }
+
+    const parts = clientName.trim().split(' ');
+    const prenom = parts[0] || '';
+    const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+
+    // upsert: creates the client on first sight, refreshes her details after.
+    const { error: clientErr } = await supabase.from('clients').upsert([{
+      id: validUuidClientId,
+      nom,
+      prenom,
+      telephone: clientPhone || localMatch?.telephone || '',
+      adresse: localMatch?.adresse || ''
+    }]);
+    if (clientErr) throw new Error(clientErr.message);
 
     const robeItem = selectedDresses[0];
     const validRobeId = robeItem && isUuid(robeItem.id) ? robeItem.id : null;
@@ -410,40 +399,56 @@ export default function Reservations({
     const bijouItem = selectedBijoux[0];
     const validBijouId = bijouItem && isUuid(bijouItem.id) ? bijouItem.id : null;
 
-    const resRowToInsert: any = {
+    const { error: resError } = await supabase.from('reservations').insert([{
+      // Same identifier on both sides, so the booking can be matched later.
+      id: localResId,
       client_id: validUuidClientId,
+      // The single columns keep the first item for compatibility; the full
+      // selection goes to the join tables below.
       robe_id: validRobeId,
       bijou_id: validBijouId,
       date_debut: dateSortie || null,
       date_fin: dateRetour || null,
-      statut_reservation: 'future',
+      statut_reservation: localReservation.statut,
       prix_total: Number(totalCost) || 0,
       acompte: Number(montantPaye) || 0,
-      reste_a_payer: Number(remainingCost) || 0
-    };
-
-    let { error: resError } = await supabase.from('reservations').insert([resRowToInsert]).select();
-
-    // If statut_reservation column is named 'statut' in table, fallback retry
-    if (resError) {
-      const fallbackRow: any = {
-        client_id: validUuidClientId,
-        robe_id: validRobeId,
-        bijou_id: validBijouId,
-        date_debut: dateSortie || null,
-        date_fin: dateRetour || null,
-        statut: 'future',
-        prix_total: Number(totalCost) || 0,
-        acompte: Number(montantPaye) || 0,
-        reste_a_payer: Number(remainingCost) || 0
-      };
-      const retry = await supabase.from('reservations').insert([fallbackRow]).select();
-      if (!retry.error) {
-        resError = null;
-      }
-    }
+      reste_a_payer: Number(remainingCost) || 0,
+      // The deposit is money owed back to the client — it must not stay local.
+      caution_totale: Number(totalCaution) || 0,
+      notes: notes || null
+    }]);
 
       if (resError) throw new Error(resError.message);
+
+      // Every selected article, not just the first: a booking regularly holds
+      // several dresses and several pieces of jewellery.
+      const robeRows = selectedDresses
+        .filter(d => isUuid(d.id))
+        .map(d => ({
+          id: crypto.randomUUID(),
+          reservation_id: localResId,
+          robe_id: d.id,
+          prix: d.prix_location_da || 0,
+          caution: d.caution_da || 0
+        }));
+      if (robeRows.length) {
+        const { error } = await supabase.from('reservation_robes').insert(robeRows);
+        if (error) console.warn('Could not link dresses to reservation:', error.message);
+      }
+
+      const bijouRows = selectedBijoux
+        .filter(b => isUuid(b.id))
+        .map(b => ({
+          id: crypto.randomUUID(),
+          reservation_id: localResId,
+          bijou_id: b.id,
+          prix: b.prix_location_da || 0,
+          caution: 0
+        }));
+      if (bijouRows.length) {
+        const { error } = await supabase.from('reservation_bijoux').insert(bijouRows);
+        if (error) console.warn('Could not link jewellery to reservation:', error.message);
+      }
 
       if (montantPaye > 0) {
         const trRowToInsert = {

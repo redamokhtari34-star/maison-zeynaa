@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Bell, ShieldCheck, RefreshCw, CloudOff, X } from 'lucide-react';
-import { Language, Dress, Bijou, Cliente } from '../types';
+import { Language, Dress, Bijou, Cliente, Reservation } from '../types';
 
 interface TopBarProps {
   language: Language;
   dresses: Dress[];
   bijoux: Bijou[];
   clientes: Cliente[];
+  reservations: Reservation[];
   alertCount: number;
   syncing: boolean;
   cloudConnected: boolean;
@@ -20,6 +21,7 @@ export default function TopBar({
   dresses,
   bijoux,
   clientes,
+  reservations,
   alertCount,
   syncing,
   cloudConnected,
@@ -45,8 +47,8 @@ export default function TopBar({
 
     const out: Hit[] = [];
     const labels = language === 'fr'
-      ? { robe: 'Robe', bijou: 'Bijou', cliente: 'Cliente' }
-      : { robe: 'فستان', bijou: 'مجوهرات', cliente: 'زبونة' };
+      ? { robe: 'Robe', bijou: 'Bijou', cliente: 'Cliente', reservation: 'Réservation' }
+      : { robe: 'فستان', bijou: 'مجوهرات', cliente: 'زبونة', reservation: 'حجز' };
 
     for (const d of dresses) {
       if (d.nom.toLowerCase().includes(q) || d.categorie.toLowerCase().includes(q) || d.taille.toLowerCase().includes(q)) {
@@ -63,8 +65,28 @@ export default function TopBar({
         out.push({ id: `c-${c.id}`, tab: 'clientes', title: c.nom_complet, kind: labels.cliente });
       }
     }
+    // A booking is the shop's central object: it must be findable by client
+    // name, by reference and by either of its dates.
+    for (const r of reservations) {
+      const client = clientes.find(c => c.id === r.cliente_id);
+      const haystack = [
+        client?.nom_complet ?? '',
+        r.id,
+        r.date_sortie,
+        r.date_retour,
+        ...r.items.map(i => i.nom_article)
+      ].join(' ').toLowerCase();
+      if (haystack.includes(q)) {
+        out.push({
+          id: `r-${r.id}`,
+          tab: 'reservations',
+          title: `${client?.nom_complet ?? 'Cliente'} · ${r.date_sortie} → ${r.date_retour}`,
+          kind: labels.reservation
+        });
+      }
+    }
     return out.slice(0, 8);
-  }, [query, dresses, bijoux, clientes, language]);
+  }, [query, dresses, bijoux, clientes, reservations, language]);
 
   const pick = (hit: Hit) => {
     setCurrentTab(hit.tab);
@@ -100,7 +122,7 @@ export default function TopBar({
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder={language === 'fr' ? 'Rechercher une robe, une cliente…' : 'ابحث عن فستان أو زبونة…'}
+          placeholder={language === 'fr' ? 'Rechercher une robe, une cliente, une réservation…' : 'ابحث عن فستان أو زبونة…'}
           className={`w-full rounded-full border border-neutral-200 bg-neutral-50 py-2.5 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white ${
             isRtl ? 'pr-11 pl-10 text-right' : 'pl-11 pr-10'
           }`}

@@ -18,7 +18,6 @@ import {
 import { Dress, DressCategory, DressStatus, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
-import { generateAdditionalDresses } from '../data/sampleData';
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
@@ -188,104 +187,8 @@ export default function Robes({
     setIsFormOpen(true);
   };
 
-  // Bulk add 70 dresses
-  const [isAddingBulk, setIsAddingBulk] = useState(false);
-  const handleAdd70Dresses = async () => {
-    setIsAddingBulk(true);
-    try {
-      const extraDresses = generateAdditionalDresses(70, Date.now());
-      const updatedList = [...dresses, ...extraDresses];
-
-      // Save locally & trigger sync
-      onSaveDresses(updatedList);
-
-      // Save directly to Supabase if connected
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const rowsToInsert = extraDresses.map(mapDressToDb);
-        const { error } = await supabase.from('robes').upsert(rowsToInsert as any);
-        if (error) {
-          console.warn('Supabase bulk insert warning:', error);
-        }
-      }
-
-      addHistoryEntry(
-        language === 'fr' ? 'Ajout massif de robes' : 'إضافة مجموعة فساتين',
-        `70 nouvelles robes ont été ajoutées au catalogue (Total: ${updatedList.length}).`
-      );
-
-      notifyError(language === 'fr' 
-        ? `70 nouvelles robes ont été ajoutées avec succès ! Total : ${updatedList.length} robes.` 
-        : `تمت إضافة 70 فستان جديد بنجاح! المجموع: ${updatedList.length} فستان.`);
-
-    } catch (err) {
-      console.error('Error adding bulk dresses:', err);
-    } finally {
-      setIsAddingBulk(false);
-    }
-  };
 
   // Set exactly 70 dresses
-  const [isSetting70, setIsSetting70] = useState(false);
-  const handleSetExactly70Dresses = async () => {
-    setIsSetting70(true);
-    try {
-      let updatedList: Dress[] = [];
-      const supabase = getSupabaseClient();
-
-      if (dresses.length > 70) {
-        updatedList = dresses.slice(0, 70);
-        const dressesToRemove = dresses.slice(70);
-
-        if (supabase) {
-          const idsToDelete = dressesToRemove.map(d => d.id);
-          const { error } = await supabase.from('robes').delete().in('id', idsToDelete);
-          if (error) {
-            console.warn('Supabase delete warning:', error);
-          }
-        }
-
-        addHistoryEntry(
-          language === 'fr' ? 'Ajustement inventaire' : 'تعديل القائمة',
-          `${dressesToRemove.length} robes ont été retirées du catalogue (Total restants: 70).`
-        );
-
-        notifyError(language === 'fr' 
-          ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes ! (${dressesToRemove.length} robes en trop supprimées)` 
-          : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
-      } else if (dresses.length < 70) {
-        const needed = 70 - dresses.length;
-        const extraDresses = generateAdditionalDresses(needed, Date.now());
-        updatedList = [...dresses, ...extraDresses];
-
-        if (supabase) {
-          const rowsToInsert = extraDresses.map(mapDressToDb);
-          const { error } = await supabase.from('robes').upsert(rowsToInsert as any);
-          if (error) {
-            console.warn('Supabase insert warning:', error);
-          }
-        }
-
-        addHistoryEntry(
-          language === 'fr' ? 'Ajustement inventaire' : 'تعديل القائمة',
-          `${needed} robes ont été ajoutées au catalogue (Total: 70).`
-        );
-
-        notifyError(language === 'fr' 
-          ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes !` 
-          : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
-      } else {
-        notifyError(language === 'fr' ? 'Il y a déjà exactement 70 robes.' : 'يوجد بالفعل 70 فستان بالضبط.');
-        return;
-      }
-
-      onSaveDresses(updatedList);
-    } catch (err) {
-      console.error('Error setting 70 dresses:', err);
-    } finally {
-      setIsSetting70(false);
-    }
-  };
 
   const openEditForm = (dress: Dress, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -411,7 +314,7 @@ export default function Robes({
       // refetching meant the new dress vanished from the list whenever the
       // insert or the refetch did not go through.
       const newDress: Dress = {
-        id: `d-${Date.now()}`,
+        id: crypto.randomUUID(),
         nom,
         categorie,
         couleur,
@@ -545,39 +448,6 @@ export default function Robes({
           </p>
         </div>
         <div className={`flex flex-wrap items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          {dresses.length !== 70 && (
-            <button
-              id="set-exact-70-robes-btn"
-              onClick={handleSetExactly70Dresses}
-              disabled={isSetting70 || isAddingBulk}
-              className={`flex items-center gap-2 font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border ${
-                dresses.length > 70 
-                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' 
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-              }`}
-              title={language === 'fr' ? 'Ajuster directement l\'inventaire à exactement 70 robes' : 'ضبط القائمة إلى 70 فستان بالضبط'}
-            >
-              <CheckCircle size={15} className={dresses.length > 70 ? 'text-rose-600' : 'text-emerald-600'} />
-              <span>
-                {isSetting70 
-                  ? '...' 
-                  : (language === 'fr' 
-                      ? (dresses.length > 70 ? `Fixer à 70 robes (Supprimer ${dresses.length - 70})` : `Ajuster à 70 robes (+${70 - dresses.length})`)
-                      : `تعديل إلى 70 فستان`)}
-              </span>
-            </button>
-          )}
-
-          <button
-            id="add-bulk-70-robes-btn"
-            onClick={handleAdd70Dresses}
-            disabled={isAddingBulk || isSetting70}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer transition-all text-xs border border-slate-700"
-            title={language === 'fr' ? 'Générer et rajouter 70 robes instantanément sur Supabase' : 'إضافة 70 فستان جديد فوراً'}
-          >
-            <Sparkles size={15} className="text-amber-400" />
-            <span>{isAddingBulk ? '...' : (language === 'fr' ? '+ 70 Robes' : '+ 70 فستان')}</span>
-          </button>
 
           <button
             id="add-dress-top-btn"
