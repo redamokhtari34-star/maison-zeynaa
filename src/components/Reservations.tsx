@@ -12,7 +12,8 @@ import {
   X, 
   ChevronRight, 
   AlertTriangle,
-  Receipt
+  Receipt,
+  Pencil
 } from 'lucide-react';
 import { Reservation, Cliente, Dress, Bijou, Language, ReservationItem, Transaction } from '../types';
 import { translations } from '../translations';
@@ -65,8 +66,11 @@ export default function Reservations({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Wizard state
+  // Wizard state. The same wizard records a new booking and corrects an
+  // existing one; editingId tells the two apart and is the booking being
+  // corrected.
   const [isWizardOpen, setIsWizardOpen] = useState(initialOpenForm || false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (initialOpenForm) {
@@ -217,6 +221,7 @@ export default function Reservations({
 
   // Open creation wizard
   const openNewWizard = () => {
+    setEditingId(null);
     setClientNameInput('');
     setClientPhoneInput('');
     setDateSortie(todayStr);
@@ -229,6 +234,38 @@ export default function Reservations({
     setIsWizardOpen(true);
   };
 
+  // Open the same wizard on an existing booking, every field prefilled.
+  //
+  // The stored items only carry the article's identifier and the price charged
+  // at the time, so each one is matched back to the catalogue entry the wizard
+  // works with. An article since removed from the catalogue is skipped rather
+  // than allowed to break the booking — it stays on the record until saved.
+  const openEditWizard = (res: Reservation) => {
+    setEditingId(res.id);
+    setClientNameInput(getClientName(res.cliente_id));
+    setClientPhoneInput(getClientPhone(res.cliente_id));
+    setDateSortie(res.date_sortie);
+    setDateRetour(res.date_retour);
+
+    setSelectedDresses(
+      res.items
+        .filter(i => i.type_article === 'robe')
+        .map(i => dresses.find(d => d.id === i.article_id))
+        .filter((d): d is Dress => Boolean(d))
+    );
+    setSelectedBijoux(
+      res.items
+        .filter(i => i.type_article === 'bijou')
+        .map(i => bijoux.find(b => b.id === i.article_id))
+        .filter((b): b is Bijou => Boolean(b))
+    );
+
+    setMontantPaye(res.montant_paye_da);
+    setNotes(res.notes || '');
+    setWizardStep(1);
+    setIsWizardOpen(true);
+  };
+
   // Handle addition/removal of items in wizard
   const toggleDressSelect = (dress: Dress) => {
     const isSelected = selectedDresses.some(d => d.id === dress.id);
@@ -236,7 +273,8 @@ export default function Reservations({
       setSelectedDresses(selectedDresses.filter(d => d.id !== dress.id));
     } else {
       // Check overlap before selecting
-      const avail = checkItemAvailability('robe', dress.id, dateSortie, dateRetour);
+      // While correcting a booking, its own items must not read as taken.
+      const avail = checkItemAvailability('robe', dress.id, dateSortie, dateRetour, editingId ?? undefined);
       if (!avail.available) {
         const conflictClient = getClientName(avail.conflictingReservation!.cliente_id);
         const warningMsg = language === 'fr'
@@ -255,7 +293,7 @@ export default function Reservations({
       setSelectedBijoux(selectedBijoux.filter(b => b.id !== bijou.id));
     } else {
       // Check overlap before selecting
-      const avail = checkItemAvailability('bijou', bijou.id, dateSortie, dateRetour);
+      const avail = checkItemAvailability('bijou', bijou.id, dateSortie, dateRetour, editingId ?? undefined);
       if (!avail.available) {
         const conflictClient = getClientName(avail.conflictingReservation!.cliente_id);
         const warningMsg = language === 'fr'
@@ -265,6 +303,235 @@ export default function Reservations({
         return;
       }
       setSelectedBijoux([...selectedBijoux, bijou]);
+    }
+  };
+
+  // Resolve the name and number typed in the wizard to a client file, creating
+  // or correcting one as needed, and return the identifier to book against.
+  // Shared by creation and correction so a booking never ends up pointing at a
+  // client who exists on one path and not the other.
+  const resolveClient = (clientName: string, clientPhone: string) => {
+    const localMatch = findClientByName(clientName);
+    const localClientId = localMatch?.id ?? crypto.randomUUID();
+
+    if (!localMatch) {
+      onSaveClientes([
+        ...clientes,
+        {
+          id: localClientId,
+          nom_complet: clientName,
+          telephone: clientPhone,
+          date_creation: todayStr
+        }
+      ]);
+    } else if (clientPhone && clientPhone !== localMatch.telephone) {
+      onSaveClientes(
+        clientes.map(c => (c.id === localMatch.id ? { ...c, telephone: clientPhone } : c))
+      );
+    }
+
+    return { localClientId, localMatch };
+  };
+
+  // Correct an existing booking
+  //
+  // A reservation gets edited for ordinary reasons: a date moves, a dress is
+  // swapped, an amount was mistyped. Everything the wizard collects can be
+  // changed; what it does not collect — the identifier, the creation date, the
+  // history already attached to the booking — is carried over untouched.
+  const handleUpdateReservation = async () => {
+    const existing = reservations.find(r => r.id === editingId);
+    if (!existing) return;
+
+    if (selectedDresses.length === 0 && selectedBijoux.length === 0) {
+      notifyError(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
+      return;
+    }
+
+    const clientName = clientNameInput.trim();
+    if (!clientName) {
+      notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
+      return;
+    }
+
+    const clientPhone = clientPhoneInput.trim();
+    const { localClientId, localMatch } = resolveClient(clientName, clientPhone);
+
+    const items: ReservationItem[] = [
+      ...selectedDresses.map(d => ({
+        id: crypto.randomUUID(),
+        reservation_id: existing.id,
+        type_article: 'robe' as const,
+        article_id: d.id,
+        prix_da: d.prix_location_da,
+        nom_article: d.nom
+      })),
+      ...selectedBijoux.map(b => ({
+        id: crypto.randomUUID(),
+        reservation_id: existing.id,
+        type_article: 'bijou' as const,
+        article_id: b.id,
+        prix_da: b.prix_location_da,
+        nom_article: b.nom
+      }))
+    ];
+
+    // A rental already returned, or already flagged late, keeps the status it
+    // earned; only a booking still running follows its dates.
+    const statut = existing.statut === 'retourne' || existing.statut === 'en_retard'
+      ? existing.statut
+      : dateSortie > todayStr ? 'future' : 'en_cours';
+
+    const updated: Reservation = {
+      ...existing,
+      cliente_id: localClientId,
+      date_sortie: dateSortie,
+      date_retour: dateRetour,
+      montant_total_da: totalCost,
+      caution_da: totalCaution,
+      montant_paye_da: montantPaye,
+      reste_a_payer_da: remainingCost,
+      statut,
+      notes,
+      items
+    };
+
+    onSaveReservations(reservations.map(r => (r.id === existing.id ? updated : r)));
+
+    // Correcting the amount received has to reach the till, or the cash drawer
+    // and the booking stop agreeing. Only the difference is recorded, as an
+    // entry when more was taken and as a refund when less.
+    const paidDelta = montantPaye - existing.montant_paye_da;
+    if (paidDelta !== 0) {
+      onAddTransaction({
+        id: crypto.randomUUID(),
+        type: paidDelta > 0 ? 'entree' : 'sortie',
+        montant_da: Math.abs(paidDelta),
+        description: `Correction acompte Réservation - ${clientName}`,
+        categorie: 'Réservation',
+        date: todayStr,
+        heure: nowTime(),
+        utilisateur: 'Zeyna',
+        source_argent: 'caisse'
+      } as Transaction);
+    }
+
+    addHistoryEntry(
+      language === 'fr' ? 'Réservation modifiée' : 'تعديل حجز',
+      `Réservation de ${clientName} modifiée. Total: ${formatDa(totalCost)}.`
+    );
+
+    setIsWizardOpen(false);
+    setEditingId(null);
+
+    // ── Then mirror the correction to the cloud, best effort ────────────
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      notifySuccess(language === 'fr'
+        ? 'Réservation modifiée sur cet appareil (cloud non configuré).'
+        : 'تم تعديل الحجز على هذا الجهاز (السحابة غير مهيأة).');
+      return;
+    }
+
+    try {
+      let validUuidClientId = isUuid(localClientId) ? localClientId : null;
+
+      if (clientPhone) {
+        const { data: foundClients } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('telephone', clientPhone)
+          .limit(1);
+        if (foundClients?.[0] && isUuid(foundClients[0].id)) {
+          validUuidClientId = foundClients[0].id;
+        }
+      }
+
+      const parts = clientName.split(' ');
+      const prenom = parts[0] || '';
+      const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+
+      const { error: clientErr } = await supabase.from('clients').upsert([{
+        id: validUuidClientId,
+        nom,
+        prenom,
+        telephone: clientPhone || localMatch?.telephone || '',
+        adresse: localMatch?.adresse || ''
+      }]);
+      if (clientErr) throw new Error(clientErr.message);
+
+      const robeItem = selectedDresses[0];
+      const bijouItem = selectedBijoux[0];
+
+      const { error: resError } = await supabase
+        .from('reservations')
+        .update({
+          client_id: validUuidClientId,
+          robe_id: robeItem && isUuid(robeItem.id) ? robeItem.id : null,
+          bijou_id: bijouItem && isUuid(bijouItem.id) ? bijouItem.id : null,
+          date_debut: dateSortie || null,
+          date_fin: dateRetour || null,
+          statut_reservation: statut,
+          prix_total: Number(totalCost) || 0,
+          acompte: Number(montantPaye) || 0,
+          reste_a_payer: Number(remainingCost) || 0,
+          caution_totale: Number(totalCaution) || 0,
+          notes: notes || null
+        })
+        .eq('id', existing.id);
+      if (resError) throw new Error(resError.message);
+
+      // The join tables hold one row per article; a correction can add, remove
+      // or swap any of them, so the previous set is cleared and rewritten
+      // rather than patched row by row.
+      await supabase.from('reservation_robes').delete().eq('reservation_id', existing.id);
+      await supabase.from('reservation_bijoux').delete().eq('reservation_id', existing.id);
+
+      const robeRows = selectedDresses
+        .filter(d => isUuid(d.id))
+        .map(d => ({
+          id: crypto.randomUUID(),
+          reservation_id: existing.id,
+          robe_id: d.id,
+          prix: d.prix_location_da || 0,
+          caution: d.caution_da || 0
+        }));
+      if (robeRows.length) {
+        const { error } = await supabase.from('reservation_robes').insert(robeRows);
+        if (error) console.warn('Could not link dresses to reservation:', error.message);
+      }
+
+      const bijouRows = selectedBijoux
+        .filter(b => isUuid(b.id))
+        .map(b => ({
+          id: crypto.randomUUID(),
+          reservation_id: existing.id,
+          bijou_id: b.id,
+          prix: b.prix_location_da || 0,
+          caution: 0
+        }));
+      if (bijouRows.length) {
+        const { error } = await supabase.from('reservation_bijoux').insert(bijouRows);
+        if (error) console.warn('Could not link jewellery to reservation:', error.message);
+      }
+
+      if (paidDelta !== 0) {
+        const { error: trError } = await supabase.from('mouvements_caisse').insert([{
+          type: paidDelta > 0 ? 'entree' : 'sortie',
+          montant: Math.abs(paidDelta),
+          source: 'caisse',
+          beneficiaire: null,
+          motif: `Correction acompte Réservation - ${clientName}`
+        }]);
+        if (trError) throw new Error(trError.message);
+      }
+
+      notifySuccess(language === 'fr'
+        ? 'Réservation modifiée et synchronisée.'
+        : 'تم تعديل الحجز ومزامنته.');
+    } catch (err) {
+      console.error('Could not sync reservation update to Supabase:', err);
+      notifyError(language === 'fr' ? LOCAL_SYNC_FAIL : 'تم التعديل على هذا الجهاز، لكن فشلت المزامنة مع السحابة.');
     }
   };
 
@@ -286,23 +553,7 @@ export default function Reservations({
 
     // Keep the local client file in step with what was typed: record a new
     // client, or fill in / correct the number of one already on file.
-    const localMatch = findClientByName(clientName);
-    const localClientId = localMatch?.id ?? crypto.randomUUID();
-    if (!localMatch) {
-      onSaveClientes([
-        ...clientes,
-        {
-          id: localClientId,
-          nom_complet: clientName,
-          telephone: clientPhone,
-          date_creation: todayStr
-        }
-      ]);
-    } else if (clientPhone && clientPhone !== localMatch.telephone) {
-      onSaveClientes(
-        clientes.map(c => (c.id === localMatch.id ? { ...c, telephone: clientPhone } : c))
-      );
-    }
+    const { localClientId, localMatch } = resolveClient(clientName, clientPhone);
 
     // ── Record locally first ────────────────────────────────────────────
     // The shop must be able to take a booking with the network down, so the
@@ -645,7 +896,17 @@ export default function Reservations({
                       >
                         <Receipt size={14} />
                       </button>
-                      
+
+                      {/* Correct the booking — dates, articles, amounts, notes */}
+                      <button
+                        id={`edit-res-btn-${res.id}`}
+                        onClick={() => openEditWizard(res)}
+                        title={language === 'fr' ? 'Modifier la réservation' : 'تعديل الحجز'}
+                        className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg border border-neutral-200 hover:border-orange-200 cursor-pointer transition-all duration-200"
+                      >
+                        <Pencil size={14} />
+                      </button>
+
                       <button
                         id={`delete-res-btn-${res.id}`}
                         onClick={(e) => handleDeleteBooking(res.id, e)}
@@ -748,7 +1009,7 @@ export default function Reservations({
       {isWizardOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Overlay */}
-          <div onClick={() => setIsWizardOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div onClick={() => { setIsWizardOpen(false); setEditingId(null); }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
           {/* Dialog Panel */}
           <div className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
@@ -757,7 +1018,9 @@ export default function Reservations({
             <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {language === 'fr' ? 'Assistant de Réservation' : 'مساعد تسجيل الحجوزات'}
+                  {editingId
+                    ? (language === 'fr' ? 'Modifier la réservation' : 'تعديل الحجز')
+                    : (language === 'fr' ? 'Assistant de Réservation' : 'مساعد تسجيل الحجوزات')}
                 </h3>
                 {/* Step indicator */}
                 <div className={`flex gap-1.5 mt-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -775,7 +1038,7 @@ export default function Reservations({
                   ))}
                 </div>
               </div>
-              <button onClick={() => setIsWizardOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl">
+              <button onClick={() => { setIsWizardOpen(false); setEditingId(null); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl">
                 <X size={18} />
               </button>
             </div>
@@ -895,7 +1158,7 @@ export default function Reservations({
                         const isSelected = selectedDresses.some(d => d.id === dress.id);
                         
                         // Check if item is available during these dates (if NOT currently selected)
-                        const isAvail = isSelected ? { available: true } : checkItemAvailability('robe', dress.id, dateSortie, dateRetour);
+                        const isAvail = isSelected ? { available: true } : checkItemAvailability('robe', dress.id, dateSortie, dateRetour, editingId ?? undefined);
                         const disabled = !isAvail.available;
 
                         return (
@@ -958,7 +1221,7 @@ export default function Reservations({
                       .filter(b => b.nom.toLowerCase().includes(itemSearch.toLowerCase()))
                       .map(bijou => {
                         const isSelected = selectedBijoux.some(b => b.id === bijou.id);
-                        const isAvail = isSelected ? { available: true } : checkItemAvailability('bijou', bijou.id, dateSortie, dateRetour);
+                        const isAvail = isSelected ? { available: true } : checkItemAvailability('bijou', bijou.id, dateSortie, dateRetour, editingId ?? undefined);
                         const disabled = !isAvail.available;
 
                         return (
@@ -1134,10 +1397,12 @@ export default function Reservations({
                 <button
                   type="button"
                   id="wizard-submit-btn"
-                  onClick={handleCreateReservation}
+                  onClick={editingId ? handleUpdateReservation : handleCreateReservation}
                   className="py-3 px-6 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  {language === 'fr' ? 'Valider la réservation' : 'تأكيد وحفظ الحجز'}
+                  {editingId
+                    ? (language === 'fr' ? 'Enregistrer les modifications' : 'حفظ التعديلات')
+                    : (language === 'fr' ? 'Valider la réservation' : 'تأكيد وحفظ الحجز')}
                 </button>
               )}
 
