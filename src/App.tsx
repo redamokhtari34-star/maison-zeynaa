@@ -5,7 +5,6 @@ import Dashboard from './components/Dashboard';
 import Toaster from './components/Toaster';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
-import Login from './components/Login';
 import ConfirmDialog from './components/ConfirmDialog';
 
 // Loaded on demand — the dashboard should not wait for screens nobody opened.
@@ -46,12 +45,10 @@ import {
   seedSupabaseWithSampleData,
   cleanFinancialsAndReservationsForProduction,
   getHistory,
-  subscribeToHistory,
-  setCurrentUser
+  subscribeToHistory
 } from './lib/storage';
 import { todayIso } from './lib/dates';
 import { notifySuccess } from './lib/toast';
-import { getSession, onSessionChange, signOut, type Session } from './lib/auth';
 import { askConfirm } from './lib/confirm';
 
 export default function App() {
@@ -65,16 +62,6 @@ export default function App() {
   // Whether the last sync actually reached the cloud. Drives the status pill,
   // which must never claim "synchronised" when it isn't.
   const [cloudReachable, setCloudReachable] = useState(false);
-
-  // Records are only reachable once signed in: the policies grant the
-  // `authenticated` role, never anonymous visitors.
-  const [session, setSession] = useState<Session | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    getSession().then(s => { setSession(s); setAuthChecked(true); });
-    return onSessionChange(setSession);
-  }, []);
 
   const refreshFromSupabase = async () => {
     setSupabaseSyncing(true);
@@ -102,11 +89,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!session) return;
-    // The part before the @ is what a colleague would recognise in the log.
-    setCurrentUser(session.user.email?.split('@')[0] ?? 'Zeyna');
     refreshFromSupabase();
-  }, [session]);
+  }, []);
 
   // Actions logged from anywhere in the app land on screen straight away.
   useEffect(
@@ -346,11 +330,6 @@ export default function App() {
     }
   };
 
-  // Wait for the stored session to be read before deciding what to show, so a
-  // signed-in user never sees the login screen flash on reload.
-  if (!authChecked) return null;
-  if (!session) return <><Login /><Toaster /><ConfirmDialog /></>;
-
   return (
     <div className={`min-h-screen bg-neutral-50 ${isRtl ? 'flex flex-row-reverse' : 'flex flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
@@ -377,8 +356,6 @@ export default function App() {
         syncing={supabaseSyncing}
         cloudConnected={cloudConnected}
         setCurrentTab={setCurrentTab}
-        userLabel={session.user.email ?? ''}
-        onSignOut={signOut}
       />
 
       {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
