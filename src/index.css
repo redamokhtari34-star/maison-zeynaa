@@ -1,8 +1,289 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Maison Zeyna — "Gestion Haute Couture" design system
+ * Cream ground, white cards with hairline warm borders, a single saturated
+ * orange reserved for primary actions, and near-black for the one feature
+ * surface. Display sizes and all figures are set in a serif; the UI itself
+ * runs on a geometric sans. Themed at the Tailwind token layer so every
+ * screen adopts it without markup changes.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --radius-2xl: 20px;
-  --radius-3xl: 24px;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: "Playfair Display", ui-serif, Georgia, "Times New Roman", serif;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+
+  --color-violet-50: #FFF4EA;
+  --color-violet-100: #FFE6D0;
+  --color-violet-200: #FFC79C;
+  --color-violet-300: #FFA463;
+  --color-violet-400: #FB8630;
+  --color-violet-500: #F26F0C;
+  --color-violet-600: #E05E00;
+  --color-violet-700: #B84A02;
+  --color-violet-800: #933C08;
+  --color-violet-900: #78330C;
+  --color-violet-950: #411703;
+  --color-purple-50: #FFF4EA;
+  --color-purple-100: #FFE6D0;
+  --color-purple-200: #FFC79C;
+  --color-purple-300: #FFA463;
+  --color-purple-400: #FB8630;
+  --color-purple-500: #F26F0C;
+  --color-purple-600: #E05E00;
+  --color-purple-700: #B84A02;
+  --color-purple-800: #933C08;
+  --color-purple-900: #78330C;
+  --color-purple-950: #411703;
+  --color-fuchsia-50: #FFF4EA;
+  --color-fuchsia-100: #FFE6D0;
+  --color-fuchsia-200: #FFC79C;
+  --color-fuchsia-300: #FFA463;
+  --color-fuchsia-400: #FB8630;
+  --color-fuchsia-500: #F26F0C;
+  --color-fuchsia-600: #E05E00;
+  --color-fuchsia-700: #B84A02;
+  --color-fuchsia-800: #933C08;
+  --color-fuchsia-900: #78330C;
+  --color-fuchsia-950: #411703;
+  --color-pink-50: #FFF4EA;
+  --color-pink-100: #FFE6D0;
+  --color-pink-200: #FFC79C;
+  --color-pink-300: #FFA463;
+  --color-pink-400: #FB8630;
+  --color-pink-500: #F26F0C;
+  --color-pink-600: #E05E00;
+  --color-pink-700: #B84A02;
+  --color-pink-800: #933C08;
+  --color-pink-900: #78330C;
+  --color-pink-950: #411703;
+  --color-indigo-50: #FFF4EA;
+  --color-indigo-100: #FFE6D0;
+  --color-indigo-200: #FFC79C;
+  --color-indigo-300: #FFA463;
+  --color-indigo-400: #FB8630;
+  --color-indigo-500: #F26F0C;
+  --color-indigo-600: #E05E00;
+  --color-indigo-700: #B84A02;
+  --color-indigo-800: #933C08;
+  --color-indigo-900: #78330C;
+  --color-indigo-950: #411703;
+  --color-rose-50: #EFF3F6;
+  --color-rose-100: #DEE7ED;
+  --color-rose-200: #BFCEDA;
+  --color-rose-300: #97AEC1;
+  --color-rose-400: #6E8BA4;
+  --color-rose-500: #52708B;
+  --color-rose-600: #405A72;
+  --color-rose-700: #36495C;
+  --color-rose-800: #2F3D4C;
+  --color-rose-900: #2A3540;
+  --color-rose-950: #171D24;
+  --color-orange-50: #FFF4EA;
+  --color-orange-100: #FFE6D0;
+  --color-orange-200: #FFC79C;
+  --color-orange-300: #FFA463;
+  --color-orange-400: #FB8630;
+  --color-orange-500: #F26F0C;
+  --color-orange-600: #E05E00;
+  --color-orange-700: #B84A02;
+  --color-orange-800: #933C08;
+  --color-orange-900: #78330C;
+  --color-orange-950: #411703;
+  --color-amber-50: #FEF6E7;
+  --color-amber-100: #FCEBC6;
+  --color-amber-200: #F8D68C;
+  --color-amber-300: #F2BC4E;
+  --color-amber-400: #EBA31F;
+  --color-amber-500: #D98A08;
+  --color-amber-600: #BB6C04;
+  --color-amber-700: #964F09;
+  --color-amber-800: #7B400E;
+  --color-amber-900: #67360F;
+  --color-amber-950: #3B1B03;
+  --color-yellow-50: #FEF6E7;
+  --color-yellow-100: #FCEBC6;
+  --color-yellow-200: #F8D68C;
+  --color-yellow-300: #F2BC4E;
+  --color-yellow-400: #EBA31F;
+  --color-yellow-500: #D98A08;
+  --color-yellow-600: #BB6C04;
+  --color-yellow-700: #964F09;
+  --color-yellow-800: #7B400E;
+  --color-yellow-900: #67360F;
+  --color-yellow-950: #3B1B03;
+  --color-emerald-50: #ECF8F1;
+  --color-emerald-100: #D6F0E2;
+  --color-emerald-200: #AEE1C7;
+  --color-emerald-300: #7ACCA5;
+  --color-emerald-400: #47B180;
+  --color-emerald-500: #259764;
+  --color-emerald-600: #157A50;
+  --color-emerald-700: #116141;
+  --color-emerald-800: #114E36;
+  --color-emerald-900: #10402D;
+  --color-emerald-950: #042418;
+  --color-green-50: #ECF8F1;
+  --color-green-100: #D6F0E2;
+  --color-green-200: #AEE1C7;
+  --color-green-300: #7ACCA5;
+  --color-green-400: #47B180;
+  --color-green-500: #259764;
+  --color-green-600: #157A50;
+  --color-green-700: #116141;
+  --color-green-800: #114E36;
+  --color-green-900: #10402D;
+  --color-green-950: #042418;
+  --color-teal-50: #ECF8F1;
+  --color-teal-100: #D6F0E2;
+  --color-teal-200: #AEE1C7;
+  --color-teal-300: #7ACCA5;
+  --color-teal-400: #47B180;
+  --color-teal-500: #259764;
+  --color-teal-600: #157A50;
+  --color-teal-700: #116141;
+  --color-teal-800: #114E36;
+  --color-teal-900: #10402D;
+  --color-teal-950: #042418;
+  --color-lime-50: #ECF8F1;
+  --color-lime-100: #D6F0E2;
+  --color-lime-200: #AEE1C7;
+  --color-lime-300: #7ACCA5;
+  --color-lime-400: #47B180;
+  --color-lime-500: #259764;
+  --color-lime-600: #157A50;
+  --color-lime-700: #116141;
+  --color-lime-800: #114E36;
+  --color-lime-900: #10402D;
+  --color-lime-950: #042418;
+  --color-red-50: #FEF0EF;
+  --color-red-100: #FDDDDB;
+  --color-red-200: #FABDB9;
+  --color-red-300: #F5928C;
+  --color-red-400: #EE635C;
+  --color-red-500: #E13F37;
+  --color-red-600: #C62A23;
+  --color-red-700: #A4201B;
+  --color-red-800: #871E1A;
+  --color-red-900: #711E1B;
+  --color-red-950: #3D0B09;
+  --color-blue-50: #EFF3F6;
+  --color-blue-100: #DEE7ED;
+  --color-blue-200: #BFCEDA;
+  --color-blue-300: #97AEC1;
+  --color-blue-400: #6E8BA4;
+  --color-blue-500: #52708B;
+  --color-blue-600: #405A72;
+  --color-blue-700: #36495C;
+  --color-blue-800: #2F3D4C;
+  --color-blue-900: #2A3540;
+  --color-blue-950: #171D24;
+  --color-cyan-50: #EFF3F6;
+  --color-cyan-100: #DEE7ED;
+  --color-cyan-200: #BFCEDA;
+  --color-cyan-300: #97AEC1;
+  --color-cyan-400: #6E8BA4;
+  --color-cyan-500: #52708B;
+  --color-cyan-600: #405A72;
+  --color-cyan-700: #36495C;
+  --color-cyan-800: #2F3D4C;
+  --color-cyan-900: #2A3540;
+  --color-cyan-950: #171D24;
+  --color-sky-50: #EFF3F6;
+  --color-sky-100: #DEE7ED;
+  --color-sky-200: #BFCEDA;
+  --color-sky-300: #97AEC1;
+  --color-sky-400: #6E8BA4;
+  --color-sky-500: #52708B;
+  --color-sky-600: #405A72;
+  --color-sky-700: #36495C;
+  --color-sky-800: #2F3D4C;
+  --color-sky-900: #2A3540;
+  --color-sky-950: #171D24;
+  --color-gray-50: #FAF9F7;
+  --color-gray-100: #F4F2EE;
+  --color-gray-200: #EAE7E1;
+  --color-gray-300: #DAD6CE;
+  --color-gray-400: #B5B0A6;
+  --color-gray-500: #918C81;
+  --color-gray-600: #6E6A61;
+  --color-gray-700: #55524B;
+  --color-gray-800: #3A3833;
+  --color-gray-900: #1F1E1B;
+  --color-gray-950: #121110;
+  --color-slate-50: #FAF9F7;
+  --color-slate-100: #F4F2EE;
+  --color-slate-200: #EAE7E1;
+  --color-slate-300: #DAD6CE;
+  --color-slate-400: #B5B0A6;
+  --color-slate-500: #918C81;
+  --color-slate-600: #6E6A61;
+  --color-slate-700: #55524B;
+  --color-slate-800: #3A3833;
+  --color-slate-900: #1F1E1B;
+  --color-slate-950: #121110;
+  --color-stone-50: #FAF9F7;
+  --color-stone-100: #F4F2EE;
+  --color-stone-200: #EAE7E1;
+  --color-stone-300: #DAD6CE;
+  --color-stone-400: #B5B0A6;
+  --color-stone-500: #918C81;
+  --color-stone-600: #6E6A61;
+  --color-stone-700: #55524B;
+  --color-stone-800: #3A3833;
+  --color-stone-900: #1F1E1B;
+  --color-stone-950: #121110;
+  --color-zinc-50: #FAF9F7;
+  --color-zinc-100: #F4F2EE;
+  --color-zinc-200: #EAE7E1;
+  --color-zinc-300: #DAD6CE;
+  --color-zinc-400: #B5B0A6;
+  --color-zinc-500: #918C81;
+  --color-zinc-600: #6E6A61;
+  --color-zinc-700: #55524B;
+  --color-zinc-800: #3A3833;
+  --color-zinc-900: #1F1E1B;
+  --color-zinc-950: #121110;
+  --color-neutral-50: #FAF9F7;
+  --color-neutral-100: #F4F2EE;
+  --color-neutral-200: #EAE7E1;
+  --color-neutral-300: #DAD6CE;
+  --color-neutral-400: #B5B0A6;
+  --color-neutral-500: #918C81;
+  --color-neutral-600: #6E6A61;
+  --color-neutral-700: #55524B;
+  --color-neutral-800: #3A3833;
+  --color-neutral-900: #1F1E1B;
+  --color-neutral-950: #121110;
+}
+
+@layer base {
+  body { background-color: var(--color-neutral-50); }
+
+  /* Page and section titles are the serif voice of the house. */
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+}
+
+@layer utilities {
+  .font-display { font-family: var(--font-display); }
+
+  /* Figures — amounts, counts — are set in the serif, lining and tabular so
+     columns of numbers stay aligned. */
+  .figure {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* The small capitalised label used above every metric. */
+  .eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-neutral-500);
+  }
 }

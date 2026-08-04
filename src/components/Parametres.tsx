@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
-import { 
-  resetDatabaseToDefaults, 
+import {
+  resetDatabaseToDefaults,
   addHistoryEntry, 
   getFullDatabaseState, 
   saveDresses, 
@@ -24,6 +24,8 @@ import {
   saveReservations, 
   saveTransactions 
 } from '../lib/storage';
+import { notifyError } from '../lib/toast';
+import { askConfirm } from '../lib/confirm';
 
 interface ParametresProps {
   language: Language;
@@ -64,7 +66,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
     const fileReader = new FileReader();
     if (e.target.files && e.target.files[0]) {
       fileReader.readAsText(e.target.files[0], "UTF-8");
-      fileReader.onload = (uploadEvent) => {
+      fileReader.onload = async (uploadEvent) => {
         try {
           const parsed = JSON.parse(uploadEvent.target?.result as string);
           
@@ -72,45 +74,37 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
             ? 'Êtes-vous sûr d’importer ce fichier de sauvegarde ? Les données actuelles seront synchronisées avec Supabase.'
             : 'هل أنت متأكد من استيراد ملف النسخة الاحتياطية هذا؟ سيتم استبدال البيانات الحالية بالكامل.';
           
-          if (window.confirm(msg)) {
+          if (await askConfirm({ title: language === 'fr' ? 'Restaurer une sauvegarde' : 'استعادة نسخة', message: msg, confirmLabel: language === 'fr' ? 'Restaurer' : 'استعادة', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
             if (parsed.dresses) saveDresses(parsed.dresses);
             if (parsed.bijoux) saveBijoux(parsed.bijoux);
             if (parsed.clientes) saveClientes(parsed.clientes);
             if (parsed.reservations) saveReservations(parsed.reservations);
             if (parsed.transactions) saveTransactions(parsed.transactions);
 
-            alert(language === 'fr' ? 'Restauration réussie !' : 'تم استيراد البيانات بنجاح !');
+            notifyError(language === 'fr' ? 'Restauration réussie !' : 'تم استيراد البيانات بنجاح !');
             window.location.reload();
           }
         } catch (err) {
-          alert(language === 'fr' ? 'Format de fichier de sauvegarde non valide !' : 'صيغة ملف غير صحيحة !');
+          notifyError(language === 'fr' ? 'Format de fichier de sauvegarde non valide !' : 'صيغة ملف غير صحيحة !');
         }
       };
     }
   };
 
-  // Factory reset
-  const handleFactoryReset = () => {
-    const msg = language === 'fr'
-      ? 'Êtes-vous sûr de vouloir réinitialiser TOUTES les données ? Cette action est irréversible.'
-      : 'هل أنت متأكد من إعادة ضبط المصنع؟ سيتم مسح جميع التغييرات والحجوزات والملابس الجديدة واستعادة البيانات النموذجية الأولية.';
-
-    if (window.confirm(msg)) {
-      onResetData();
-    }
-  };
+  // App.tsx owns the confirmation for this one, so it is not asked twice.
+  const handleFactoryReset = () => onResetData();
 
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            ⚙️ {language === 'fr' ? 'Paramètres Généraux du Salon' : 'إعدادات الصالون والمحل'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Paramètres Généraux du Salon' : 'إعدادات الصالون والمحل'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Personnalisez le fonctionnement de votre boutique, sauvegardez ou réinitialisez vos données.`
               : `قومي بتخصيص صالونك، إدارة لغة الواجهة، وتحميل أو استيراد النسخ الاحتياطية للسلامة.`}
@@ -121,7 +115,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Left: General Info Settings Form */}
-        <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-6">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
             <Store size={18} className="text-violet-600" />
             <span>{language === 'fr' ? 'Coordonnées de la boutique' : 'معلومات وتفاصيل المحل'}</span>
@@ -135,7 +129,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={salonName}
                 onChange={(e) => setSalonName(e.target.value)}
-                className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-bold ${
+                className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-bold ${
                   isRtl ? 'text-right' : 'text-left'
                 }`}
               />
@@ -148,7 +142,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
+                className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
               />
             </div>
 
@@ -159,7 +153,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                   isRtl ? 'text-right' : 'text-left'
                 }`}
               />
@@ -172,7 +166,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
                 type="text"
                 value={openingHours}
                 onChange={(e) => setOpeningHours(e.target.value)}
-                className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-mono"
+                className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 font-mono"
               />
             </div>
           </div>
@@ -191,7 +185,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
         <div className="space-y-8">
 
           {/* Backup Database management */}
-          <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm space-y-5">
+          <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-5">
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <FileJson size={18} className="text-violet-600" />
               <span>{language === 'fr' ? 'Sauvegarde & Sécurité' : 'حفظ واستيراد البيانات'}</span>
@@ -228,24 +222,38 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
               </label>
             </div>
 
-            {/* Advanced danger zone reset */}
-            <div className="pt-4 border-t border-dashed border-gray-200/80">
-              <div className={`flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <div>
-                  <span className="text-xs font-bold text-red-600 uppercase block">{language === 'fr' ? 'Zone de danger' : 'منطقة الخطر'}</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5 block">{language === 'fr' ? 'Remettre à zéro' : 'إعادة ضبط المصنع'}</span>
-                </div>
-                
-                <button
-                  id="factory-reset-btn"
-                  type="button"
-                  onClick={handleFactoryReset}
-                  className="py-2.5 px-4 bg-red-50 hover:bg-red-100/80 active:bg-red-200 text-red-600 hover:text-red-700 text-xs font-bold rounded-xl border border-red-200/60 transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Trash2 size={13} />
-                  <span>{language === 'fr' ? 'Réinitialiser' : 'مسح البيانات'}</span>
-                </button>
-              </div>
+            {/* Reset — spells out exactly what goes and what stays */}
+            <div className="pt-4 border-t border-dashed border-neutral-200">
+              <span className="eyebrow !text-red-600">{language === 'fr' ? 'Zone de danger' : 'منطقة الخطر'}</span>
+
+              <p className="mt-2 text-[13px] leading-relaxed text-neutral-600">
+                {language === 'fr'
+                  ? 'Efface définitivement les clientes, les réservations, la caisse et le journal d’activité, sur cet appareil comme dans le cloud.'
+                  : 'يحذف نهائياً الزبونات والحجوزات والصندوق وسجل النشاط، على هذا الجهاز وفي السحابة.'}
+              </p>
+
+              <p className={`mt-2 flex items-center gap-1.5 text-[13px] font-medium text-green-700 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <CheckCircle size={13} />
+                {language === 'fr'
+                  ? 'Les catalogues de robes et de bijoux sont conservés.'
+                  : 'يتم الاحتفاظ بكتالوج الفساتين والمجوهرات.'}
+              </p>
+
+              <button
+                id="factory-reset-btn"
+                type="button"
+                onClick={handleFactoryReset}
+                className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 ${
+                  isRtl ? 'flex-row-reverse' : ''
+                }`}
+              >
+                <Trash2 size={15} />
+                <span>
+                  {language === 'fr'
+                    ? 'Réinitialiser (sauf robes et bijoux)'
+                    : 'إعادة الضبط (باستثناء الفساتين والمجوهرات)'}
+                </span>
+              </button>
             </div>
 
           </div>

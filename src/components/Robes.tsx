@@ -18,7 +18,13 @@ import {
 import { Dress, DressCategory, DressStatus, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
-import { generateAdditionalDresses } from '../data/sampleData';
+import { todayIso } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface RobesProps {
   dresses: Dress[];
@@ -121,7 +127,7 @@ export default function Robes({
           }
         } catch (err: any) {
           console.error(`Erreur d'envoi de l'image ${i + 1}/${files.length} sur Supabase Storage:`, err);
-          alert(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
+          notifyError(`Erreur lors de l'envoi de l'image (${file.name}) : ` + (err.message || err));
 
           // Sequential fallback read base64 if upload failed
           const base64 = await new Promise<string>((resolve) => {
@@ -182,106 +188,8 @@ export default function Robes({
     setIsFormOpen(true);
   };
 
-  // Bulk add 70 dresses
-  const [isAddingBulk, setIsAddingBulk] = useState(false);
-  const handleAdd70Dresses = async () => {
-    setIsAddingBulk(true);
-    try {
-      const extraDresses = generateAdditionalDresses(70, Date.now());
-      const updatedList = [...dresses, ...extraDresses];
-
-      // Save locally & trigger sync
-      onSaveDresses(updatedList);
-
-      // Save directly to Supabase if connected
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const rowsToInsert = extraDresses.map(mapDressToDb);
-        const { error } = await supabase.from('robes').upsert(rowsToInsert as any);
-        if (error) {
-          console.warn('Supabase bulk insert warning:', error);
-        }
-      }
-
-      addHistoryEntry(
-        language === 'fr' ? 'Ajout massif de robes' : 'إضافة مجموعة فساتين',
-        `70 nouvelles robes ont été ajoutées au catalogue (Total: ${updatedList.length}).`
-      );
-
-      alert(language === 'fr' 
-        ? `70 nouvelles robes ont été ajoutées avec succès ! Total : ${updatedList.length} robes.` 
-        : `تمت إضافة 70 فستان جديد بنجاح! المجموع: ${updatedList.length} فستان.`);
-
-      onRefreshData?.();
-    } catch (err) {
-      console.error('Error adding bulk dresses:', err);
-    } finally {
-      setIsAddingBulk(false);
-    }
-  };
 
   // Set exactly 70 dresses
-  const [isSetting70, setIsSetting70] = useState(false);
-  const handleSetExactly70Dresses = async () => {
-    setIsSetting70(true);
-    try {
-      let updatedList: Dress[] = [];
-      const supabase = getSupabaseClient();
-
-      if (dresses.length > 70) {
-        updatedList = dresses.slice(0, 70);
-        const dressesToRemove = dresses.slice(70);
-
-        if (supabase) {
-          const idsToDelete = dressesToRemove.map(d => d.id);
-          const { error } = await supabase.from('robes').delete().in('id', idsToDelete);
-          if (error) {
-            console.warn('Supabase delete warning:', error);
-          }
-        }
-
-        addHistoryEntry(
-          language === 'fr' ? 'Ajustement inventaire' : 'تعديل القائمة',
-          `${dressesToRemove.length} robes ont été retirées du catalogue (Total restants: 70).`
-        );
-
-        alert(language === 'fr' 
-          ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes ! (${dressesToRemove.length} robes en trop supprimées)` 
-          : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
-      } else if (dresses.length < 70) {
-        const needed = 70 - dresses.length;
-        const extraDresses = generateAdditionalDresses(needed, Date.now());
-        updatedList = [...dresses, ...extraDresses];
-
-        if (supabase) {
-          const rowsToInsert = extraDresses.map(mapDressToDb);
-          const { error } = await supabase.from('robes').upsert(rowsToInsert as any);
-          if (error) {
-            console.warn('Supabase insert warning:', error);
-          }
-        }
-
-        addHistoryEntry(
-          language === 'fr' ? 'Ajustement inventaire' : 'تعديل القائمة',
-          `${needed} robes ont été ajoutées au catalogue (Total: 70).`
-        );
-
-        alert(language === 'fr' 
-          ? `Ajustement effectué : Le catalogue contient maintenant exactement 70 robes !` 
-          : `تم تعديل القائمة: يوجد الآن 70 فستان بالضبط!`);
-      } else {
-        alert(language === 'fr' ? 'Il y a déjà exactement 70 robes.' : 'يوجد بالفعل 70 فستان بالضبط.');
-        return;
-      }
-
-      onSaveDresses(updatedList);
-      onRefreshData?.();
-    } catch (err) {
-      console.error('Error setting 70 dresses:', err);
-    } finally {
-      setIsSetting70(false);
-    }
-  };
 
   const openEditForm = (dress: Dress, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -309,19 +217,14 @@ export default function Robes({
       ? `Êtes-vous sûr de vouloir supprimer la robe "${dress.nom}" ?`
       : `هل أنت متأكد من حذف فستان "${dress.nom}"؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({ title: language === 'fr' ? 'Supprimer la robe' : 'حذف الفستان', message: msg, danger: true, confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('robes').delete().eq('id', dressId);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase delete error:', error);
-        }
+        mirrorToCloud(() => supabase.from('robes').delete().eq('id', dressId), LOCAL_SYNC_FAIL);
       }
 
       const updated = dresses.filter(d => d.id !== dressId);
       onSaveDresses(updated);
-      onRefreshData?.();
       addHistoryEntry(
         language === 'fr' ? 'Suppression de robe' : 'حذف فستان',
         `La robe "${dress.nom}" (ID: ${dress.id}) a été retirée de l'inventaire.`
@@ -336,11 +239,7 @@ export default function Robes({
     
     const supabase = getSupabaseClient();
     if (supabase) {
-      const { error } = await supabase.from('robes').update({ statut: targetStatus }).eq('id', dressId);
-      if (error) {
-        alert("Erreur Supabase : " + error.message);
-        console.error('Supabase update status error:', error);
-      }
+      mirrorToCloud(() => supabase.from('robes').update({ statut: targetStatus }).eq('id', dressId), LOCAL_SYNC_FAIL);
     }
 
     const updated = dresses.map(d => {
@@ -350,7 +249,6 @@ export default function Robes({
       return d;
     });
     onSaveDresses(updated);
-    onRefreshData?.();
 
     const dress = dresses.find(d => d.id === dressId);
     if (dress) {
@@ -365,7 +263,7 @@ export default function Robes({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom || !couleur || !taille) {
-      alert(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
+      notifyError(language === 'fr' ? 'Veuillez remplir les champs obligatoires' : 'يرجى ملء الحقول الإجبارية');
       return;
     }
 
@@ -402,56 +300,70 @@ export default function Robes({
       };
 
       if (supabase) {
-        const { error } = await supabase.from('robes').update(mapDressToDb(updatedDressObj)).eq('id', editingDress.id);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase update robe error:', error);
-        }
+        mirrorToCloud(() => supabase.from('robes').update(mapDressToDb(updatedDressObj)).eq('id', editingDress.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = dresses.map(d => d.id === editingDress.id ? updatedDressObj : d);
       onSaveDresses(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Modification de robe' : 'تعديل فستان',
         `La robe "${nom}" a été modifiée.`
       );
     } else {
-      // Create new dress directly in Supabase
-      if (!supabase) {
-        alert("Erreur Supabase : Client Supabase non initialisé");
-        return;
-      }
-
-      // Payload matching Supabase robes table columns: nom, categorie, taille, couleur, prix_location, caution, statut, photo_url (without id)
-      const rowToInsert = {
+      // Record the dress locally first. Writing only to Supabase and then
+      // refetching meant the new dress vanished from the list whenever the
+      // insert or the refetch did not go through.
+      const newDress: Dress = {
+        id: crypto.randomUUID(),
         nom,
         categorie,
-        taille,
         couleur,
-        prix_location: Number(prix),
-        caution: Number(caution),
+        taille,
+        prix_location_da: Number(prix),
+        caution_da: Number(caution),
+        description,
+        photo_principale: finalPhoto,
+        photos: photosList,
         statut: 'disponible',
-        photo_url: finalPhoto
+        date_creation: todayIso()
       };
-
-      const { error } = await supabase.from('robes').insert([rowToInsert]).select();
-
-      if (error) {
-        alert("Erreur Supabase : " + error.message);
-        console.error('Supabase insert robe error:', error);
-        return; // Stop execution on error
-      }
-
-      alert("Robe ajoutée avec succès !");
-
-      await onRefreshData?.();
+      onSaveDresses([newDress, ...dresses]);
 
       addHistoryEntry(
         language === 'fr' ? 'Ajout de robe' : 'إضافة فستان',
         `Nouvelle robe "${nom}" ajoutée avec succès.`
       );
+
+      // Then mirror it to the cloud, best effort.
+      if (!supabase) {
+        notifySuccess(language === 'fr'
+          ? 'Robe ajoutée sur cet appareil (cloud non configuré).'
+          : 'تمت إضافة الفستان على هذا الجهاز (السحابة غير مهيأة).');
+      } else {
+        const rowToInsert = {
+          nom,
+          categorie,
+          taille,
+          couleur,
+          prix_location: Number(prix),
+          caution: Number(caution),
+          statut: 'disponible',
+          photo_url: finalPhoto
+        };
+
+        const { error } = await supabase.from('robes').insert([rowToInsert]).select();
+
+        if (error) {
+          console.error('Supabase insert robe error:', error);
+          notifyError(language === 'fr'
+            ? "Robe ajoutée sur cet appareil, mais la synchronisation avec le cloud a échoué."
+            : 'تمت إضافة الفستان محلياً، لكن فشلت المزامنة مع السحابة.');
+        } else {
+          notifySuccess(language === 'fr' ? 'Robe ajoutée et synchronisée.' : 'تمت إضافة الفستان ومزامنته.');
+          // Only pull the cloud copy back once it actually holds this dress.
+        }
+      }
     }
 
     setIsFormOpen(false);
@@ -523,58 +435,25 @@ export default function Robes({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header Panel */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            👗 {language === 'fr' ? 'Gestion des Robes' : 'إدارة الفساتين'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Robes' : 'إدارة الفساتين'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Affichez, filtrez et modifiez l'inventaire des robes du magasin (${dresses.length} modèles).`
               : `اعرض، صنف وعدل قائمة فساتين المحل الحالية (${dresses.length} موديل).`}
           </p>
         </div>
         <div className={`flex flex-wrap items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          {dresses.length !== 70 && (
-            <button
-              id="set-exact-70-robes-btn"
-              onClick={handleSetExactly70Dresses}
-              disabled={isSetting70 || isAddingBulk}
-              className={`flex items-center gap-2 font-bold px-4 py-3 rounded-2xl cursor-pointer hover:shadow-md active:scale-95 transition-all text-xs border ${
-                dresses.length > 70 
-                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200' 
-                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-              }`}
-              title={language === 'fr' ? 'Ajuster directement l\'inventaire à exactement 70 robes' : 'ضبط القائمة إلى 70 فستان بالضبط'}
-            >
-              <CheckCircle size={15} className={dresses.length > 70 ? 'text-rose-600' : 'text-emerald-600'} />
-              <span>
-                {isSetting70 
-                  ? '...' 
-                  : (language === 'fr' 
-                      ? (dresses.length > 70 ? `Fixer à 70 robes (Supprimer ${dresses.length - 70})` : `Ajuster à 70 robes (+${70 - dresses.length})`)
-                      : `تعديل إلى 70 فستان`)}
-              </span>
-            </button>
-          )}
-
-          <button
-            id="add-bulk-70-robes-btn"
-            onClick={handleAdd70Dresses}
-            disabled={isAddingBulk || isSetting70}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-2xl cursor-pointer hover:shadow-md active:scale-95 transition-all text-xs border border-slate-700"
-            title={language === 'fr' ? 'Générer et rajouter 70 robes instantanément sur Supabase' : 'إضافة 70 فستان جديد فوراً'}
-          >
-            <Sparkles size={15} className="text-amber-400" />
-            <span>{isAddingBulk ? '...' : (language === 'fr' ? '+ 70 Robes' : '+ 70 فستان')}</span>
-          </button>
 
           <button
             id="add-dress-top-btn"
             onClick={openAddForm}
-            className="flex items-center gap-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 transition-all text-sm"
+            className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
           >
             <Plus size={16} />
             <span>{language === 'fr' ? 'Ajouter une robe' : 'إضافة فستان جديد'}</span>
@@ -583,7 +462,7 @@ export default function Robes({
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search bar */}
           <div className="relative flex-1">
@@ -596,7 +475,7 @@ export default function Robes({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-gray-200/80 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-neutral-200 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -608,7 +487,7 @@ export default function Robes({
               id="dress-sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full py-3 px-4 bg-slate-50 border border-gray-200/80 rounded-2xl text-sm text-gray-700 font-medium focus:outline-none focus:border-violet-500 cursor-pointer"
+              className="w-full py-3 px-4 bg-slate-50 border border-neutral-200 rounded-2xl text-sm text-gray-700 font-medium focus:outline-none focus:border-violet-500 cursor-pointer"
             >
               <option value="recent">{language === 'fr' ? 'Plus récents' : 'أضيف مؤخراً'}</option>
               <option value="price-asc">{language === 'fr' ? 'Prix : Ordre croissant' : 'السعر: من الأقل للأعلى'}</option>
@@ -664,7 +543,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('all')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'all'
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
               }`}
             >
@@ -675,7 +554,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('disponible')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'disponible'
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
               }`}
             >
@@ -686,7 +565,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('reservee')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'reservee'
-                  ? 'bg-amber-500 text-white shadow-sm'
+                  ? 'bg-amber-500 text-white'
                   : 'bg-slate-50 text-amber-500 hover:bg-amber-50'
               }`}
             >
@@ -697,7 +576,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('en_location')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'en_location'
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white'
                   : 'bg-slate-50 text-violet-600 hover:bg-violet-50'
               }`}
             >
@@ -708,7 +587,7 @@ export default function Robes({
               onClick={() => setSelectedStatus('en_entretien')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                 selectedStatus === 'en_entretien'
-                  ? 'bg-gray-600 text-white shadow-sm'
+                  ? 'bg-gray-600 text-white'
                   : 'bg-slate-50 text-gray-600 hover:bg-gray-100'
               }`}
             >
@@ -720,7 +599,7 @@ export default function Robes({
 
       {/* Dresses Grid */}
       {sortedDresses.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <Search size={28} />
           </div>
@@ -734,7 +613,7 @@ export default function Robes({
           {sortedDresses.map(dress => (
             <div
               key={dress.id}
-              className="bg-white rounded-[20px] overflow-hidden border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-350 group flex flex-col justify-between"
+              className="bg-white rounded-2xl overflow-hidden border border-neutral-200 transition-all duration-350 group flex flex-col justify-between"
             >
               {/* Image Header with status badges */}
               <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden shrink-0">
@@ -788,7 +667,7 @@ export default function Robes({
                   </div>
 
                   {/* Operational Buttons */}
-                  <div className={`flex gap-2 pt-1 border-t border-dashed border-gray-200/80 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex gap-2 pt-1 border-t border-dashed border-neutral-200 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <button
                       id={`edit-dress-btn-${dress.id}`}
                       onClick={(e) => openEditForm(dress, e)}
@@ -814,7 +693,7 @@ export default function Robes({
                     <button
                       id={`delete-dress-btn-${dress.id}`}
                       onClick={(e) => handleDelete(dress.id, e)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200/80 hover:border-red-200/80 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200"
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-xl cursor-pointer flex items-center justify-center transition-all duration-200"
                     >
                       <X size={13} />
                     </button>
@@ -838,7 +717,7 @@ export default function Robes({
           {/* Sliding panel */}
           <div className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
             {/* Header */}
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {editingDress 
@@ -870,7 +749,7 @@ export default function Robes({
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Ex: Caftan d’Or Royal"
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -884,7 +763,7 @@ export default function Robes({
                     id="form-dress-cat"
                     value={categorie}
                     onChange={(e) => setCategorie(e.target.value as DressCategory)}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
                   >
                     {categoriesList.map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -901,7 +780,7 @@ export default function Robes({
                     value={taille}
                     onChange={(e) => setTaille(e.target.value)}
                     placeholder="Ex: 38 (M)"
-                    className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                       isRtl ? 'text-right' : 'text-left'
                     }`}
                   />
@@ -919,7 +798,7 @@ export default function Robes({
                     value={couleur}
                     onChange={(e) => setCouleur(e.target.value)}
                     placeholder="Ex: Rose Poudré"
-                    className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                       isRtl ? 'text-right' : 'text-left'
                     }`}
                   />
@@ -931,7 +810,7 @@ export default function Robes({
                     id="form-dress-status"
                     value={statut}
                     onChange={(e) => setStatut(e.target.value as DressStatus)}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
                   >
                     <option value="disponible">{t.statut_disponible}</option>
                     <option value="en_entretien">{t.statut_en_entretien}</option>
@@ -952,7 +831,7 @@ export default function Robes({
                     required
                     value={prix}
                     onChange={(e) => setPrix(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500"
                   />
                 </div>
 
@@ -965,7 +844,7 @@ export default function Robes({
                     required
                     value={caution}
                     onChange={(e) => setCaution(Number(e.target.value))}
-                    className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
@@ -979,7 +858,7 @@ export default function Robes({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Matériaux, broderies, accessoires inclus..."
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -1022,7 +901,7 @@ export default function Robes({
                     </div>
                   ) : photoMain ? (
                     <div className="space-y-3">
-                      <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                      <div className="relative w-32 h-32 mx-auto rounded-xl overflow-hidden border border-neutral-200">
                         <img src={photoMain} alt="Preview" className="w-full h-full object-cover" />
                         <button
                           type="button"
@@ -1061,7 +940,7 @@ export default function Robes({
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {photosList.map((url, idx) => (
-                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-neutral-200">
                           <img src={url} alt={`Secondary ${idx}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
@@ -1087,7 +966,7 @@ export default function Robes({
                     value={photoMain.startsWith('data:') ? '' : photoMain}
                     onChange={(e) => setPhotoMain(e.target.value)}
                     placeholder="https://example.com/dress.jpg"
-                    className="w-full p-2.5 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500"
+                    className="w-full p-2.5 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500"
                   />
                 </div>
               </div>
@@ -1105,7 +984,7 @@ export default function Robes({
                 <button
                   type="submit"
                   id="submit-form-btn"
-                  className="flex-1 py-3 px-4 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/10 transition-all"
+                  className="flex-1 py-3 px-4 bg-orange-600 text-white text-sm font-bold rounded-xl cursor-pointer hover:shadow-violet-500/10 transition-all"
                 >
                   {t.save}
                 </button>

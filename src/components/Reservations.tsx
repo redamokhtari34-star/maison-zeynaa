@@ -17,11 +17,19 @@ import {
 import { Reservation, Cliente, Dress, Bijou, Language, ReservationItem, Transaction } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactions, getSupabaseClient, mapReservationToDb, mapTransactionToDb, isUuid } from '../lib/storage';
+import { todayIso, isoInDays, nowTime } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface ReservationsProps {
   reservations: Reservation[];
   onSaveReservations: (reservations: Reservation[]) => void;
   clientes: Cliente[];
+  onSaveClientes: (clientes: Cliente[]) => void;
   dresses: Dress[];
   bijoux: Bijou[];
   language: Language;
@@ -36,9 +44,10 @@ interface ReservationsProps {
 export default function Reservations({ 
   reservations, 
   onSaveReservations, 
-  clientes, 
-  dresses, 
-  bijoux, 
+  clientes,
+  onSaveClientes,
+  dresses,
+  bijoux,
   language,
   onAddTransaction,
   setCurrentTab,
@@ -50,7 +59,7 @@ export default function Reservations({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,8 +75,9 @@ export default function Reservations({
     }
   }, [initialOpenForm, onFormOpenHandled]);
   const [clientNameInput, setClientNameInput] = useState('');
+  const [clientPhoneInput, setClientPhoneInput] = useState('');
   const [dateSortie, setDateSortie] = useState(todayStr);
-  const [dateRetour, setDateRetour] = useState('2026-07-24');
+  const [dateRetour, setDateRetour] = useState(isoInDays(3));
   const [selectedDresses, setSelectedDresses] = useState<Dress[]>([]);
   const [selectedBijoux, setSelectedBijoux] = useState<Bijou[]>([]);
   const [montantPaye, setMontantPaye] = useState<number>(0);
@@ -86,6 +96,20 @@ export default function Reservations({
 
   const getClientPhone = (id: string) => {
     return clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.telephone || '';
+  };
+
+  const findClientByName = (name: string) =>
+    clientes.find(c => c.nom_complet.trim().toLowerCase() === name.trim().toLowerCase());
+
+  // The client already on file for the name currently typed, if any.
+  const knownClient = clientNameInput.trim() ? findClientByName(clientNameInput) : undefined;
+
+  // Typing (or picking) a known client pulls her number in, so the operator
+  // never has to retype it; an unknown name leaves whatever was entered.
+  const handleClientNameChange = (name: string) => {
+    setClientNameInput(name);
+    const match = findClientByName(name);
+    if (match?.telephone) setClientPhoneInput(match.telephone);
   };
 
   const formatDa = (amount: number) => {
@@ -113,19 +137,20 @@ export default function Reservations({
       ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
       : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({
+      title: language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز',
+      message: msg,
+      danger: true,
+      confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف',
+      cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
+    })) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('reservations').delete().eq('id', id);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase delete reservation error:', error);
-        }
+        mirrorToCloud(() => supabase.from('reservations').delete().eq('id', id), LOCAL_SYNC_FAIL);
       }
 
       const updated = reservations.filter(r => r.id !== id);
       onSaveReservations(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Annulation de réservation' : 'إلغاء حجز',
@@ -143,7 +168,12 @@ export default function Reservations({
       ? `Confirmez-vous l'encaissement du solde de ${formatDa(amountToPay)} pour la réservation #${res.id.toUpperCase()} ?`
       : `هل تؤكد تحصيل المبلغ المتبقي وقدره ${formatDa(amountToPay)} للحجز رقم #${res.id.toUpperCase()}؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({
+      title: language === 'fr' ? 'Encaisser le solde' : 'تحصيل المتبقي',
+      message: msg,
+      confirmLabel: language === 'fr' ? 'Encaisser' : 'تحصيل',
+      cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
+    })) {
       const updatedResObj: Reservation = {
         ...res,
         montant_paye_da: res.montant_total_da,
@@ -152,11 +182,7 @@ export default function Reservations({
 
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', res.id);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase update reservation balance error:', error);
-        }
+        mirrorToCloud(() => supabase.from('reservations').update(mapReservationToDb(updatedResObj)).eq('id', res.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = reservations.map(r => r.id === res.id ? updatedResObj : r);
@@ -164,7 +190,7 @@ export default function Reservations({
 
       // Log transaction in Caisse
       const newTr: Transaction = {
-        id: `t-${Date.now()}`,
+        id: crypto.randomUUID(),
         type: 'entree',
         montant_da: amountToPay,
         description: `Paiement Solde Réservation ${res.id.toUpperCase()} - ${getClientName(res.cliente_id)}`,
@@ -176,15 +202,10 @@ export default function Reservations({
       };
 
       if (supabase) {
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
-        if (trError) {
-          alert(`Erreur Supabase (Ajout mouvement caisse): ${trError.message}`);
-          console.error('Supabase insert transaction error:', trError);
-        }
+        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]), LOCAL_SYNC_FAIL);
       }
 
       onAddTransaction(newTr);
-      onRefreshData?.();
 
       // Log to history
       addHistoryEntry(
@@ -197,8 +218,9 @@ export default function Reservations({
   // Open creation wizard
   const openNewWizard = () => {
     setClientNameInput('');
+    setClientPhoneInput('');
     setDateSortie(todayStr);
-    setDateRetour('2026-07-24');
+    setDateRetour(isoInDays(3));
     setSelectedDresses([]);
     setSelectedBijoux([]);
     setMontantPaye(0);
@@ -220,7 +242,7 @@ export default function Reservations({
         const warningMsg = language === 'fr'
           ? `La robe "${dress.nom}" est déjà réservée par ${conflictClient} du ${avail.conflictingReservation!.date_sortie} au ${avail.conflictingReservation!.date_retour}.`
           : `الفستان "${dress.nom}" محجوز بالفعل للزبونة ${conflictClient} من ${avail.conflictingReservation!.date_sortie} إلى ${avail.conflictingReservation!.date_retour}.`;
-        alert(warningMsg);
+        notifyError(warningMsg);
         return;
       }
       setSelectedDresses([...selectedDresses, dress]);
@@ -239,7 +261,7 @@ export default function Reservations({
         const warningMsg = language === 'fr'
           ? `L'accessoire "${bijou.nom}" est déjà réservé par ${conflictClient} du ${avail.conflictingReservation!.date_sortie} au ${avail.conflictingReservation!.date_retour}.`
           : `الإكسسوار "${bijou.nom}" محجوز بالفعل للزبونة ${conflictClient} من ${avail.conflictingReservation!.date_sortie} إلى ${avail.conflictingReservation!.date_retour}.`;
-        alert(warningMsg);
+        notifyError(warningMsg);
         return;
       }
       setSelectedBijoux([...selectedBijoux, bijou]);
@@ -250,59 +272,138 @@ export default function Reservations({
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedDresses.length === 0 && selectedBijoux.length === 0) {
-      alert(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
+      notifyError(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
       return;
     }
 
     const clientName = clientNameInput.trim();
     if (!clientName) {
-      alert(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
+      notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
       return;
     }
 
+    const clientPhone = clientPhoneInput.trim();
+
+    // Keep the local client file in step with what was typed: record a new
+    // client, or fill in / correct the number of one already on file.
+    const localMatch = findClientByName(clientName);
+    const localClientId = localMatch?.id ?? crypto.randomUUID();
+    if (!localMatch) {
+      onSaveClientes([
+        ...clientes,
+        {
+          id: localClientId,
+          nom_complet: clientName,
+          telephone: clientPhone,
+          date_creation: todayStr
+        }
+      ]);
+    } else if (clientPhone && clientPhone !== localMatch.telephone) {
+      onSaveClientes(
+        clientes.map(c => (c.id === localMatch.id ? { ...c, telephone: clientPhone } : c))
+      );
+    }
+
+    // ── Record locally first ────────────────────────────────────────────
+    // The shop must be able to take a booking with the network down, so the
+    // reservation is committed on the device before the cloud is contacted.
+    const localResId = crypto.randomUUID();
+    const localItems: ReservationItem[] = [
+      ...selectedDresses.map(d => ({
+        id: crypto.randomUUID(),
+        reservation_id: localResId,
+        type_article: 'robe' as const,
+        article_id: d.id,
+        prix_da: d.prix_location_da,
+        nom_article: d.nom
+      })),
+      ...selectedBijoux.map(b => ({
+        id: crypto.randomUUID(),
+        reservation_id: localResId,
+        type_article: 'bijou' as const,
+        article_id: b.id,
+        prix_da: b.prix_location_da,
+        nom_article: b.nom
+      }))
+    ];
+
+    const localReservation: Reservation = {
+      id: localResId,
+      cliente_id: localClientId,
+      date_sortie: dateSortie,
+      date_retour: dateRetour,
+      montant_total_da: totalCost,
+      caution_da: totalCaution,
+      montant_paye_da: montantPaye,
+      reste_a_payer_da: remainingCost,
+      statut: dateSortie > todayStr ? 'future' : 'en_cours',
+      notes,
+      date_creation: todayStr,
+      items: localItems
+    };
+    onSaveReservations([localReservation, ...reservations]);
+
+    if (montantPaye > 0) {
+      onAddTransaction({
+        id: crypto.randomUUID(),
+        type: 'entree',
+        montant_da: montantPaye,
+        description: `Acompte Réservation - ${clientName}`,
+        categorie: 'Réservation',
+        date: todayStr,
+        heure: nowTime(),
+        utilisateur: 'Zeyna',
+        source_argent: 'caisse'
+      } as Transaction);
+    }
+
+    addHistoryEntry(
+      language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد',
+      `Réservation créée pour ${clientName}. Total: ${formatDa(totalCost)}.`
+    );
+
+    setIsWizardOpen(false);
+
+    // ── Then mirror it to the cloud, best effort ────────────────────────
     const supabase = getSupabaseClient();
     if (!supabase) {
-      alert("Erreur Supabase : Client Supabase non initialisé");
+      notifySuccess(language === 'fr'
+        ? 'Réservation enregistrée sur cet appareil (cloud non configuré).'
+        : 'تم حفظ الحجز على هذا الجهاز (السحابة غير مهيأة).');
       return;
     }
 
-    const existingClient = clientes.find(c => c.nom_complet.trim().toLowerCase() === clientName.toLowerCase() || c.id === clientName);
-    let validUuidClientId = existingClient && isUuid(existingClient.id) ? existingClient.id : null;
+    try {
 
-    // Automatically register client if not already in clients table or if ID is not a valid UUID
-    if (!validUuidClientId && clientName) {
-      const parts = clientName.trim().split(' ');
-      const prenom = parts[0] || '';
-      const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+    // The local record already carries a UUID, so the same identifier is used
+    // on both sides. Matching on the phone number rather than on the spelling
+    // of a name is what stops the same person being filed twice.
+    let validUuidClientId = isUuid(localClientId) ? localClientId : null;
 
-      // Check if client already exists in Supabase
+    if (clientPhone) {
       const { data: foundClients } = await supabase
         .from('clients')
         .select('id')
-        .or(`nom.ilike.${nom},prenom.ilike.${prenom}`)
+        .eq('telephone', clientPhone)
         .limit(1);
-
-      if (foundClients && foundClients[0] && isUuid(foundClients[0].id)) {
+      if (foundClients?.[0] && isUuid(foundClients[0].id)) {
         validUuidClientId = foundClients[0].id;
-      } else {
-        const { data: newClientData, error: clientErr } = await supabase.from('clients').insert([{
-          nom,
-          prenom,
-          telephone: existingClient?.telephone || '',
-          adresse: existingClient?.adresse || ''
-        }]).select();
-
-        if (clientErr) {
-          alert("Erreur Supabase (Création cliente) : " + clientErr.message);
-          console.error('Supabase client insert error:', clientErr);
-          return;
-        }
-
-        if (newClientData && newClientData[0] && isUuid(newClientData[0].id)) {
-          validUuidClientId = newClientData[0].id;
-        }
       }
     }
+
+    const parts = clientName.trim().split(' ');
+    const prenom = parts[0] || '';
+    const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+
+    // upsert: creates the client on first sight, refreshes her details after.
+    const { error: clientErr } = await supabase.from('clients').upsert([{
+      id: validUuidClientId,
+      nom,
+      prenom,
+      telephone: clientPhone || localMatch?.telephone || '',
+      adresse: localMatch?.adresse || ''
+    }]);
+    if (clientErr) throw new Error(clientErr.message);
 
     const robeItem = selectedDresses[0];
     const validRobeId = robeItem && isUuid(robeItem.id) ? robeItem.id : null;
@@ -310,71 +411,82 @@ export default function Reservations({
     const bijouItem = selectedBijoux[0];
     const validBijouId = bijouItem && isUuid(bijouItem.id) ? bijouItem.id : null;
 
-    const resRowToInsert: any = {
+    const { error: resError } = await supabase.from('reservations').insert([{
+      // Same identifier on both sides, so the booking can be matched later.
+      id: localResId,
       client_id: validUuidClientId,
+      // The single columns keep the first item for compatibility; the full
+      // selection goes to the join tables below.
       robe_id: validRobeId,
       bijou_id: validBijouId,
       date_debut: dateSortie || null,
       date_fin: dateRetour || null,
-      statut_reservation: 'future',
+      statut_reservation: localReservation.statut,
       prix_total: Number(totalCost) || 0,
       acompte: Number(montantPaye) || 0,
-      reste_a_payer: Number(remainingCost) || 0
-    };
+      reste_a_payer: Number(remainingCost) || 0,
+      // The deposit is money owed back to the client — it must not stay local.
+      caution_totale: Number(totalCaution) || 0,
+      notes: notes || null
+    }]);
 
-    let { error: resError } = await supabase.from('reservations').insert([resRowToInsert]).select();
+      if (resError) throw new Error(resError.message);
 
-    // If statut_reservation column is named 'statut' in table, fallback retry
-    if (resError) {
-      const fallbackRow: any = {
-        client_id: validUuidClientId,
-        robe_id: validRobeId,
-        bijou_id: validBijouId,
-        date_debut: dateSortie || null,
-        date_fin: dateRetour || null,
-        statut: 'future',
-        prix_total: Number(totalCost) || 0,
-        acompte: Number(montantPaye) || 0,
-        reste_a_payer: Number(remainingCost) || 0
-      };
-      const retry = await supabase.from('reservations').insert([fallbackRow]).select();
-      if (!retry.error) {
-        resError = null;
+      // Every selected article, not just the first: a booking regularly holds
+      // several dresses and several pieces of jewellery.
+      const robeRows = selectedDresses
+        .filter(d => isUuid(d.id))
+        .map(d => ({
+          id: crypto.randomUUID(),
+          reservation_id: localResId,
+          robe_id: d.id,
+          prix: d.prix_location_da || 0,
+          caution: d.caution_da || 0
+        }));
+      if (robeRows.length) {
+        const { error } = await supabase.from('reservation_robes').insert(robeRows);
+        if (error) console.warn('Could not link dresses to reservation:', error.message);
       }
-    }
 
-    if (resError) {
-      alert("Erreur Supabase (Création réservation) : " + resError.message);
-      console.error('Supabase insert reservation error:', resError);
-      return;
-    }
-
-    if (montantPaye > 0) {
-      const trRowToInsert = {
-        type: 'entree',
-        montant: montantPaye,
-        source: 'caisse',
-        beneficiaire: null,
-        motif: `Acompte Réservation - ${clientName}`
-      };
-
-      const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
-      if (trError) {
-        alert("Erreur Supabase : " + trError.message);
-        console.error('Supabase insert transaction error:', trError);
+      const bijouRows = selectedBijoux
+        .filter(b => isUuid(b.id))
+        .map(b => ({
+          id: crypto.randomUUID(),
+          reservation_id: localResId,
+          bijou_id: b.id,
+          prix: b.prix_location_da || 0,
+          caution: 0
+        }));
+      if (bijouRows.length) {
+        const { error } = await supabase.from('reservation_bijoux').insert(bijouRows);
+        if (error) console.warn('Could not link jewellery to reservation:', error.message);
       }
+
+      if (montantPaye > 0) {
+        const trRowToInsert = {
+          type: 'entree',
+          montant: montantPaye,
+          source: 'caisse',
+          beneficiaire: null,
+          motif: `Acompte Réservation - ${clientName}`
+        };
+
+        const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
+        if (trError) throw new Error(trError.message);
+      }
+
+      notifySuccess(language === 'fr'
+        ? 'Réservation enregistrée et synchronisée.'
+        : 'تم حفظ الحجز ومزامنته.');
+
+      // Only pull the cloud copy back once it holds this booking, otherwise the
+      // refresh would overwrite the local record we just committed.
+    } catch (err) {
+      console.error('Could not sync reservation to Supabase:', err);
+      notifyError(language === 'fr'
+        ? "Réservation enregistrée sur cet appareil, mais la synchronisation avec le cloud a échoué. Elle sera visible ici en attendant."
+        : 'تم حفظ الحجز على هذا الجهاز، لكن فشلت المزامنة مع السحابة.');
     }
-
-    alert("Réservation enregistrée avec succès !");
-    await onRefreshData?.();
-
-    // Log in activity history
-    addHistoryEntry(
-      language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد',
-      `Réservation créée pour ${clientName}. Total: ${formatDa(totalCost)}.`
-    );
-
-    setIsWizardOpen(false);
   };
 
   // Filter reservations
@@ -391,14 +503,14 @@ export default function Reservations({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            📅 {language === 'fr' ? 'Gestion des Réservations & Locations' : 'إدارة الحجوزات والتأجير'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Gestion des Réservations & Locations' : 'إدارة الحجوزات والتأجير'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Planifiez les sorties de robes, suivez les acomptes et évitez les conflits de calendrier.`
               : `خططي لخرجات الفساتين، تابعي الدفعات المسبقة وتجنبي تداخل المواعيد.`}
@@ -407,7 +519,7 @@ export default function Reservations({
         <button
           id="open-wizard-btn"
           onClick={openNewWizard}
-          className="flex items-center gap-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer hover:shadow-lg hover:shadow-violet-500/20 active:scale-95 transition-all text-sm"
+          className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
         >
           <Plus size={16} />
           <span>{language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد'}</span>
@@ -415,7 +527,7 @@ export default function Reservations({
       </div>
 
       {/* Toolbar filters */}
-      <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search */}
           <div className="relative flex-1">
@@ -428,7 +540,7 @@ export default function Reservations({
               placeholder={language === 'fr' ? 'Rechercher cliente...' : 'بحث عن زبونة...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -440,7 +552,7 @@ export default function Reservations({
               id="res-filter-all"
               onClick={() => setStatusFilter('all')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'all' ? 'bg-violet-600 text-white shadow-sm' : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
+                statusFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
               }`}
             >
               {t.all}
@@ -449,7 +561,7 @@ export default function Reservations({
               id="res-filter-fut"
               onClick={() => setStatusFilter('future')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'future' ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-50 text-amber-600 hover:bg-amber-50'
+                statusFilter === 'future' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-amber-600 hover:bg-amber-50'
               }`}
             >
               {t.statut_future}
@@ -458,7 +570,7 @@ export default function Reservations({
               id="res-filter-loc"
               onClick={() => setStatusFilter('en_cours')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_cours' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'
+                statusFilter === 'en_cours' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'
               }`}
             >
               {t.statut_en_cours}
@@ -467,7 +579,7 @@ export default function Reservations({
               id="res-filter-ret"
               onClick={() => setStatusFilter('retourne')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'retourne' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
+                statusFilter === 'retourne' ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
               }`}
             >
               {t.statut_retourne}
@@ -476,7 +588,7 @@ export default function Reservations({
               id="res-filter-lat"
               onClick={() => setStatusFilter('en_retard')}
               className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_retard' ? 'bg-red-600 text-white shadow-sm' : 'bg-slate-50 text-red-600 hover:bg-red-50'
+                statusFilter === 'en_retard' ? 'bg-red-600 text-white' : 'bg-slate-50 text-red-600 hover:bg-red-50'
               }`}
             >
               {t.statut_en_retard}
@@ -487,7 +599,7 @@ export default function Reservations({
 
       {/* Booking cards list */}
       {filteredReservations.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <Calendar size={36} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Aucune réservation trouvée' : 'لا توجد حجوزات'}</h3>
           <p className="text-sm text-gray-400 mt-1">
@@ -509,7 +621,7 @@ export default function Reservations({
             return (
               <div
                 key={res.id}
-                className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+                className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -537,7 +649,7 @@ export default function Reservations({
                       <button
                         id={`delete-res-btn-${res.id}`}
                         onClick={(e) => handleDeleteBooking(res.id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200/80 hover:border-red-200/80 rounded-lg cursor-pointer transition-all duration-200"
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-lg cursor-pointer transition-all duration-200"
                       >
                         <X size={14} />
                       </button>
@@ -587,13 +699,13 @@ export default function Reservations({
                 </div>
 
                 {/* Pricing summary */}
-                <div className="pt-4 border-t border-dashed border-gray-200/80">
+                <div className="pt-4 border-t border-dashed border-neutral-200">
                   <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <div className="p-2">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.total_price}</span>
                       <span className="font-extrabold text-violet-600 font-mono">{formatDa(res.montant_total_da)}</span>
                     </div>
-                    <div className="p-2 border-x border-gray-200/80">
+                    <div className="p-2 border-x border-neutral-200">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.amount_paid}</span>
                       <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
                     </div>
@@ -639,10 +751,10 @@ export default function Reservations({
           <div onClick={() => setIsWizardOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
           {/* Dialog Panel */}
-          <div className="relative w-full max-w-xl bg-white rounded-[20px] overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
+          <div className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
             
             {/* Header */}
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {language === 'fr' ? 'Assistant de Réservation' : 'مساعد تسجيل الحجوزات'}
@@ -674,19 +786,51 @@ export default function Reservations({
               {/* STEP 1: Dates & Client selection */}
               {wizardStep === 1 && (
                 <div className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-700 block">{t.select_client} *</label>
-                    <input
-                      id="wizard-client-name-input"
-                      type="text"
-                      required
-                      placeholder="Prénom et Nom de la cliente"
-                      value={clientNameInput}
-                      onChange={(e) => setClientNameInput(e.target.value)}
-                      className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
-                        isRtl ? 'text-right' : 'text-left'
-                      }`}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-700 block">{t.select_client} *</label>
+                      <input
+                        id="wizard-client-name-input"
+                        type="text"
+                        required
+                        list="wizard-client-suggestions"
+                        autoComplete="off"
+                        placeholder={language === 'fr' ? 'Prénom et Nom de la cliente' : 'اسم ولقب الزبونة'}
+                        value={clientNameInput}
+                        onChange={(e) => handleClientNameChange(e.target.value)}
+                        className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
+                          isRtl ? 'text-right' : 'text-left'
+                        }`}
+                      />
+                      {/* Picking a known client fills in her number automatically */}
+                      <datalist id="wizard-client-suggestions">
+                        {clientes.map(c => (
+                          <option key={c.id} value={c.nom_complet}>{c.telephone}</option>
+                        ))}
+                      </datalist>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-700 block">
+                        {language === 'fr' ? 'Téléphone' : 'رقم الهاتف'}
+                      </label>
+                      <input
+                        id="wizard-client-phone-input"
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="05 55 12 34 56"
+                        value={clientPhoneInput}
+                        onChange={(e) => setClientPhoneInput(e.target.value)}
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white text-left"
+                        dir="ltr"
+                      />
+                      {knownClient && (
+                        <p className="text-[11px] text-emerald-700 font-semibold">
+                          {language === 'fr' ? 'Cliente déjà enregistrée' : 'زبونة مسجلة مسبقاً'}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -698,7 +842,7 @@ export default function Reservations({
                         required
                         value={dateSortie}
                         onChange={(e) => setDateSortie(e.target.value)}
-                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none font-mono text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none font-mono text-left"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -709,7 +853,7 @@ export default function Reservations({
                         required
                         value={dateRetour}
                         onChange={(e) => setDateRetour(e.target.value)}
-                        className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none font-mono text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none font-mono text-left"
                       />
                     </div>
                   </div>
@@ -740,7 +884,7 @@ export default function Reservations({
                     placeholder={language === 'fr' ? 'Filtrer par nom, couleur, taille...' : 'البحث عن فستان...'}
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none"
+                    className="w-full p-2.5 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none"
                   />
 
                   {/* List dresses */}
@@ -761,10 +905,10 @@ export default function Reservations({
                             onClick={() => !disabled && toggleDressSelect(dress)}
                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                               isSelected 
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
+                                ? 'bg-violet-600 text-white border-violet-600' 
                                 : disabled 
-                                  ? 'bg-slate-50 text-gray-300 border-gray-200/80 opacity-60 cursor-not-allowed' 
-                                  : 'bg-slate-50/40 border-gray-200/80 hover:bg-slate-50 cursor-pointer text-gray-800'
+                                  ? 'bg-slate-50 text-gray-300 border-neutral-200 opacity-60 cursor-not-allowed' 
+                                  : 'bg-slate-50/40 border-neutral-200 hover:bg-slate-50 cursor-pointer text-gray-800'
                             }`}
                           >
                             <div className={`flex gap-3 items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
@@ -806,7 +950,7 @@ export default function Reservations({
                     placeholder={language === 'fr' ? 'Filtrer par nom...' : 'البحث عن حلي...'}
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-gray-200/80 rounded-xl text-xs"
+                    className="w-full p-2.5 bg-slate-50 border border-neutral-200 rounded-xl text-xs"
                   />
 
                   <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
@@ -824,10 +968,10 @@ export default function Reservations({
                             onClick={() => !disabled && toggleBijouSelect(bijou)}
                             className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
                               isSelected 
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
+                                ? 'bg-violet-600 text-white border-violet-600' 
                                 : disabled 
-                                  ? 'bg-slate-50 text-gray-300 border-gray-200/80 opacity-60 cursor-not-allowed' 
-                                  : 'bg-slate-50/40 border-gray-200/80 hover:bg-slate-50 cursor-pointer text-gray-800'
+                                  ? 'bg-slate-50 text-gray-300 border-neutral-200 opacity-60 cursor-not-allowed' 
+                                  : 'bg-slate-50/40 border-neutral-200 hover:bg-slate-50 cursor-pointer text-gray-800'
                             }`}
                           >
                             <div className={`flex gap-3 items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
@@ -858,7 +1002,7 @@ export default function Reservations({
               {/* STEP 4: Payment & summary review */}
               {wizardStep === 4 && (
                 <div className="space-y-5">
-                  <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200/80 pb-2">
+                  <h4 className="text-sm font-bold text-gray-900 border-b border-neutral-200 pb-2">
                     {language === 'fr' ? 'Récapitulatif & Paiement' : 'الخلاصة والدفع'}
                   </h4>
 
@@ -867,6 +1011,9 @@ export default function Reservations({
                     <div>
                       <p className="text-gray-400 font-bold uppercase">{language === 'fr' ? 'Cliente' : 'الزبونة'}</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{clientNameInput || 'Inconnue'}</p>
+                      {clientPhoneInput.trim() && (
+                        <p className="text-gray-500 mt-0.5" dir="ltr">📞 {clientPhoneInput.trim()}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-gray-400 font-bold uppercase">{language === 'fr' ? 'Dates de location' : 'فترة الكراء'}</p>
@@ -932,7 +1079,7 @@ export default function Reservations({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Ex: Demande pressing, modification d’ourlet..."
-                      className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                      className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                         isRtl ? 'text-right' : 'text-left'
                       }`}
                     />
@@ -943,7 +1090,7 @@ export default function Reservations({
             </div>
 
             {/* Wizard Navigation Footer */}
-            <div className="p-6 border-t border-gray-200/80 flex justify-between bg-slate-50 gap-3">
+            <div className="p-6 border-t border-neutral-200 flex justify-between bg-slate-50 gap-3">
               
               {/* Back button */}
               <button
@@ -967,18 +1114,18 @@ export default function Reservations({
                   onClick={() => {
                     if (wizardStep === 1) {
                       if (!clientNameInput.trim() || !dateSortie || !dateRetour) {
-                        alert(language === 'fr' ? 'Veuillez renseigner le nom de la cliente et toutes les dates.' : 'يرجى كتابة اسم الزبونة وتحديد التواريخ.');
+                        notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente et toutes les dates.' : 'يرجى كتابة اسم الزبونة وتحديد التواريخ.');
                         return;
                       }
                       if (dateSortie > dateRetour) {
-                        alert(language === 'fr' ? 'La date de retour doit être après la date de sortie !' : 'تاريخ الإرجاع يجب أن يكون بعد تاريخ الخروج !');
+                        notifyError(language === 'fr' ? 'La date de retour doit être après la date de sortie !' : 'تاريخ الإرجاع يجب أن يكون بعد تاريخ الخروج !');
                         return;
                       }
                     }
                     setItemSearch('');
                     setWizardStep(wizardStep + 1);
                   }}
-                  className="py-3 px-5 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="py-3 px-5 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{language === 'fr' ? 'Suivant' : 'التالي'}</span>
                   <ChevronRight size={14} />
@@ -988,7 +1135,7 @@ export default function Reservations({
                   type="button"
                   id="wizard-submit-btn"
                   onClick={handleCreateReservation}
-                  className="py-3 px-6 bg-gradient-to-tr from-violet-600 to-emerald-600 text-white text-xs font-bold rounded-xl hover:shadow-lg transition-all cursor-pointer"
+                  className="py-3 px-6 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
                   {language === 'fr' ? 'Valider la réservation' : 'تأكيد وحفظ الحجز'}
                 </button>

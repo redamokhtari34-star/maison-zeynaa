@@ -19,6 +19,13 @@ import {
 import { Cliente, Reservation, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapClientToDb } from '../lib/storage';
+import { todayIso } from '../lib/dates';
+import { notifyError, notifySuccess } from '../lib/toast';
+import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
+
+const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
+  + "mais la synchronisation avec le cloud a échoué.";
 
 interface ClientesProps {
   clientes: Cliente[];
@@ -121,19 +128,14 @@ export default function Clientes({
       ? `Êtes-vous sûr de vouloir supprimer la cliente "${client.nom_complet}" ? Toutes ses fiches d'historique seront inaccessibles.`
       : `هل أنت متأكد من حذف الزبونة "${client.nom_complet}"؟ سيتم حظر جميع فواتيرها وسجلاتها.`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({ title: language === 'fr' ? 'Supprimer la cliente' : 'حذف الزبونة', message: msg, danger: true, confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        const { error } = await supabase.from('clients').delete().eq('id', clientId);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase delete client error:', error);
-        }
+        mirrorToCloud(() => supabase.from('clients').delete().eq('id', clientId), LOCAL_SYNC_FAIL);
       }
 
       const updated = clientes.filter(c => c.id !== clientId);
       onSaveClientes(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Suppression de cliente' : 'حذف زبونة',
@@ -149,7 +151,7 @@ export default function Clientes({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomComplet || !telephone) {
-      alert(language === 'fr' ? 'Le nom complet et le téléphone sont obligatoires' : 'الاسم الكامل ورقم الهاتف إجباريان');
+      notifyError(language === 'fr' ? 'Le nom complet et le téléphone sont obligatoires' : 'الاسم الكامل ورقم الهاتف إجباريان');
       return;
     }
 
@@ -165,58 +167,59 @@ export default function Clientes({
       };
 
       if (supabase) {
-        const { error } = await supabase.from('clients').update(mapClientToDb(updatedClientObj)).eq('id', editingCliente.id);
-        if (error) {
-          alert("Erreur Supabase : " + error.message);
-          console.error('Supabase update client error:', error);
-        }
+        mirrorToCloud(() => supabase.from('clients').update(mapClientToDb(updatedClientObj)).eq('id', editingCliente.id), LOCAL_SYNC_FAIL);
       }
 
       const updated = clientes.map(c => c.id === editingCliente.id ? updatedClientObj : c);
       onSaveClientes(updated);
-      onRefreshData?.();
 
       addHistoryEntry(
         language === 'fr' ? 'Modification de cliente' : 'تعديل زبونة',
         `Les informations de la cliente "${nomComplet}" ont été mises à jour.`
       );
     } else {
-      if (!supabase) {
-        alert("Erreur Supabase : Client Supabase non initialisé");
-        return;
-      }
-
-      // Payload matching Supabase clients table columns (without id)
-      const parts = nomComplet.trim().split(' ');
-      const prenom = parts[0] || '';
-      const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
-
-      const clientRow = {
-        nom,
-        prenom,
+      // Record locally first, so a new client cannot disappear from the
+      // directory when the cloud write or the refetch after it fails.
+      const newCliente: Cliente = {
+        id: crypto.randomUUID(),
+        nom_complet: nomComplet,
         telephone,
-        adresse: adresse || ''
+        adresse: adresse || '',
+        notes,
+        date_creation: todayIso()
       };
-
-      const { data, error } = await supabase.from('clients').insert([clientRow]).select();
-
-      if (error) {
-        alert("Erreur Supabase : " + error.message);
-        console.error('Supabase insert client error:', error);
-        return;
-      }
-
-      alert("Client ajouté avec succès !");
-
-      if (data && data[0]) {
-        setSelectedClientId(data[0].id);
-      }
-      await onRefreshData?.();
+      onSaveClientes([newCliente, ...clientes]);
+      setSelectedClientId(newCliente.id);
 
       addHistoryEntry(
         language === 'fr' ? 'Création de cliente' : 'تسجيل زبونة جديدة',
         `Nouvelle fiche cliente créée pour "${nomComplet}".`
       );
+
+      if (!supabase) {
+        notifySuccess(language === 'fr'
+          ? 'Cliente enregistrée sur cet appareil (cloud non configuré).'
+          : 'تم حفظ الزبونة على هذا الجهاز (السحابة غير مهيأة).');
+      } else {
+        const parts = nomComplet.trim().split(' ');
+        const prenom = parts[0] || '';
+        const nom = parts.length > 1 ? parts.slice(1).join(' ') : prenom;
+
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([{ nom, prenom, telephone, adresse: adresse || '' }])
+          .select();
+
+        if (error) {
+          console.error('Supabase insert client error:', error);
+          notifyError(language === 'fr'
+            ? "Cliente enregistrée sur cet appareil, mais la synchronisation avec le cloud a échoué."
+            : 'تم حفظ الزبونة محلياً، لكن فشلت المزامنة مع السحابة.');
+        } else {
+          notifySuccess(language === 'fr' ? 'Cliente enregistrée et synchronisée.' : 'تم حفظ الزبونة ومزامنتها.');
+          if (data && data[0]) setSelectedClientId(data[0].id);
+        }
+      }
     }
 
     setIsFormOpen(false);
@@ -225,26 +228,37 @@ export default function Clientes({
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm ${
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
         isRtl ? 'sm:flex-row-reverse' : ''
       }`}>
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            👩 {language === 'fr' ? 'Annuaire des Clientes' : 'دليل الزبونات'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Annuaire des Clientes' : 'دليل الزبونات'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {language === 'fr' 
+          <p className="mt-1 text-[15px] text-neutral-500">
+            {language === 'fr'
               ? `Consultez l'historique d'achat, les encours et gérez les coordonnées de vos clientes.`
               : `اطلعي على سجل كراء الزبونات، المدفوعات والديون العالقة، وأديري معلومات التواصل الخاصة بهن.`}
           </p>
         </div>
+
+        <button
+          id="add-client-btn"
+          onClick={openAddForm}
+          className={`flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-700 ${
+            isRtl ? 'flex-row-reverse' : ''
+          }`}
+        >
+          <Plus size={16} />
+          <span>{t.qa_add_cliente}</span>
+        </button>
       </div>
 
       {/* Main split layout: list on left (or right if RTL), details on right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left column: Clients search and list */}
-        <div className="lg:col-span-1 bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col h-[650px]">
+        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-neutral-200 flex flex-col h-[650px]">
           {/* Search bar */}
           <div className="relative mb-4">
             <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'left-3' : 'left-3'}`}>
@@ -256,7 +270,7 @@ export default function Clientes({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-gray-200/80 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -278,8 +292,8 @@ export default function Clientes({
                     onClick={() => setSelectedClientId(client.id)}
                     className={`p-4 rounded-2xl border text-sm cursor-pointer transition-all ${
                       isActive 
-                        ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
-                        : 'bg-slate-50/50 border-gray-200/80 hover:bg-slate-50 text-gray-800'
+                        ? 'bg-violet-600 text-white border-violet-600' 
+                        : 'bg-slate-50/50 border-neutral-200 hover:bg-slate-50 text-gray-800'
                     } ${isRtl ? 'text-right' : 'text-left'}`}
                   >
                     <div className={`flex justify-between items-start ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -305,7 +319,7 @@ export default function Clientes({
                           className={`p-1.5 rounded-lg border transition-all duration-200 ${
                             isActive 
                               ? 'text-white/80 hover:text-white border-white/20 hover:bg-violet-700' 
-                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50 border-gray-200/80 hover:border-red-200/80'
+                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50 border-neutral-200 hover:border-red-200/80'
                           }`}
                         >
                           <X size={12} />
@@ -324,12 +338,12 @@ export default function Clientes({
           {selectedClient ? (
             <>
               {/* Profile Card Header */}
-              <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-neutral-200">
                 <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
                   isRtl ? 'sm:flex-row-reverse' : ''
                 }`}>
                   <div className={`flex gap-4 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-500 flex items-center justify-center text-white text-2xl font-black shadow-md shadow-violet-500/10">
+                    <div className="w-16 h-16 rounded-2xl bg-orange-600 flex items-center justify-center text-white text-2xl font-black shadow-violet-500/10">
                       {selectedClient.nom_complet.charAt(0).toUpperCase()}
                     </div>
                     <div className={isRtl ? 'text-right' : 'text-left'}>
@@ -386,7 +400,7 @@ export default function Clientes({
 
               {/* Financial Quick Metrics */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">{language === 'fr' ? 'Volume Loué' : 'إجمالي المشتريات'}</span>
                   <p className="text-xl font-black text-gray-900 leading-none">{formatDa(totalInvoiced)}</p>
                   <span className="text-[10px] text-gray-400 block mt-2">
@@ -394,7 +408,7 @@ export default function Clientes({
                   </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">{t.payments_made}</span>
                   <p className="text-xl font-black text-emerald-600 leading-none">{formatDa(totalPaid)}</p>
                   <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden mt-3.5">
@@ -405,7 +419,7 @@ export default function Clientes({
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">{t.remaining_balance}</span>
                   <p className={`text-xl font-black leading-none ${totalOwed > 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {formatDa(totalOwed)}
@@ -421,11 +435,11 @@ export default function Clientes({
               </div>
 
               {/* Reservations History Sheet */}
-              <div className="bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-neutral-200">
                 <h3 className="text-base font-bold text-gray-900 mb-5">{t.history_rentals}</h3>
 
                 {clientReservations.length === 0 ? (
-                  <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-gray-200/80">
+                  <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-neutral-200">
                     <Calendar size={24} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-xs text-gray-400 font-medium">{language === 'fr' ? 'Aucune réservation enregistrée.' : 'لا توجد أي حجوزات مسجلة لهذه الزبونة.'}</p>
                   </div>
@@ -459,7 +473,7 @@ export default function Clientes({
                             </p>
                           </div>
 
-                          <div className={`flex sm:flex-col items-end justify-between border-t sm:border-t-0 border-dashed border-gray-200/80 pt-3 sm:pt-0 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                          <div className={`flex sm:flex-col items-end justify-between border-t sm:border-t-0 border-dashed border-neutral-200 pt-3 sm:pt-0 ${isRtl ? 'flex-row-reverse' : ''}`}>
                             <span className="text-xs text-gray-400 font-semibold">{language === 'fr' ? 'Prix location' : 'سعر الكراء'}</span>
                             <span className="text-sm font-extrabold text-violet-600 mt-0.5">{formatDa(res.montant_total_da)}</span>
                             {res.reste_a_payer_da > 0 && (
@@ -476,7 +490,7 @@ export default function Clientes({
               </div>
             </>
           ) : (
-            <div className="bg-white py-20 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center">
+            <div className="bg-white py-20 px-4 rounded-2xl border border-neutral-200 text-center">
               <User size={36} className="text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Sélectionnez une cliente' : 'اختر زبونة'}</h3>
               <p className="text-sm text-gray-400 mt-1">
@@ -492,7 +506,7 @@ export default function Clientes({
         <div className="fixed inset-0 z-50 flex justify-end">
           <div onClick={() => setIsFormOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
           <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
-            <div className={`p-6 border-b border-gray-200/80 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {editingCliente 
@@ -515,7 +529,7 @@ export default function Clientes({
                   value={nomComplet}
                   onChange={(e) => setNomComplet(e.target.value)}
                   placeholder="Ex: Meriem Belkacem"
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -530,7 +544,7 @@ export default function Clientes({
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                   placeholder="Ex: 0550 12 34 56"
-                  className="w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 text-left font-mono"
                 />
               </div>
 
@@ -542,7 +556,7 @@ export default function Clientes({
                   value={adresse}
                   onChange={(e) => setAdresse(e.target.value)}
                   placeholder="Ex: Hydra, Alger"
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -556,7 +570,7 @@ export default function Clientes({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Mesures, préférences de style, remarques importantes..."
-                  className={`w-full p-3 border border-gray-200/80 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
                     isRtl ? 'text-right' : 'text-left'
                   }`}
                 />
@@ -574,7 +588,7 @@ export default function Clientes({
                 <button
                   type="submit"
                   id="submit-client-btn"
-                  className="flex-1 py-3 px-4 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white text-sm font-bold rounded-xl cursor-pointer"
+                  className="flex-1 py-3 px-4 bg-orange-600 text-white text-sm font-bold rounded-xl cursor-pointer"
                 >
                   {t.save}
                 </button>

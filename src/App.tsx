@@ -1,16 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
-import Robes from './components/Robes';
-import Bijoux from './components/Bijoux';
-import Clientes from './components/Clientes';
-import Reservations from './components/Reservations';
-import Calendrier from './components/Calendrier';
-import Caisse from './components/Caisse';
-import Statistiques from './components/Statistiques';
-import Retours from './components/Retours';
-import Documents from './components/Documents';
-import Parametres from './components/Parametres';
+import Toaster from './components/Toaster';
+import SplashScreen from './components/SplashScreen';
+import InstallPrompt from './components/InstallPrompt';
+import ConfirmDialog from './components/ConfirmDialog';
+
+// Loaded on demand — the dashboard should not wait for screens nobody opened.
+const Robes = lazy(() => import('./components/Robes'));
+const Bijoux = lazy(() => import('./components/Bijoux'));
+const Clientes = lazy(() => import('./components/Clientes'));
+const Reservations = lazy(() => import('./components/Reservations'));
+const Calendrier = lazy(() => import('./components/Calendrier'));
+const Caisse = lazy(() => import('./components/Caisse'));
+const Statistiques = lazy(() => import('./components/Statistiques'));
+const Retours = lazy(() => import('./components/Retours'));
+const Documents = lazy(() => import('./components/Documents'));
+const Parametres = lazy(() => import('./components/Parametres'));
+const BlocNotes = lazy(() => import('./components/BlocNotes'));
+const Equipe = lazy(() => import('./components/Equipe'));
 
 import { 
   Language, 
@@ -34,25 +43,46 @@ import {
   fetchFullDatabaseStateFromSupabase,
   getSupabaseClient,
   seedSupabaseWithSampleData,
-  cleanFinancialsAndReservationsForProduction
+  cleanFinancialsAndReservationsForProduction,
+  getHistory,
+  subscribeToHistory
 } from './lib/storage';
+import { todayIso } from './lib/dates';
+import { notifySuccess } from './lib/toast';
+import { askConfirm } from './lib/confirm';
 
 export default function App() {
-  // Lazily load full database state once on mount
-  const [db, setDb] = useState(() => {
-    cleanFinancialsAndReservationsForProduction();
-    return getFullDatabaseState();
-  });
+  // Lazily load full database state once on mount.
+  // NB: this must never wipe anything — resetting the shop's records is an
+  // explicit action from Paramètres, not a side effect of opening the app.
+  const [db, setDb] = useState(() => getFullDatabaseState());
+  // The splash covers the first paint only; it is skipped for reduced motion.
+  const [booting, setBooting] = useState(true);
   const [supabaseSyncing, setSupabaseSyncing] = useState(false);
+  // Whether the last sync actually reached the cloud. Drives the status pill,
+  // which must never claim "synchronised" when it isn't.
+  const [cloudReachable, setCloudReachable] = useState(false);
 
   const refreshFromSupabase = async () => {
     setSupabaseSyncing(true);
     try {
-      await cleanFinancialsAndReservationsForProduction();
-      const remoteState = await fetchFullDatabaseStateFromSupabase();
+      // A dropped connection can leave these requests pending indefinitely, so
+      // cap the wait — otherwise the status would spin forever and the app
+      // would look stuck rather than simply offline.
+      const withTimeout = <T,>(p: Promise<T>, ms = 12000) =>
+        Promise.race([
+          p,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Supabase sync timed out')), ms)
+          )
+        ]);
+
+      const remoteState = await withTimeout(fetchFullDatabaseStateFromSupabase());
       setDb(remoteState);
+      setCloudReachable(true);
     } catch (err) {
       console.warn('Could not sync with Supabase:', err);
+      setCloudReachable(false);
     } finally {
       setSupabaseSyncing(false);
     }
@@ -61,6 +91,12 @@ export default function App() {
   useEffect(() => {
     refreshFromSupabase();
   }, []);
+
+  // Actions logged from anywhere in the app land on screen straight away.
+  useEffect(
+    () => subscribeToHistory(() => setDb(prev => ({ ...prev, history: getHistory() }))),
+    []
+  );
 
   // App shell state
   const [currentTab, setCurrentTab] = useState<string>('accueil');
@@ -92,6 +128,15 @@ export default function App() {
   };
 
   const isRtl = language === 'ar';
+
+  // Feeds the top bar: what actually needs the manager's attention today.
+  const todayStr = todayIso();
+  const alertCount = db.reservations.filter(
+    r => r.statut === 'en_retard' || (r.date_retour === todayStr && r.statut === 'en_cours')
+  ).length;
+
+  // Configured *and* proven reachable by the last sync.
+  const cloudConnected = getSupabaseClient() !== null && cloudReachable;
 
   // Dynamic Save and update proxies
   const handleSaveDresses = (updatedDresses: Dress[]) => {
@@ -127,15 +172,21 @@ export default function App() {
     setDb(prev => ({ ...prev, transactions: updated }));
   };
 
-  // Reset database back to production mode
+  // Wipe reservations, clients and cash records — irreversible, so it is
+  // confirmed explicitly and never runs on its own.
   const handleResetDatabase = async () => {
+    const warning = language === 'fr'
+      ? 'Réinitialisation\n\nSeront supprimés définitivement, sur cet appareil et dans le cloud :\n• les clientes\n• les réservations\n• la caisse et la trésorerie\n• le journal d’activité\n\nSeront conservés :\n• le catalogue des robes\n• le catalogue des bijoux\n\nVoulez-vous vraiment continuer ?'
+      : 'إعادة الضبط\n\nسيتم حذفه نهائياً، على هذا الجهاز وفي السحابة:\n• الزبونات\n• الحجوزات\n• الصندوق والخزينة\n• سجل النشاط\n\nسيتم الاحتفاظ به:\n• كتالوج الفساتين\n• كتالوج المجوهرات\n\nهل تريد المتابعة؟';
+    if (!(await askConfirm({ title: language === 'fr' ? 'Réinitialisation' : 'إعادة الضبط', message: warning, danger: true, confirmLabel: language === 'fr' ? 'Tout effacer' : 'حذف الكل', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' }))) return;
+
     await cleanFinancialsAndReservationsForProduction();
     const freshDb = getFullDatabaseState();
     setDb(freshDb);
     setCurrentTab('accueil');
-    alert(language === 'fr' 
-      ? 'Mise en production effectuée : Trésorerie et réservations réinitialisées à 0 DA. L’intégralité des catalogues de robes (78) et bijoux (400) a été conservée intacte avec le statut "Disponible".' 
-      : 'تمت التهيئة للإنتاج: تم إعادة ضبط الخزينة والحجوزات إلى 0 د.ج مع الحفاظ على الكتالوج كاملاً.');
+    notifySuccess(language === 'fr'
+      ? 'Réinitialisation effectuée : trésorerie et réservations remises à zéro, catalogues conservés.'
+      : 'تمت إعادة الضبط: الخزينة والحجوزات صفر، مع الحفاظ على الكتالوج.');
   };
 
   // Switch rendered tabs
@@ -190,6 +241,7 @@ export default function App() {
             reservations={db.reservations}
             onSaveReservations={handleSaveReservations}
             clientes={db.clientes}
+            onSaveClientes={handleSaveClientes}
             dresses={db.dresses}
             bijoux={db.bijoux}
             language={language}
@@ -260,6 +312,10 @@ export default function App() {
             setInvoiceReservationId={setInvoiceReservationId}
           />
         );
+      case 'notes':
+        return <BlocNotes language={language} />;
+      case 'equipe':
+        return <Equipe language={language} history={db.history} />;
       case 'parametres':
         return (
           <Parametres 
@@ -275,9 +331,9 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-50 flex ${isRtl ? 'flex-row-reverse' : 'flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-neutral-50 ${isRtl ? 'flex flex-row-reverse' : 'flex flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
-      <Sidebar 
+      <Sidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         language={language}
@@ -285,11 +341,30 @@ export default function App() {
         transactions={db.transactions}
       />
 
-      {/* Main Container viewport */}
-      <main className={`flex-1 p-6 lg:p-10 pt-24 lg:pt-10 transition-all ${
-        isRtl ? 'lg:pr-[312px]' : 'lg:pl-[312px]'
+      {booting && <SplashScreen onDone={() => setBooting(false)} />}
+      <InstallPrompt language={language} />
+      <Toaster />
+      <ConfirmDialog />
+
+      <TopBar
+        language={language}
+        dresses={db.dresses}
+        bijoux={db.bijoux}
+        clientes={db.clientes}
+        reservations={db.reservations}
+        alertCount={alertCount}
+        syncing={supabaseSyncing}
+        cloudConnected={cloudConnected}
+        setCurrentTab={setCurrentTab}
+      />
+
+      {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
+      <main className={`flex-1 px-4 pt-24 pb-12 sm:px-6 lg:px-8 ${
+        isRtl ? 'lg:pr-[272px]' : 'lg:pl-[272px]'
       }`}>
-        {renderTabContent()}
+        <Suspense fallback={<div className="py-24 text-center text-sm text-neutral-400">Chargement…</div>}>
+          {renderTabContent()}
+        </Suspense>
       </main>
     </div>
   );

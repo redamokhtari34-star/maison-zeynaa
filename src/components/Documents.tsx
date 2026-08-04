@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Reservation, Language, Cliente } from '../types';
 import { translations } from '../translations';
+import { todayIso } from '../lib/dates';
 
 interface DocumentsProps {
   reservations: Reservation[];
@@ -33,7 +34,7 @@ export default function Documents({
   const t = translations[language];
   const isRtl = language === 'ar';
 
-  const todayStr = '2026-07-21';
+  const todayStr = todayIso();
 
   // Selection
   const [selectedResId, setSelectedResId] = useState<string>(
@@ -64,12 +65,12 @@ export default function Documents({
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'} print-hide-all`} dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-[20px] border border-gray-200/80 shadow-sm print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-neutral-200 print:hidden">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            📄 {language === 'fr' ? 'Reçus de Caisse & Contrats' : 'سندات القبض وعقود الكراء'}
+          <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
+            {language === 'fr' ? 'Reçus de Caisse & Contrats' : 'سندات القبض وعقود الكراء'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
               ? `Générez et imprimez des reçus professionnels pour vos clientes.`
               : `استخرجي واطبعي فواتير وسندات كراء رسمية بضغطة زر واحدة لتسليمها للزبونة.`}
@@ -80,7 +81,7 @@ export default function Documents({
           <button
             id="print-invoice-doc-btn"
             onClick={handlePrint}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer shadow-sm transition-all text-sm"
+            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
           >
             <Printer size={16} />
             <span>{language === 'fr' ? 'Imprimer le reçu' : 'طباعة السند'}</span>
@@ -92,7 +93,7 @@ export default function Documents({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:block">
         
         {/* Left: list of reservations to pick for print */}
-        <div className="lg:col-span-1 bg-white p-5 rounded-[20px] border border-gray-200/80 shadow-sm flex flex-col h-[550px] print:hidden">
+        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-neutral-200 flex flex-col h-[550px] print:hidden">
           <h3 className="text-sm font-bold text-gray-900 mb-4">{language === 'fr' ? 'Sélectionner une réservation' : 'اختر الحجز لإصدار السند'}</h3>
           
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
@@ -112,8 +113,8 @@ export default function Documents({
                     }}
                     className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all ${
                       isSelected 
-                        ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/10' 
-                        : 'bg-slate-50/50 border-gray-200/80 hover:bg-slate-50 text-gray-800'
+                        ? 'bg-violet-600 text-white border-violet-600' 
+                        : 'bg-slate-50/50 border-neutral-200 hover:bg-slate-50 text-gray-800'
                     }`}
                   >
                     <div className={`flex justify-between font-bold ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -136,10 +137,10 @@ export default function Documents({
         {/* Right: Printable Invoice Frame */}
         <div className="lg:col-span-2 print:w-full">
           {selectedRes && clientInfo ? (
-            <div className="bg-white p-8 rounded-[20px] border border-gray-200/80 shadow-sm max-w-2xl mx-auto printable-invoice-box print:border-0 print:p-0 print:shadow-none">
+            <div className="bg-white p-8 rounded-2xl border border-neutral-200 max-w-2xl mx-auto printable-invoice-box print:border-0 print:p-0 print:shadow-none">
               
               {/* Receipt Header logo & salon info */}
-              <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-gray-200/80 ${
+              <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-neutral-200 ${
                 isRtl ? 'sm:flex-row-reverse text-right' : 'text-left'
               }`}>
                 <div>
@@ -161,7 +162,7 @@ export default function Documents({
               </div>
 
               {/* Client & Booking details */}
-              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-gray-200/80 text-xs text-gray-600 ${
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-neutral-200 text-xs text-gray-600 ${
                 isRtl ? 'text-right' : 'text-left'
               }`}>
                 <div>
@@ -181,7 +182,7 @@ export default function Documents({
               </div>
 
               {/* Items rented Table */}
-              <div className="py-6 border-b border-gray-200/80">
+              <div className="py-6 border-b border-neutral-200">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className={`text-gray-400 font-bold uppercase border-b border-gray-50 pb-2 ${isRtl ? 'text-right' : 'text-left'}`}>
@@ -214,7 +215,7 @@ export default function Documents({
                   </div>
 
                   {selectedRes.reste_a_payer_da > 0 && (
-                    <div className="flex justify-between text-red-600 font-extrabold border-t border-dashed border-gray-200/80 pt-2">
+                    <div className="flex justify-between text-red-600 font-extrabold border-t border-dashed border-neutral-200 pt-2">
                       <span>{language === 'fr' ? 'Reste à payer' : 'المبلغ المتبقي للدفعة الثانية'}</span>
                       <span className="font-mono">{formatDa(selectedRes.reste_a_payer_da)}</span>
                     </div>
@@ -248,17 +249,17 @@ export default function Documents({
               }`}>
                 <div>
                   <p>{language === 'fr' ? 'Signature Cliente' : 'إمضاء وتوقيع الزبونة'}</p>
-                  <div className="h-12 border-b border-gray-200/80 mt-2" />
+                  <div className="h-12 border-b border-neutral-200 mt-2" />
                 </div>
                 <div>
                   <p>{language === 'fr' ? 'Le Magasin (Maison Zeyna)' : 'ختم وتوقيع الصالون'}</p>
-                  <div className="h-12 border-b border-gray-200/80 mt-2" />
+                  <div className="h-12 border-b border-neutral-200 mt-2" />
                 </div>
               </div>
 
             </div>
           ) : (
-            <div className="bg-white py-20 px-4 rounded-[20px] border border-gray-200/80 shadow-sm text-center print:hidden">
+            <div className="bg-white py-20 px-4 rounded-2xl border border-neutral-200 text-center print:hidden">
               <Receipt size={36} className="text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Générez un reçu' : 'أصدار سند مالي'}</h3>
               <p className="text-sm text-gray-400 mt-1">

@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Dress, Bijou, Cliente, Reservation, Transaction, HistoriqueAction, SupabaseConfig, StoreProfile } from '../types';
+import { Dress, Bijou, Cliente, Reservation, Transaction, HistoriqueAction, SupabaseConfig, StoreProfile, NotebookSheet } from '../types';
 import { sampleDresses, sampleBijoux, sampleClientes, sampleReservations, sampleTransactions, sampleHistory, defaultStoreProfile } from '../data/sampleData';
 
-// Keys for LocalStorage - unused as all storage is Supabase / in-memory
+// LocalStorage keys — the device-side mirror of the shop's records
 const KEYS = {
   DRESSES: 'zeyna_dresses_v1',
   BIJOUX: 'zeyna_bijoux_v1',
@@ -12,17 +12,41 @@ const KEYS = {
   TRANSACTIONS: 'zeyna_transactions_v1',
   HISTORY: 'zeyna_history_v1',
   SUPABASE_CONFIG: 'zeyna_supabase_config_v1',
-  STORE_PROFILE: 'zeyna_store_profile_v1'
+  STORE_PROFILE: 'zeyna_store_profile_v1',
+  NOTEBOOK: 'zeyna_notebook_v1'
 };
 
-// Global in-memory state store
+// Records are mirrored to the device so that anything entered while the
+// network is down survives a reload instead of living only in this tab.
+function loadLocal<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
+  } catch (err) {
+    console.warn(`Could not read ${key} from storage:`, err);
+  }
+  return fallback;
+}
+
+function persist(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`Could not persist ${key}:`, err);
+  }
+}
+
+// Global state store, hydrated from the device. Everything starts empty and is
+// filled by the first sync, then kept locally so the shop can work offline.
+// Seeding demonstration dresses here made the catalogue jump from 78 to 70 the
+// moment the real data arrived.
 const memoryState = {
-  dresses: [] as Dress[],
-  bijoux: [] as Bijou[],
-  clientes: [] as Cliente[],
-  reservations: [] as Reservation[],
-  transactions: [] as Transaction[],
-  history: sampleHistory as HistoriqueAction[],
+  dresses: loadLocal<Dress[]>(KEYS.DRESSES, []),
+  bijoux: loadLocal<Bijou[]>(KEYS.BIJOUX, []),
+  clientes: loadLocal<Cliente[]>(KEYS.CLIENTES, []),
+  reservations: loadLocal<Reservation[]>(KEYS.RESERVATIONS, []),
+  transactions: loadLocal<Transaction[]>(KEYS.TRANSACTIONS, []),
+  history: loadLocal<HistoriqueAction[]>(KEYS.HISTORY, []),
   profile: defaultStoreProfile as StoreProfile
 };
 
@@ -30,14 +54,25 @@ const memoryState = {
 let supabaseClient: SupabaseClient | null = null;
 
 // Retrieve Supabase config
+// Project defaults, used when no environment variables are supplied. The
+// publishable key is meant to be shipped to the browser — the database is
+// protected by row-level security, not by hiding this string — but keeping the
+// values in .env lets the app be pointed at another project without a rebuild
+// of the source.
+const DEFAULT_SUPABASE_URL = 'https://ldmwnqbuwryqnoftbxfh.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_QHiv-07EQfrcarnHJQpb1g_Mt7rbRpe';
+
+/** Strips the stray quotes, spaces and /rest/v1 suffixes that break the client. */
+function cleanSetting(value: unknown): string {
+  return typeof value === 'string'
+    ? value.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '')
+    : '';
+}
+
 export function getSupabaseConfig(): SupabaseConfig {
-  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-  return { 
-    url: envUrl || 'https://ldmwnqbuwryqnoftbxfh.supabase.co', 
-    anonKey: envKey || 'sb_publishable_QHiv-07EQfrcarnHJQpb1g_Mt7rbRpe', 
-    isConnected: true 
-  };
+  const url = cleanSetting((import.meta as any).env?.VITE_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+  const anonKey = cleanSetting((import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_KEY;
+  return { url, anonKey, isConnected: Boolean(url && anonKey) };
 }
 
 // Save Supabase config and initialize client
@@ -100,7 +135,7 @@ function autoUpdateStatuses(
   dresses: Dress[],
   bijoux: Bijou[]
 ): { reservations: Reservation[]; dresses: Dress[]; bijoux: Bijou[] } {
-  const todayStr = new Date('2026-07-21T02:23:27-07:00').toISOString().split('T')[0]; // Current mock date from metadata
+  const todayStr = todayIso();
 
   // Create lookup maps or deep copies
   const updatedReservations = reservations.map(r => {
@@ -171,6 +206,8 @@ function autoUpdateStatuses(
 }
 
 import { DressCategory, DressStatus, ReservationStatus, ReservationItem, TransactionType } from '../types';
+import { todayIso, toIso } from './dates';
+import { notifyError } from './toast';
 
 // Helper to check if string is a valid UUID
 export function isUuid(val: any): boolean {
@@ -489,7 +526,7 @@ export async function syncTableToSupabase<TLocal, TDb>(
     const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id');
     if (fetchError) {
       console.error(`Failed to fetch IDs from ${tableName} for sync:`, fetchError);
-      alert(`Erreur Supabase (${tableName} Sync): ${fetchError.message}`);
+      notifyError(`Erreur Supabase (${tableName} Sync): ${fetchError.message}`);
       return;
     }
 
@@ -502,7 +539,7 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: deleteError } = await supabase.from(tableName).delete().in('id', idsToDelete);
       if (deleteError) {
         console.error(`Failed to delete removed rows from ${tableName}:`, deleteError);
-        alert(`Erreur Supabase (${tableName} Delete): ${deleteError.message}`);
+        notifyError(`Erreur Supabase (${tableName} Delete): ${deleteError.message}`);
       }
     }
 
@@ -512,12 +549,12 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: upsertError } = await supabase.from(tableName).upsert(dbRows as any);
       if (upsertError) {
         console.error(`Failed to upsert to ${tableName}:`, upsertError);
-        alert(`Erreur Supabase (${tableName} Upsert): ${upsertError.message}`);
+        notifyError(`Erreur Supabase (${tableName} Upsert): ${upsertError.message}`);
       }
     }
   } catch (err: any) {
     console.error(`Error in syncTableToSupabase for ${tableName}:`, err);
-    alert(`Erreur de connexion Supabase (${tableName}): ${err?.message || err}`);
+    notifyError(`Erreur de connexion Supabase (${tableName}): ${err?.message || err}`);
   }
 }
 
@@ -614,6 +651,13 @@ export async function cleanFinancialsAndReservationsForProduction() {
   memoryState.transactions = [];
   memoryState.history = [];
 
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, []);
+  persist(KEYS.RESERVATIONS, []);
+  persist(KEYS.TRANSACTIONS, []);
+  persist(KEYS.HISTORY, []);
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
@@ -624,6 +668,15 @@ export async function cleanFinancialsAndReservationsForProduction() {
       // 2. Delete all cash movements
       const { error: trErr } = await supabase.from('mouvements_caisse').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (trErr) console.warn('Supabase mouvements_caisse clear warning:', trErr.message);
+
+      // 2b. Clients and the activity log are cleared locally too, so they must
+      // go in the cloud as well — otherwise the next sync would bring back the
+      // records the shop just asked to erase.
+      const { error: cliErr } = await supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (cliErr) console.warn('Supabase clients clear warning:', cliErr.message);
+
+      const { error: histErr } = await supabase.from('historique_actions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (histErr) console.warn('Supabase historique_actions clear warning:', histErr.message);
 
       // 3. Reset tresorerie / safe balance
       await updateTresorerieInDb();
@@ -673,42 +726,68 @@ export async function fetchFullDatabaseStateFromSupabase() {
     { data: bijouxDb, error: bijouxErr },
     { data: clientsDb, error: clientsErr },
     { data: reservationsDb, error: reservationsErr },
-    { data: transactionsDb, error: transactionsErr }
+    { data: transactionsDb, error: transactionsErr },
+    { data: historyDb, error: historyErr }
   ] = await Promise.all([
     supabase.from('robes').select('*'),
     supabase.from('bijoux').select('*'),
     supabase.from('clients').select('*'),
     supabase.from('reservations').select('*'),
-    supabase.from('mouvements_caisse').select('*')
+    supabase.from('mouvements_caisse').select('*'),
+    supabase.from('historique_actions').select('*').order('created_at', { ascending: false }).limit(300)
   ]);
 
   if (dressesErr) {
     console.error('Error loading robes from Supabase:', dressesErr);
-    alert("Erreur Supabase (Chargement robes) : " + dressesErr.message);
   }
   if (bijouxErr) {
     console.error('Error loading bijoux from Supabase:', bijouxErr);
-    alert("Erreur Supabase (Chargement bijoux) : " + bijouxErr.message);
   }
   if (clientsErr) {
     console.error('Error loading clients from Supabase:', clientsErr);
-    alert("Erreur Supabase (Chargement clients) : " + clientsErr.message);
   }
   if (reservationsErr) {
     console.error('Error loading reservations from Supabase:', reservationsErr);
-    alert("Erreur Supabase (Chargement réservations) : " + reservationsErr.message);
   }
   if (transactionsErr) {
     console.error('Error loading mouvements_caisse from Supabase:', transactionsErr);
-    alert("Erreur Supabase (Chargement caisse) : " + transactionsErr.message);
+  }
+  if (historyErr) {
+    console.error('Error loading historique_actions from Supabase:', historyErr);
   }
 
-  // Load dresses, bijoux, clientes, reservations, transactions ONLY and DIRECTLY from Supabase
-  memoryState.dresses = dressesDb ? dressesDb.map(mapDressFromDb) : [];
-  memoryState.bijoux = bijouxDb ? bijouxDb.map(mapBijouFromDb) : [];
-  memoryState.clientes = clientsDb ? clientsDb.map(mapClientFromDb) : [];
-  memoryState.reservations = reservationsDb ? reservationsDb.map(mapReservationFromDb) : [];
-  memoryState.transactions = transactionsDb ? transactionsDb.map(mapTransactionFromDb) : [];
+  // Adopt the cloud copy only when it actually carries something.
+  //
+  // A failed request yields null, and a table that is empty (or unreadable
+  // because of row-level security) yields zero rows. Writing either straight
+  // into memory wiped the catalogue and every record created on this device —
+  // the shop watched its dresses vanish seconds after adding them. An empty
+  // remote result is therefore never allowed to erase a non-empty local list;
+  // real deletions still propagate, since they come back as fewer rows rather
+  // than as none at all.
+  const adopt = <TRow, TLocal>(
+    rows: TRow[] | null,
+    map: (row: TRow) => TLocal,
+    current: TLocal[]
+  ): TLocal[] => {
+    if (!rows) return current;              // request failed
+    if (rows.length === 0 && current.length > 0) return current;
+    return rows.map(map);
+  };
+
+  memoryState.dresses = adopt(dressesDb, mapDressFromDb, memoryState.dresses);
+  memoryState.bijoux = adopt(bijouxDb, mapBijouFromDb, memoryState.bijoux);
+  memoryState.clientes = adopt(clientsDb, mapClientFromDb, memoryState.clientes);
+  memoryState.reservations = adopt(reservationsDb, mapReservationFromDb, memoryState.reservations);
+  memoryState.transactions = adopt(transactionsDb, mapTransactionFromDb, memoryState.transactions);
+  memoryState.history = adopt(historyDb, mapHistoryFromDb, memoryState.history);
+
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, memoryState.clientes);
+  persist(KEYS.RESERVATIONS, memoryState.reservations);
+  persist(KEYS.TRANSACTIONS, memoryState.transactions);
+  persist(KEYS.HISTORY, memoryState.history);
 
   return getFullDatabaseState();
 }
@@ -720,6 +799,7 @@ export function getDresses(): Dress[] {
 
 export function saveDresses(dresses: Dress[]) {
   memoryState.dresses = dresses;
+  persist(KEYS.DRESSES, dresses);
   syncTableToSupabase('robes', dresses, mapDressToDb, d => d.id);
 }
 
@@ -729,6 +809,7 @@ export function getBijoux(): Bijou[] {
 
 export function saveBijoux(bijoux: Bijou[]) {
   memoryState.bijoux = bijoux;
+  persist(KEYS.BIJOUX, bijoux);
   syncTableToSupabase('bijoux', bijoux, mapBijouToDb, b => b.id);
 }
 
@@ -738,6 +819,7 @@ export function getClientes(): Cliente[] {
 
 export function saveClientes(clientes: Cliente[]) {
   memoryState.clientes = clientes;
+  persist(KEYS.CLIENTES, clientes);
   syncTableToSupabase('clients', clientes, mapClientToDb, c => c.id);
 }
 
@@ -747,6 +829,7 @@ export function getReservations(): Reservation[] {
 
 export function saveReservations(reservations: Reservation[]) {
   memoryState.reservations = reservations;
+  persist(KEYS.RESERVATIONS, reservations);
   syncTableToSupabase('reservations', reservations, mapReservationToDb, r => r.id);
 }
 
@@ -756,6 +839,7 @@ export function getTransactions(): Transaction[] {
 
 export function saveTransactions(transactions: Transaction[]) {
   memoryState.transactions = transactions;
+  persist(KEYS.TRANSACTIONS, transactions);
   syncTableToSupabase('mouvements_caisse', transactions, mapTransactionToDb, t => t.id).then(() => {
     updateTresorerieInDb();
   });
@@ -765,8 +849,51 @@ export function getHistory(): HistoriqueAction[] {
   return memoryState.history;
 }
 
+// The activity log is written from deep inside the components, far from the
+// React tree that displays it. Listeners let those screens refresh instead of
+// showing a stale copy until the next page load.
+type HistoryListener = () => void;
+let historyListeners: HistoryListener[] = [];
+
+export function subscribeToHistory(listener: HistoryListener): () => void {
+  historyListeners.push(listener);
+  return () => {
+    historyListeners = historyListeners.filter(l => l !== listener);
+  };
+}
+
 export function saveHistory(history: HistoriqueAction[]) {
   memoryState.history = history;
+  persist(KEYS.HISTORY, history);
+  historyListeners.forEach(l => l());
+}
+
+// The notebook is the one thing the shop authors by hand, so it is persisted
+// to localStorage rather than living only in memory: a page reload must not
+// throw away notes that were never part of the Supabase schema.
+export function getNotebook(): NotebookSheet[] {
+  try {
+    const raw = localStorage.getItem(KEYS.NOTEBOOK);
+    if (raw) return JSON.parse(raw) as NotebookSheet[];
+  } catch (err) {
+    console.warn('Could not read notebook from storage:', err);
+  }
+  return [
+    {
+      id: 'sheet-1',
+      nom: 'Feuille 1',
+      colonnes: ['Désignation', 'Quantité', 'Montant (DA)', 'Remarque'],
+      lignes: Array.from({ length: 6 }, () => ['', '', '', ''])
+    }
+  ];
+}
+
+export function saveNotebook(sheets: NotebookSheet[]) {
+  try {
+    localStorage.setItem(KEYS.NOTEBOOK, JSON.stringify(sheets));
+  } catch (err) {
+    console.warn('Could not save notebook:', err);
+  }
 }
 
 export function getStoreProfile(): StoreProfile {
@@ -805,23 +932,81 @@ export function getFullDatabaseState() {
   };
 }
 
+// Download the whole database as a timestamped JSON backup. Everything lives
+// in the browser (and, when configured, Supabase), so this is the escape hatch
+// that lets the shop keep a copy of its own records.
+export function exportDatabaseToFile() {
+  const state = getFullDatabaseState();
+  const payload = {
+    application: 'Maison Zeyna',
+    exported_at: new Date().toISOString(),
+    version: 1,
+    ...state
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `maison-zeyna-${stamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  return payload;
+}
+
 // Log a business action
-export function addHistoryEntry(action: string, details: string, user: string = 'Zeyna') {
-  const history = getHistory();
-  const today = new Date('2026-07-21T02:23:27-07:00');
-  const dateStr = today.toISOString().split('T')[0];
-  const timeStr = today.toTimeString().split(' ')[0].substring(0, 5);
+export function mapHistoryFromDb(row: any): HistoriqueAction {
+  const at = row.created_at ? new Date(row.created_at) : new Date();
+  return {
+    id: String(row.id),
+    action: row.action || '',
+    utilisateur: row.utilisateur || 'Zeyna',
+    date: toIso(at),
+    heure: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`,
+    details: row.details || ''
+  };
+}
+
+// Set from the signed-in account, so the activity log can say who did what.
+let currentUser = 'Zeyna';
+export function setCurrentUser(name: string) {
+  currentUser = name || 'Zeyna';
+}
+export function getCurrentUser() {
+  return currentUser;
+}
+
+export function addHistoryEntry(action: string, details: string, user: string = currentUser) {
+  const now = new Date();
 
   const entry: HistoriqueAction = {
     id: `h-${Date.now()}`,
     action,
     utilisateur: user,
-    date: dateStr,
-    heure: timeStr,
+    date: toIso(now),
+    heure: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     details
   };
 
-  saveHistory([entry, ...history]);
+  saveHistory([entry, ...getHistory()]);
+
+  // Mirror the entry so the log follows the shop from one device to another,
+  // in the background: a slow network must never hold up the action that is
+  // being recorded.
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    void supabase
+      .from('historique_actions')
+      .insert([{ action, details, utilisateur: user }])
+      .then(({ error }) => {
+        if (error) console.warn('Could not record history entry in Supabase:', error.message);
+      });
+  }
 }
 
 // Check overlapping rentals for specific dress or jewelry
@@ -866,5 +1051,12 @@ export function resetDatabaseToDefaults() {
   memoryState.reservations = [];
   memoryState.transactions = [];
   memoryState.history = [];
+
+  persist(KEYS.DRESSES, memoryState.dresses);
+  persist(KEYS.BIJOUX, memoryState.bijoux);
+  persist(KEYS.CLIENTES, []);
+  persist(KEYS.RESERVATIONS, []);
+  persist(KEYS.TRANSACTIONS, []);
+  persist(KEYS.HISTORY, []);
   memoryState.profile = { ...defaultStoreProfile };
 }
