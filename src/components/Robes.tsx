@@ -21,6 +21,7 @@ import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
 
 const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
   + "mais la synchronisation avec le cloud a échoué.";
@@ -216,7 +217,7 @@ export default function Robes({
       ? `Êtes-vous sûr de vouloir supprimer la robe "${dress.nom}" ?`
       : `هل أنت متأكد من حذف فستان "${dress.nom}"؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({ title: language === 'fr' ? 'Supprimer la robe' : 'حذف الفستان', message: msg, danger: true, confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
       const supabase = getSupabaseClient();
       if (supabase) {
         mirrorToCloud(() => supabase.from('robes').delete().eq('id', dressId), LOCAL_SYNC_FAIL);

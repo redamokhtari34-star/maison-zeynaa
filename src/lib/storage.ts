@@ -36,12 +36,13 @@ function persist(key: string, value: unknown) {
   }
 }
 
-// Global state store, hydrated from the device. The catalogues ship with the
-// app so the shop has something to work with before the first cloud sync; the
-// ledgers start empty and are only ever filled by real activity.
+// Global state store, hydrated from the device. Everything starts empty and is
+// filled by the first sync, then kept locally so the shop can work offline.
+// Seeding demonstration dresses here made the catalogue jump from 78 to 70 the
+// moment the real data arrived.
 const memoryState = {
-  dresses: loadLocal<Dress[]>(KEYS.DRESSES, sampleDresses as Dress[]),
-  bijoux: loadLocal<Bijou[]>(KEYS.BIJOUX, sampleBijoux as Bijou[]),
+  dresses: loadLocal<Dress[]>(KEYS.DRESSES, []),
+  bijoux: loadLocal<Bijou[]>(KEYS.BIJOUX, []),
   clientes: loadLocal<Cliente[]>(KEYS.CLIENTES, []),
   reservations: loadLocal<Reservation[]>(KEYS.RESERVATIONS, []),
   transactions: loadLocal<Transaction[]>(KEYS.TRANSACTIONS, []),
@@ -971,7 +972,16 @@ export function mapHistoryFromDb(row: any): HistoriqueAction {
   };
 }
 
-export function addHistoryEntry(action: string, details: string, user: string = 'Zeyna') {
+// Set from the signed-in account, so the activity log can say who did what.
+let currentUser = 'Zeyna';
+export function setCurrentUser(name: string) {
+  currentUser = name || 'Zeyna';
+}
+export function getCurrentUser() {
+  return currentUser;
+}
+
+export function addHistoryEntry(action: string, details: string, user: string = currentUser) {
   const now = new Date();
 
   const entry: HistoriqueAction = {

@@ -25,6 +25,7 @@ import {
   saveTransactions 
 } from '../lib/storage';
 import { notifyError } from '../lib/toast';
+import { askConfirm } from '../lib/confirm';
 
 interface ParametresProps {
   language: Language;
@@ -65,7 +66,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
     const fileReader = new FileReader();
     if (e.target.files && e.target.files[0]) {
       fileReader.readAsText(e.target.files[0], "UTF-8");
-      fileReader.onload = (uploadEvent) => {
+      fileReader.onload = async (uploadEvent) => {
         try {
           const parsed = JSON.parse(uploadEvent.target?.result as string);
           
@@ -73,7 +74,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
             ? 'Êtes-vous sûr d’importer ce fichier de sauvegarde ? Les données actuelles seront synchronisées avec Supabase.'
             : 'هل أنت متأكد من استيراد ملف النسخة الاحتياطية هذا؟ سيتم استبدال البيانات الحالية بالكامل.';
           
-          if (window.confirm(msg)) {
+          if (await askConfirm({ title: language === 'fr' ? 'Restaurer une sauvegarde' : 'استعادة نسخة', message: msg, confirmLabel: language === 'fr' ? 'Restaurer' : 'استعادة', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
             if (parsed.dresses) saveDresses(parsed.dresses);
             if (parsed.bijoux) saveBijoux(parsed.bijoux);
             if (parsed.clientes) saveClientes(parsed.clientes);

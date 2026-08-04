@@ -1,22 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Dashboard from './components/Dashboard';
-import Robes from './components/Robes';
-import Bijoux from './components/Bijoux';
-import Clientes from './components/Clientes';
-import Reservations from './components/Reservations';
-import Calendrier from './components/Calendrier';
-import Caisse from './components/Caisse';
-import Statistiques from './components/Statistiques';
-import Retours from './components/Retours';
-import Documents from './components/Documents';
-import Parametres from './components/Parametres';
-import BlocNotes from './components/BlocNotes';
-import Equipe from './components/Equipe';
 import Toaster from './components/Toaster';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
+import Login from './components/Login';
+import ConfirmDialog from './components/ConfirmDialog';
+
+// Loaded on demand — the dashboard should not wait for screens nobody opened.
+const Robes = lazy(() => import('./components/Robes'));
+const Bijoux = lazy(() => import('./components/Bijoux'));
+const Clientes = lazy(() => import('./components/Clientes'));
+const Reservations = lazy(() => import('./components/Reservations'));
+const Calendrier = lazy(() => import('./components/Calendrier'));
+const Caisse = lazy(() => import('./components/Caisse'));
+const Statistiques = lazy(() => import('./components/Statistiques'));
+const Retours = lazy(() => import('./components/Retours'));
+const Documents = lazy(() => import('./components/Documents'));
+const Parametres = lazy(() => import('./components/Parametres'));
+const BlocNotes = lazy(() => import('./components/BlocNotes'));
+const Equipe = lazy(() => import('./components/Equipe'));
 
 import { 
   Language, 
@@ -42,10 +46,13 @@ import {
   seedSupabaseWithSampleData,
   cleanFinancialsAndReservationsForProduction,
   getHistory,
-  subscribeToHistory
+  subscribeToHistory,
+  setCurrentUser
 } from './lib/storage';
 import { todayIso } from './lib/dates';
 import { notifySuccess } from './lib/toast';
+import { getSession, onSessionChange, signOut, type Session } from './lib/auth';
+import { askConfirm } from './lib/confirm';
 
 export default function App() {
   // Lazily load full database state once on mount.
@@ -58,6 +65,16 @@ export default function App() {
   // Whether the last sync actually reached the cloud. Drives the status pill,
   // which must never claim "synchronised" when it isn't.
   const [cloudReachable, setCloudReachable] = useState(false);
+
+  // Records are only reachable once signed in: the policies grant the
+  // `authenticated` role, never anonymous visitors.
+  const [session, setSession] = useState<Session | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    getSession().then(s => { setSession(s); setAuthChecked(true); });
+    return onSessionChange(setSession);
+  }, []);
 
   const refreshFromSupabase = async () => {
     setSupabaseSyncing(true);
@@ -85,8 +102,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!session) return;
+    // The part before the @ is what a colleague would recognise in the log.
+    setCurrentUser(session.user.email?.split('@')[0] ?? 'Zeyna');
     refreshFromSupabase();
-  }, []);
+  }, [session]);
 
   // Actions logged from anywhere in the app land on screen straight away.
   useEffect(
@@ -174,7 +194,7 @@ export default function App() {
     const warning = language === 'fr'
       ? 'Réinitialisation\n\nSeront supprimés définitivement, sur cet appareil et dans le cloud :\n• les clientes\n• les réservations\n• la caisse et la trésorerie\n• le journal d’activité\n\nSeront conservés :\n• le catalogue des robes\n• le catalogue des bijoux\n\nVoulez-vous vraiment continuer ?'
       : 'إعادة الضبط\n\nسيتم حذفه نهائياً، على هذا الجهاز وفي السحابة:\n• الزبونات\n• الحجوزات\n• الصندوق والخزينة\n• سجل النشاط\n\nسيتم الاحتفاظ به:\n• كتالوج الفساتين\n• كتالوج المجوهرات\n\nهل تريد المتابعة؟';
-    if (!window.confirm(warning)) return;
+    if (!(await askConfirm({ title: language === 'fr' ? 'Réinitialisation' : 'إعادة الضبط', message: warning, danger: true, confirmLabel: language === 'fr' ? 'Tout effacer' : 'حذف الكل', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' }))) return;
 
     await cleanFinancialsAndReservationsForProduction();
     const freshDb = getFullDatabaseState();
@@ -326,6 +346,11 @@ export default function App() {
     }
   };
 
+  // Wait for the stored session to be read before deciding what to show, so a
+  // signed-in user never sees the login screen flash on reload.
+  if (!authChecked) return null;
+  if (!session) return <><Login /><Toaster /><ConfirmDialog /></>;
+
   return (
     <div className={`min-h-screen bg-neutral-50 ${isRtl ? 'flex flex-row-reverse' : 'flex flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
@@ -340,6 +365,7 @@ export default function App() {
       {booting && <SplashScreen onDone={() => setBooting(false)} />}
       <InstallPrompt language={language} />
       <Toaster />
+      <ConfirmDialog />
 
       <TopBar
         language={language}
@@ -351,13 +377,17 @@ export default function App() {
         syncing={supabaseSyncing}
         cloudConnected={cloudConnected}
         setCurrentTab={setCurrentTab}
+        userLabel={session.user.email ?? ''}
+        onSignOut={signOut}
       />
 
       {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
       <main className={`flex-1 px-4 pt-24 pb-12 sm:px-6 lg:px-8 ${
         isRtl ? 'lg:pr-[272px]' : 'lg:pl-[272px]'
       }`}>
-        {renderTabContent()}
+        <Suspense fallback={<div className="py-24 text-center text-sm text-neutral-400">Chargement…</div>}>
+          {renderTabContent()}
+        </Suspense>
       </main>
     </div>
   );

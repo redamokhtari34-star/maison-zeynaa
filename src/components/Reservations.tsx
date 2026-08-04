@@ -20,6 +20,7 @@ import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactio
 import { todayIso, isoInDays, nowTime } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
 
 const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
   + "mais la synchronisation avec le cloud a échoué.";
@@ -136,7 +137,13 @@ export default function Reservations({
       ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
       : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({
+      title: language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز',
+      message: msg,
+      danger: true,
+      confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف',
+      cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
+    })) {
       const supabase = getSupabaseClient();
       if (supabase) {
         mirrorToCloud(() => supabase.from('reservations').delete().eq('id', id), LOCAL_SYNC_FAIL);
@@ -161,7 +168,12 @@ export default function Reservations({
       ? `Confirmez-vous l'encaissement du solde de ${formatDa(amountToPay)} pour la réservation #${res.id.toUpperCase()} ?`
       : `هل تؤكد تحصيل المبلغ المتبقي وقدره ${formatDa(amountToPay)} للحجز رقم #${res.id.toUpperCase()}؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({
+      title: language === 'fr' ? 'Encaisser le solde' : 'تحصيل المتبقي',
+      message: msg,
+      confirmLabel: language === 'fr' ? 'Encaisser' : 'تحصيل',
+      cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
+    })) {
       const updatedResObj: Reservation = {
         ...res,
         montant_paye_da: res.montant_total_da,

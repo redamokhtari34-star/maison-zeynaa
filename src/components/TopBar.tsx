@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Bell, ShieldCheck, RefreshCw, CloudOff, X } from 'lucide-react';
+import { Search, Bell, ShieldCheck, RefreshCw, CloudOff, X, LogOut } from 'lucide-react';
 import { Language, Dress, Bijou, Cliente, Reservation } from '../types';
 
 interface TopBarProps {
@@ -12,6 +12,8 @@ interface TopBarProps {
   syncing: boolean;
   cloudConnected: boolean;
   setCurrentTab: (tab: string) => void;
+  userLabel: string;
+  onSignOut: () => void;
 }
 
 type Hit = { id: string; tab: string; title: string; kind: string };
@@ -25,7 +27,9 @@ export default function TopBar({
   alertCount,
   syncing,
   cloudConnected,
-  setCurrentTab
+  setCurrentTab,
+  userLabel,
+  onSignOut
 }: TopBarProps) {
   const isRtl = language === 'ar';
   const [query, setQuery] = useState('');
@@ -192,9 +196,21 @@ export default function TopBar({
           )}
         </button>
 
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-neutral-950 font-display text-sm text-white">
-          Z
-        </div>
+        <span
+          title={userLabel}
+          className="grid h-9 w-9 place-items-center rounded-full bg-neutral-950 font-display text-sm uppercase text-white"
+        >
+          {(userLabel || 'Z').charAt(0)}
+        </span>
+
+        <button
+          onClick={onSignOut}
+          aria-label={language === 'fr' ? 'Se déconnecter' : 'تسجيل الخروج'}
+          title={language === 'fr' ? 'Se déconnecter' : 'تسجيل الخروج'}
+          className="grid h-9 w-9 place-items-center rounded-full border border-neutral-200 text-neutral-600 transition-colors hover:bg-neutral-50"
+        >
+          <LogOut size={15} />
+        </button>
       </div>
     </header>
   );

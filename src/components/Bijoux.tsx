@@ -17,6 +17,7 @@ import { addHistoryEntry, getSupabaseClient, mapBijouToDb, uploadImageToSupabase
 import { todayIso } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
+import { askConfirm } from '../lib/confirm';
 
 const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
   + "mais la synchronisation avec le cloud a échoué.";
@@ -186,7 +187,7 @@ export default function Bijoux({
       ? `Êtes-vous sûr de vouloir supprimer l'accessoire "${bijou.nom}" ?`
       : `هل أنت متأكد من حذف الإكسسوار "${bijou.nom}"؟`;
 
-    if (window.confirm(msg)) {
+    if (await askConfirm({ title: language === 'fr' ? 'Supprimer l’accessoire' : 'حذف الإكسسوار', message: msg, danger: true, confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف', cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء' })) {
       const supabase = getSupabaseClient();
       if (supabase) {
         mirrorToCloud(() => supabase.from('bijoux').delete().eq('id', bijouId), LOCAL_SYNC_FAIL);
