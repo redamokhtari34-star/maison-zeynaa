@@ -5,7 +5,6 @@
   "framework": "vite",
   "headers": [
     {
-      "comment": "The worker decides what is cached; if the worker itself is cached, a new build can never take over.",
       "source": "/sw.js",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
@@ -13,7 +12,6 @@
       ]
     },
     {
-      "comment": "Build output is content-hashed, so it can be cached indefinitely.",
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
@@ -25,8 +23,5 @@
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/((?!assets/|sw\\.js|manifest\\.json|.*\\.png).*)", "destination": "/index.html" }
   ]
 }
