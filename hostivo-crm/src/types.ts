@@ -40,3 +40,14 @@ export interface ClientUpdates {
   notes?: string;
   noteModification?: string;
 }
+
+/** Champs saisis à la création d'un nouveau client — voir lib/sheetsWrite.ts. */
+export interface NewClientInput {
+  nomEntreprise: string;
+  dateDemande?: string;
+  telephone?: string;
+  secteur?: string;
+  reseauxSouhaites?: string[];
+  statutSite?: string;
+  notes?: string;
+}

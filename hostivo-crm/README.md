@@ -91,11 +91,17 @@ que par une API tierce :
    VITE_SHEET_WRITE_SECRET="hostivo-2026-xyz"   # même valeur que WRITE_SECRET
    ```
 
-Redémarrez `npm run dev`. La fiche client affiche alors des champs
-modifiables (statut du site, statut de modification, notes) avec un bouton
-**Enregistrer** qui écrit directement dans la bonne ligne du Sheet — le
-script revérifie le nom de l'entreprise avant d'écrire, pour éviter
-d'altérer la mauvaise ligne si le Sheet a été trié entre-temps.
+Redémarrez `npm run dev`. Une fois ces variables renseignées :
+
+- la fiche client affiche des champs modifiables (statut du site, statut de
+  modification, notes) avec un bouton **Enregistrer** qui écrit directement
+  dans la bonne ligne du Sheet — le script revérifie le nom de l'entreprise
+  avant d'écrire, pour éviter d'altérer la mauvaise ligne si le Sheet a été
+  trié entre-temps ;
+- un bouton **+ Nouveau client** apparaît au-dessus du tableau : il ouvre un
+  formulaire (nom, téléphone, secteur, date de la demande, réseaux
+  souhaités, statut, notes) et ajoute une nouvelle ligne en bas du Sheet dès
+  la validation, avec son numéro attribué automatiquement.
 
 Cette clé secrète est visible dans le code source envoyé au navigateur : elle
 empêche les écritures accidentelles ou aléatoires, mais ne remplace pas une
@@ -117,9 +123,10 @@ quelques collaborateurs de confiance ; à éviter si le lien de l'app venait à
   numéro de téléphone.
 - **Fiche client** (panneau latéral) : toutes les colonnes du Sheet, notes et
   historique de modification.
-- **Édition** (optionnelle, voir ci-dessus) : changer le statut du site, le
-  statut de modification et les notes depuis la fiche client, avec
-  écriture directe dans le Sheet.
+- **Édition et ajout de clients** (optionnels, voir ci-dessus) : changer le
+  statut du site, le statut de modification et les notes depuis la fiche
+  client, ou ajouter un nouveau client via un formulaire dédié — écriture
+  directe dans le Sheet dans les deux cas.
 
 ## Déploiement sur Vercel
 

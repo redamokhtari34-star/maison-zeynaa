@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AddClientModal } from './components/AddClientModal';
 import { ClientDetail } from './components/ClientDetail';
 import { ClientTable, type SortKey } from './components/ClientTable';
 import { Filters } from './components/Filters';
@@ -6,9 +7,9 @@ import { StatsBar } from './components/StatsBar';
 import { TopBar } from './components/TopBar';
 import { sampleClients } from './data/sampleData';
 import { fetchClientsFromSheet, isSheetConfigured } from './lib/sheets';
-import { isWriteConfigured, writeClientUpdates } from './lib/sheetsWrite';
+import { createClient, isWriteConfigured, writeClientUpdates } from './lib/sheetsWrite';
 import { parseLooseDate } from './lib/parse';
-import type { Client, ClientUpdates, SourceMode } from './types';
+import type { Client, ClientUpdates, NewClientInput, SourceMode } from './types';
 
 export default function App() {
   const [clients, setClients] = useState<Client[]>(sampleClients);
@@ -23,6 +24,7 @@ export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>('numero');
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [selected, setSelected] = useState<Client | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   async function load() {
     if (!isSheetConfigured) return;
@@ -110,6 +112,24 @@ export default function App() {
     setSelected((prev) => (prev && prev.id === client.id ? { ...prev, ...updates } : prev));
   }
 
+  async function handleCreateClient(input: NewClientInput) {
+    const { sheetRow, numero } = await createClient(input);
+    const newClient: Client = {
+      id: `new-${sheetRow}-${input.nomEntreprise}`,
+      numero,
+      sheetRow,
+      dateDemande: input.dateDemande ?? '',
+      nomEntreprise: input.nomEntreprise,
+      telephone: input.telephone ?? '',
+      secteur: input.secteur ?? '',
+      reseauxSouhaites: input.reseauxSouhaites ?? [],
+      liens: [],
+      statutSite: input.statutSite ?? '',
+      notes: input.notes,
+    };
+    setClients((prev) => [newClient, ...prev]);
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
       {!isSheetConfigured && (
@@ -135,25 +155,39 @@ export default function App() {
         <StatsBar clients={clients} activeStatut={statut} onSelectStatut={setStatut} />
       </div>
 
-      <div className="mb-3.5">
-        <Filters
-          secteurs={secteurs}
-          statuts={statuts}
-          secteur={secteur}
-          statut={statut}
-          modification={modification}
-          onSecteurChange={setSecteur}
-          onStatutChange={setStatut}
-          onModificationChange={setModification}
-          onReset={resetFilters}
-          count={filtered.length}
-          total={clients.length}
-        />
+      <div className="mb-3.5 flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <Filters
+            secteurs={secteurs}
+            statuts={statuts}
+            secteur={secteur}
+            statut={statut}
+            modification={modification}
+            onSecteurChange={setSecteur}
+            onStatutChange={setStatut}
+            onModificationChange={setModification}
+            onReset={resetFilters}
+            count={filtered.length}
+            total={clients.length}
+          />
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex flex-none items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouveau client
+          </button>
+        )}
       </div>
 
       <ClientTable clients={filtered} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} onSelect={setSelected} />
 
       <ClientDetail client={selected} onClose={() => setSelected(null)} canEdit={canEdit} onSave={handleSaveClient} />
+      <AddClientModal open={showAddModal} onClose={() => setShowAddModal(false)} onCreate={handleCreateClient} secteurs={secteurs} />
     </div>
   );
 }

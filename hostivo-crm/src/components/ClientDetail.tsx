@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Client, ClientUpdates } from '../types';
 import { formatDate, toAbsoluteUrl } from '../lib/parse';
 import { telHref, whatsappHref, formatPhoneDisplay } from '../lib/phone';
+import { STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
 import { ModificationBadge, StatusBadge } from './StatusBadge';
 import { SocialIcon } from './SocialIcons';
 
@@ -11,9 +12,6 @@ interface Props {
   canEdit: boolean;
   onSave: (client: Client, updates: ClientUpdates) => Promise<void>;
 }
-
-const STATUT_SITE_OPTIONS = ['Mis en ligne', 'Maquette envoyée', 'En attente client', 'Site en cours', 'Refus'];
-const STATUT_MODIFICATION_OPTIONS = ['', 'Modification à faire', 'Modification faite'];
 
 interface FormState {
   statutSite: string;
