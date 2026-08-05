@@ -13,6 +13,8 @@ export interface Client {
   id: string;
   /** Colonne "#" du Sheet, quand elle existe. */
   numero?: number;
+  /** Numéro de ligne réel dans le Sheet (1-indexé), utilisé pour écrire les modifications. Absent en mode démo. */
+  sheetRow?: number;
   dateDemande: string;
   nomEntreprise: string;
   telephone: string;
@@ -30,3 +32,11 @@ export interface Client {
 }
 
 export type SourceMode = 'sheet' | 'demo';
+
+/** Champs que l'app peut réécrire dans le Sheet — voir lib/sheetsWrite.ts. */
+export interface ClientUpdates {
+  statutSite?: string;
+  statutModification?: string;
+  notes?: string;
+  noteModification?: string;
+}

@@ -6,8 +6,9 @@ import { StatsBar } from './components/StatsBar';
 import { TopBar } from './components/TopBar';
 import { sampleClients } from './data/sampleData';
 import { fetchClientsFromSheet, isSheetConfigured } from './lib/sheets';
+import { isWriteConfigured, writeClientUpdates } from './lib/sheetsWrite';
 import { parseLooseDate } from './lib/parse';
-import type { Client, SourceMode } from './types';
+import type { Client, ClientUpdates, SourceMode } from './types';
 
 export default function App() {
   const [clients, setClients] = useState<Client[]>(sampleClients);
@@ -101,6 +102,14 @@ export default function App() {
     setModification('');
   }
 
+  const canEdit = isWriteConfigured && source === 'sheet';
+
+  async function handleSaveClient(client: Client, updates: ClientUpdates) {
+    await writeClientUpdates(client, updates);
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, ...updates } : c)));
+    setSelected((prev) => (prev && prev.id === client.id ? { ...prev, ...updates } : prev));
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
       {!isSheetConfigured && (
@@ -144,7 +153,7 @@ export default function App() {
 
       <ClientTable clients={filtered} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} onSelect={setSelected} />
 
-      <ClientDetail client={selected} onClose={() => setSelected(null)} />
+      <ClientDetail client={selected} onClose={() => setSelected(null)} canEdit={canEdit} onSave={handleSaveClient} />
     </div>
   );
 }

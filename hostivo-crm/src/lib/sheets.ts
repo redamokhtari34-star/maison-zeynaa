@@ -112,6 +112,10 @@ function rowToClient(fieldByCol: (FieldKey | null)[], row: GvizRow, fallbackInde
   return {
     id: `${numero ?? fallbackIndex}-${nomEntreprise || fallbackIndex}`,
     numero: Number.isFinite(numero) ? numero : undefined,
+    // gviz renvoie les lignes de données sans la ligne d'en-tête (rangée 1) :
+    // la ligne réelle dans le Sheet est donc l'index + 2. Le point d'écriture
+    // revérifie le nom d'entreprise avant d'écrire, au cas où le Sheet a été trié.
+    sheetRow: fallbackIndex + 2,
     dateDemande: get('dateDemande').trim(),
     nomEntreprise,
     telephone: get('telephone').trim(),

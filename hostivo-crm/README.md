@@ -65,6 +65,44 @@ Redémarrez `npm run dev`. L'app lit désormais les colonnes du Sheet par leur
 Si une entreprise n'apparaît pas, vérifiez que la ligne a bien un nom en
 colonne « Nom entreprise » — les lignes vides sont ignorées.
 
+## Modifier les clients depuis l'app
+
+Par défaut l'app est en **lecture seule**. Pour qu'Anis, Jules et les autres
+collaborateurs puissent changer le statut du site, le statut de modification
+ou les notes directement depuis la fiche client (sans ouvrir le Sheet), il
+faut déployer un petit point d'écriture — l'app est un frontend statique
+sans serveur, donc l'écriture passe par un script côté Google Sheets plutôt
+que par une API tierce :
+
+1. Dans le Google Sheet, **Extensions → Apps Script**.
+2. Collez le contenu de [`apps-script/Code.gs`](apps-script/Code.gs) à la
+   place du code par défaut.
+3. **Project Settings** (⚙️) → **Script Properties** → ajoutez
+   `WRITE_SECRET` avec une valeur secrète de votre choix (une phrase
+   aléatoire suffit, ex. `hostivo-2026-xyz`).
+4. **Déployer → Nouveau déploiement → Application Web**.
+   - *Exécuter en tant que* : Moi
+   - *Qui a accès* : Tout le monde
+5. Copiez l'URL du déploiement (se termine par `/exec`) et complétez
+   `.env.local` :
+
+   ```
+   VITE_SHEET_WRITE_URL="https://script.google.com/macros/s/AKfycb.../exec"
+   VITE_SHEET_WRITE_SECRET="hostivo-2026-xyz"   # même valeur que WRITE_SECRET
+   ```
+
+Redémarrez `npm run dev`. La fiche client affiche alors des champs
+modifiables (statut du site, statut de modification, notes) avec un bouton
+**Enregistrer** qui écrit directement dans la bonne ligne du Sheet — le
+script revérifie le nom de l'entreprise avant d'écrire, pour éviter
+d'altérer la mauvaise ligne si le Sheet a été trié entre-temps.
+
+Cette clé secrète est visible dans le code source envoyé au navigateur : elle
+empêche les écritures accidentelles ou aléatoires, mais ne remplace pas une
+authentification par utilisateur. Suffisant pour un outil interne à
+quelques collaborateurs de confiance ; à éviter si le lien de l'app venait à
+être partagé publiquement.
+
 ## Fonctionnalités
 
 - **Tableau** triable (numéro, entreprise, secteur, statut, date de mise en
@@ -79,13 +117,56 @@ colonne « Nom entreprise » — les lignes vides sont ignorées.
   numéro de téléphone.
 - **Fiche client** (panneau latéral) : toutes les colonnes du Sheet, notes et
   historique de modification.
+- **Édition** (optionnelle, voir ci-dessus) : changer le statut du site, le
+  statut de modification et les notes depuis la fiche client, avec
+  écriture directe dans le Sheet.
 
-## Déploiement
+## Déploiement sur Vercel
 
-Projet Vite/React statique, déployable comme n'importe quelle app front (
-Vercel, Netlify…). Pensez à renseigner `VITE_GOOGLE_SHEET_ID` (et
-`VITE_GOOGLE_SHEET_NAME` si besoin) dans les variables d'environnement du
-service d'hébergement.
+Le dépôt contient `vercel.json` (build Vite standard). Étapes :
+
+1. Sur [vercel.com](https://vercel.com), **Add New → Project**, importer ce
+   dépôt GitHub (`maison-zeynaa`).
+2. **Root Directory** : comme ce projet vit dans un sous-dossier du dépôt,
+   réglez-le sur `hostivo-crm` (bouton *Edit* à côté de "Root Directory"
+   pendant la configuration).
+3. Le framework Vite est détecté automatiquement à partir de `vercel.json`.
+4. Dans **Settings → Environment Variables**, ajoutez :
+   - `VITE_GOOGLE_SHEET_ID` et `VITE_GOOGLE_SHEET_NAME` (lecture du Sheet)
+   - `VITE_SHEET_WRITE_URL` et `VITE_SHEET_WRITE_SECRET` (si l'édition est
+     activée — voir la section précédente)
+   - `BASIC_AUTH_USER` et `BASIC_AUTH_PASSWORD` (pour sécuriser le lien —
+     voir ci-dessous)
+5. **Deploy**.
+
+Je n'ai pas d'accès direct à un compte Vercel depuis cette session pour
+lancer le déploiement à votre place — ces étapes prennent normalement 2
+minutes depuis le dashboard Vercel.
+
+## Sécuriser le lien
+
+Comme le CRM affiche des données clients réelles (téléphones, notes), le
+projet inclut `middleware.ts` : une authentification HTTP Basic exécutée par
+Vercel Edge Middleware, qui protège **toute** l'app derrière un couple
+identifiant / mot de passe, avant même de servir la moindre page. Gratuit,
+aucun plan Vercel payant requis.
+
+Pour l'activer, définissez dans **Settings → Environment Variables** du
+projet Vercel :
+
+```
+BASIC_AUTH_USER="anis"
+BASIC_AUTH_PASSWORD="choisissez-un-mot-de-passe-solide"
+```
+
+Sans ces deux variables, le site reste accessible sans mot de passe (pratique
+en local). Une fois définies puis redéployé, chaque visiteur devra saisir
+ces identifiants avant d'accéder à quoi que ce soit — y compris les assets
+statiques.
+
+Pour partager l'accès avec toute l'équipe (Anis, Jules…), communiquez-leur
+simplement ces identifiants ; changez le mot de passe à tout moment en
+modifiant la variable d'environnement et en redéployant.
 
 ## Structure
 
