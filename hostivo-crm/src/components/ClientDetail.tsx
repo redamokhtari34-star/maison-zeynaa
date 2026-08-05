@@ -1,0 +1,164 @@
+import { useEffect, type ReactNode } from 'react';
+import type { Client } from '../types';
+import { formatDate, toAbsoluteUrl } from '../lib/parse';
+import { telHref, whatsappHref, formatPhoneDisplay } from '../lib/phone';
+import { ModificationBadge, StatusBadge } from './StatusBadge';
+import { SocialIcon } from './SocialIcons';
+
+interface Props {
+  client: Client | null;
+  onClose: () => void;
+}
+
+export function ClientDetail({ client, onClose }: Props) {
+  useEffect(() => {
+    if (!client) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [client, onClose]);
+
+  const open = Boolean(client);
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-20 bg-slate-900/40 transition-opacity ${
+          open ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+      />
+      <div
+        className={`fixed right-0 top-0 z-30 h-full w-full max-w-[440px] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl transition-transform ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {client && (
+          <div>
+            <div className="border-b border-slate-200 px-5 pb-4 pt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">{client.nomEntreprise}</h2>
+                  <div className="text-[12.5px] text-slate-500">{client.secteur || 'Secteur non renseigné'}</div>
+                </div>
+                <button
+                  onClick={onClose}
+                  aria-label="Fermer"
+                  className="flex h-7 w-7 flex-none items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 px-5 pb-8 pt-4">
+              <div className="flex gap-2">
+                {whatsappHref(client.telephone) && (
+                  <a
+                    href={whatsappHref(client.telephone)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-indigo-700"
+                  >
+                    <SocialIcon url="wa.me" className="h-3.5 w-3.5" />
+                    WhatsApp
+                  </a>
+                )}
+                {telHref(client.telephone) && (
+                  <a
+                    href={telHref(client.telephone)!}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-slate-700 hover:border-indigo-300"
+                  >
+                    Appeler
+                  </a>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <Field label="Statut du site" value={<StatusBadge statut={client.statutSite} />} />
+                <Field
+                  label="Modification"
+                  value={
+                    client.statutModification ? (
+                      <ModificationBadge statut={client.statutModification} />
+                    ) : (
+                      <Empty />
+                    )
+                  }
+                />
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <Field label="Date de demande" value={<span className="font-mono">{formatDate(client.dateDemande)}</span>} />
+                <Field
+                  label="Mise en ligne"
+                  value={<span className="font-mono">{client.dateMiseEnLigne ? formatDate(client.dateMiseEnLigne) : '—'}</span>}
+                />
+                <Field label="Téléphone" value={<span className="font-mono">{formatPhoneDisplay(client.telephone)}</span>} />
+                <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
+                {client.derniereMiseAJour && (
+                  <Field label="Dernière mise à jour" value={<span className="font-mono">{formatDate(client.derniereMiseAJour)}</span>} />
+                )}
+                {client.compteDemarche && <Field label="Compte démarché" value={client.compteDemarche} />}
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              <Field
+                label="Réseaux souhaités"
+                value={client.reseauxSouhaites.length ? client.reseauxSouhaites.join(', ') : <Empty text="Aucun renseigné" />}
+              />
+
+              <div>
+                <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Liens</div>
+                {client.liens.length ? (
+                  <div className="flex flex-col gap-1.5">
+                    {client.liens.map((url) => (
+                      <a
+                        key={url}
+                        href={toAbsoluteUrl(url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                      >
+                        <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty text="Aucun lien" />
+                )}
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              <Field label="Notes" value={client.notes || <Empty text="Aucune note" />} />
+              <Field label="Note de modification" value={client.noteModification || <Empty text="Aucune" />} />
+              {client.dateModification && <Field label="Date de modification" value={<span className="font-mono">{formatDate(client.dateModification)}</span>} />}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Field({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="text-[13.5px] leading-snug text-slate-700">{value}</div>
+    </div>
+  );
+}
+
+function Empty({ text = '—' }: { text?: string }) {
+  return <span className="italic text-slate-400">{text}</span>;
+}
