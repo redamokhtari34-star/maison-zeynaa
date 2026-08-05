@@ -3,6 +3,7 @@ import type { Client, ClientUpdates, NewClientInput } from '../types';
 const WRITE_URL = import.meta.env.VITE_SHEET_WRITE_URL?.trim();
 const WRITE_SECRET = import.meta.env.VITE_SHEET_WRITE_SECRET?.trim() ?? '';
 const SHEET_NAME = import.meta.env.VITE_GOOGLE_SHEET_NAME?.trim();
+const SHEET_GID = import.meta.env.VITE_GOOGLE_SHEET_GID?.trim();
 
 export const isWriteConfigured = Boolean(WRITE_URL);
 
@@ -25,7 +26,12 @@ async function postToSheet(payload: Record<string, unknown>): Promise<ApiRespons
   const res = await fetch(WRITE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ secret: WRITE_SECRET, sheetName: SHEET_NAME || undefined, ...payload }),
+    body: JSON.stringify({
+      secret: WRITE_SECRET,
+      sheetName: SHEET_NAME || undefined,
+      sheetGid: SHEET_GID || undefined,
+      ...payload,
+    }),
   });
 
   let body: ApiResponse = {};

@@ -3,6 +3,7 @@ import { parseLiensCell, parseReseauxCell, parseSouhaitesCell } from './parse';
 
 const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID?.trim();
 const SHEET_NAME = import.meta.env.VITE_GOOGLE_SHEET_NAME?.trim();
+const SHEET_GID = import.meta.env.VITE_GOOGLE_SHEET_GID?.trim();
 
 export const isSheetConfigured = Boolean(SHEET_ID);
 
@@ -74,7 +75,11 @@ function cellText(cell: GvizCell | null | undefined): string {
 
 function buildGvizUrl(): string {
   const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-  return SHEET_NAME ? `${base}&sheet=${encodeURIComponent(SHEET_NAME)}` : base;
+  // Le gid (visible dans l'URL du Sheet après "#gid=") cible l'onglet sans
+  // dépendre de son nom exact — pratique s'il n'a pas été renseigné.
+  if (SHEET_GID) return `${base}&gid=${encodeURIComponent(SHEET_GID)}`;
+  if (SHEET_NAME) return `${base}&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  return base;
 }
 
 async function fetchGvizTable(): Promise<GvizTable> {

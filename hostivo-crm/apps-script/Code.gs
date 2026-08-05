@@ -72,6 +72,18 @@ function findNumeroColumn_(headers) {
   return -1;
 }
 
+function findSheet_(ss, data) {
+  if (data.sheetGid !== undefined && data.sheetGid !== null && data.sheetGid !== '') {
+    var gid = Number(data.sheetGid);
+    var sheets = ss.getSheets();
+    for (var i = 0; i < sheets.length; i++) {
+      if (sheets[i].getSheetId() === gid) return sheets[i];
+    }
+  }
+  if (data.sheetName) return ss.getSheetByName(data.sheetName);
+  return ss.getSheets()[0];
+}
+
 function jsonResponse_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -90,7 +102,7 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = data.sheetName ? ss.getSheetByName(data.sheetName) : ss.getSheets()[0];
+    var sheet = findSheet_(ss, data);
     if (!sheet) return jsonResponse_({ ok: false, error: 'Feuille introuvable.' });
 
     if (data.action === 'create') return handleCreate_(sheet, data);

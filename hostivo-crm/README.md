@@ -30,15 +30,17 @@ via l'export JSON public de Google Sheets. Deux étapes :
    n'est modifiable depuis l'extérieur avec ce réglage — c'est une lecture
    seule.)
 2. **Renseigner l'identifiant** : copiez `.env.example` vers `.env.local` et
-   collez l'ID du Sheet, visible dans son URL :
+   collez l'ID du Sheet et le gid de l'onglet, tous deux visibles dans
+   l'URL :
 
    ```
-   https://docs.google.com/spreadsheets/d/CET_ID_LA/edit
+   https://docs.google.com/spreadsheets/d/CET_ID_LA/edit?gid=CE_GID_LA#gid=CE_GID_LA
    ```
 
    ```
    VITE_GOOGLE_SHEET_ID="CET_ID_LA"
-   VITE_GOOGLE_SHEET_NAME=""   # nom de l'onglet, vide = premier onglet
+   VITE_GOOGLE_SHEET_GID="CE_GID_LA"   # cible l'onglet sans dépendre de son nom
+   VITE_GOOGLE_SHEET_NAME=""            # alternative si vous préférez cibler par nom
    ```
 
 Redémarrez `npm run dev`. L'app lit désormais les colonnes du Sheet par leur
