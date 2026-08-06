@@ -84,6 +84,11 @@ export default function Reservations({
   const [dateRetour, setDateRetour] = useState(isoInDays(3));
   const [selectedDresses, setSelectedDresses] = useState<Dress[]>([]);
   const [selectedBijoux, setSelectedBijoux] = useState<Bijou[]>([]);
+  // A price agreed with this particular client, keyed by article id. Falls
+  // back to the catalogue price until touched — the catalogue itself is never
+  // written to, so the next booking of the same dress starts from its normal
+  // price again.
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
   const [montantPaye, setMontantPaye] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
@@ -123,9 +128,13 @@ export default function Reservations({
     }).format(amount) + ' DA';
   };
 
+  // The price charged for an article in this booking: the price agreed with
+  // this client if one was entered, otherwise the catalogue price.
+  const priceFor = (item: Dress | Bijou) => priceOverrides[item.id] ?? item.prix_location_da;
+
   // Calculations for Wizard
-  const totalDressesPrice = selectedDresses.reduce((sum, d) => sum + d.prix_location_da, 0);
-  const totalBijouxPrice = selectedBijoux.reduce((sum, b) => sum + b.prix_location_da, 0);
+  const totalDressesPrice = selectedDresses.reduce((sum, d) => sum + priceFor(d), 0);
+  const totalBijouxPrice = selectedBijoux.reduce((sum, b) => sum + priceFor(b), 0);
   const totalCost = totalDressesPrice + totalBijouxPrice;
 
   const totalCaution = selectedDresses.reduce((sum, d) => sum + d.caution_da, 0);
@@ -228,6 +237,7 @@ export default function Reservations({
     setDateRetour(isoInDays(3));
     setSelectedDresses([]);
     setSelectedBijoux([]);
+    setPriceOverrides({});
     setMontantPaye(0);
     setNotes('');
     setWizardStep(1);
@@ -259,6 +269,12 @@ export default function Reservations({
         .map(i => bijoux.find(b => b.id === i.article_id))
         .filter((b): b is Bijou => Boolean(b))
     );
+
+    // The price actually charged on the booking, which the wizard reopens
+    // with rather than silently swapping in the catalogue's current price.
+    const overrides: Record<string, number> = {};
+    res.items.forEach(i => { overrides[i.article_id] = i.prix_da; });
+    setPriceOverrides(overrides);
 
     setMontantPaye(res.montant_paye_da);
     setNotes(res.notes || '');
@@ -363,7 +379,7 @@ export default function Reservations({
         reservation_id: existing.id,
         type_article: 'robe' as const,
         article_id: d.id,
-        prix_da: d.prix_location_da,
+        prix_da: priceFor(d),
         nom_article: d.nom
       })),
       ...selectedBijoux.map(b => ({
@@ -371,7 +387,7 @@ export default function Reservations({
         reservation_id: existing.id,
         type_article: 'bijou' as const,
         article_id: b.id,
-        prix_da: b.prix_location_da,
+        prix_da: priceFor(b),
         nom_article: b.nom
       }))
     ];
@@ -493,7 +509,7 @@ export default function Reservations({
           id: crypto.randomUUID(),
           reservation_id: existing.id,
           robe_id: d.id,
-          prix: d.prix_location_da || 0,
+          prix: priceFor(d) || 0,
           caution: d.caution_da || 0
         }));
       if (robeRows.length) {
@@ -507,7 +523,7 @@ export default function Reservations({
           id: crypto.randomUUID(),
           reservation_id: existing.id,
           bijou_id: b.id,
-          prix: b.prix_location_da || 0,
+          prix: priceFor(b) || 0,
           caution: 0
         }));
       if (bijouRows.length) {
@@ -565,7 +581,7 @@ export default function Reservations({
         reservation_id: localResId,
         type_article: 'robe' as const,
         article_id: d.id,
-        prix_da: d.prix_location_da,
+        prix_da: priceFor(d),
         nom_article: d.nom
       })),
       ...selectedBijoux.map(b => ({
@@ -573,7 +589,7 @@ export default function Reservations({
         reservation_id: localResId,
         type_article: 'bijou' as const,
         article_id: b.id,
-        prix_da: b.prix_location_da,
+        prix_da: priceFor(b),
         nom_article: b.nom
       }))
     ];
@@ -691,7 +707,7 @@ export default function Reservations({
           id: crypto.randomUUID(),
           reservation_id: localResId,
           robe_id: d.id,
-          prix: d.prix_location_da || 0,
+          prix: priceFor(d) || 0,
           caution: d.caution_da || 0
         }));
       if (robeRows.length) {
@@ -705,7 +721,7 @@ export default function Reservations({
           id: crypto.randomUUID(),
           reservation_id: localResId,
           bijou_id: b.id,
-          prix: b.prix_location_da || 0,
+          prix: priceFor(b) || 0,
           caution: 0
         }));
       if (bijouRows.length) {
@@ -1284,22 +1300,53 @@ export default function Reservations({
                     </div>
                   </div>
 
-                  {/* Items count */}
+                  {/* Items count — each price is editable: what this client actually
+                      pays for the piece, agreed on the spot. The catalogue price
+                      underneath is untouched. */}
                   <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5 text-xs text-gray-700">
-                    <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">
-                      {language === 'fr' ? 'Articles sélectionnées' : 'المواد المختارة'}
-                    </p>
-                    {selectedDresses.map(d => (
-                      <p key={d.id} className="flex justify-between font-medium">
-                        <span>👗 {d.nom}</span>
-                        <span className="font-bold font-mono">{formatDa(d.prix_location_da)}</span>
+                    <div className="flex justify-between items-baseline">
+                      <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">
+                        {language === 'fr' ? 'Articles sélectionnées' : 'المواد المختارة'}
                       </p>
+                      <p className="text-[9px] text-gray-400">
+                        {language === 'fr' ? 'Prix modifiable' : 'السعر قابل للتعديل'}
+                      </p>
+                    </div>
+                    {selectedDresses.map(d => (
+                      <div key={d.id} className="flex justify-between items-center gap-2 font-medium">
+                        <span className="truncate">👗 {d.nom}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {priceOverrides[d.id] !== undefined && priceOverrides[d.id] !== d.prix_location_da && (
+                            <span className="text-[10px] text-gray-400 line-through font-mono">{formatDa(d.prix_location_da)}</span>
+                          )}
+                          <input
+                            id={`wizard-price-override-${d.id}`}
+                            type="number"
+                            min="0"
+                            value={priceFor(d)}
+                            onChange={(e) => setPriceOverrides({ ...priceOverrides, [d.id]: Number(e.target.value) })}
+                            className="w-20 p-1 text-right bg-white border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
+                          />
+                        </div>
+                      </div>
                     ))}
                     {selectedBijoux.map(b => (
-                      <p key={b.id} className="flex justify-between font-medium">
-                        <span>💍 {b.nom}</span>
-                        <span className="font-bold font-mono">{formatDa(b.prix_location_da)}</span>
-                      </p>
+                      <div key={b.id} className="flex justify-between items-center gap-2 font-medium">
+                        <span className="truncate">💍 {b.nom}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {priceOverrides[b.id] !== undefined && priceOverrides[b.id] !== b.prix_location_da && (
+                            <span className="text-[10px] text-gray-400 line-through font-mono">{formatDa(b.prix_location_da)}</span>
+                          )}
+                          <input
+                            id={`wizard-price-override-${b.id}`}
+                            type="number"
+                            min="0"
+                            value={priceFor(b)}
+                            onChange={(e) => setPriceOverrides({ ...priceOverrides, [b.id]: Number(e.target.value) })}
+                            className="w-20 p-1 text-right bg-white border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
+                          />
+                        </div>
+                      </div>
                     ))}
                     <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between font-black text-gray-900">
                       <span>{t.total_price}</span>
