@@ -146,15 +146,26 @@ export default function Reservations({
     const res = reservations.find(r => r.id === id);
     if (!res) return;
 
-    const msg = language === 'fr' 
-      ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
-      : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`;
+    const hasDeposit = res.montant_paye_da > 0;
+
+    // A cancelled booking whose client already paid something is a refund,
+    // not just a deletion — say so up front, since it changes what happens
+    // to the till.
+    const msg = hasDeposit
+      ? (language === 'fr'
+          ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?\n\n${formatDa(res.montant_paye_da)} avaient été versés par la cliente. Ce montant sera retiré du chiffre d'affaires, comme un remboursement.`
+          : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟\n\nتم دفع ${formatDa(res.montant_paye_da)} من طرف الزبونة. سيتم خصم هذا المبلغ من رقم الأعمال كاسترجاع.`)
+      : (language === 'fr'
+          ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
+          : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`);
 
     if (await askConfirm({
       title: language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز',
       message: msg,
       danger: true,
-      confirmLabel: language === 'fr' ? 'Supprimer' : 'حذف',
+      confirmLabel: hasDeposit
+        ? (language === 'fr' ? 'Supprimer et rembourser' : 'حذف واسترجاع المبلغ')
+        : (language === 'fr' ? 'Supprimer' : 'حذف'),
       cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
     })) {
       const supabase = getSupabaseClient();
@@ -165,9 +176,32 @@ export default function Reservations({
       const updated = reservations.filter(r => r.id !== id);
       onSaveReservations(updated);
 
+      // The deposit leaves the till the same way it came in — a signed
+      // 'entree' entry — so revenue and cash-in-hand, which both sum that
+      // type directly, net back out exactly what was returned to the client.
+      if (hasDeposit) {
+        const refundTr: Transaction = {
+          id: crypto.randomUUID(),
+          type: 'entree',
+          montant_da: -res.montant_paye_da,
+          description: `Remboursement acompte - réservation #${id.toUpperCase()} annulée - ${getClientName(res.cliente_id)}`,
+          categorie: 'Réservation',
+          date: todayStr,
+          heure: nowTime(),
+          utilisateur: 'Zeyna',
+          source_argent: 'caisse'
+        };
+        onAddTransaction(refundTr);
+        if (supabase) {
+          mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(refundTr)]), LOCAL_SYNC_FAIL);
+        }
+      }
+
       addHistoryEntry(
         language === 'fr' ? 'Annulation de réservation' : 'إلغاء حجز',
-        `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée.`
+        hasDeposit
+          ? `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée. Acompte de ${formatDa(res.montant_paye_da)} remboursé.`
+          : `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée.`
       );
     }
   };
@@ -415,14 +449,17 @@ export default function Reservations({
     onSaveReservations(reservations.map(r => (r.id === existing.id ? updated : r)));
 
     // Correcting the amount received has to reach the till, or the cash drawer
-    // and the booking stop agreeing. Only the difference is recorded, as an
-    // entry when more was taken and as a refund when less.
+    // and the booking stop agreeing. Only the difference is recorded, signed:
+    // positive when more was taken, negative when money went back to the
+    // client. Revenue and cash-in-hand both sum 'entree' transactions
+    // directly, so a negative entry here is what actually pulls the
+    // correction out of the till, not just an expense line next to it.
     const paidDelta = montantPaye - existing.montant_paye_da;
     if (paidDelta !== 0) {
       onAddTransaction({
         id: crypto.randomUUID(),
-        type: paidDelta > 0 ? 'entree' : 'sortie',
-        montant_da: Math.abs(paidDelta),
+        type: 'entree',
+        montant_da: paidDelta,
         description: `Correction acompte Réservation - ${clientName}`,
         categorie: 'Réservation',
         date: todayStr,
@@ -533,8 +570,8 @@ export default function Reservations({
 
       if (paidDelta !== 0) {
         const { error: trError } = await supabase.from('mouvements_caisse').insert([{
-          type: paidDelta > 0 ? 'entree' : 'sortie',
-          montant: Math.abs(paidDelta),
+          type: 'entree',
+          montant: paidDelta,
           source: 'caisse',
           beneficiaire: null,
           motif: `Correction acompte Réservation - ${clientName}`
