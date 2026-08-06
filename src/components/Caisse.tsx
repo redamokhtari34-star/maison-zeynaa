@@ -358,20 +358,25 @@ export default function Caisse({
               </thead>
               <tbody className="divide-y divide-gray-50 font-medium">
                 {transactions.slice(0, 15).map(tr => {
-                  const isEntry = tr.type === 'entree';
+                  // A refund is recorded as an 'entree' with a negative amount,
+                  // so it nets directly out of revenue and cash-in-hand rather
+                  // than sitting next to them as an unrelated expense line —
+                  // but it still needs to read as money leaving, not coming in.
+                  const isRefund = tr.type === 'entree' && tr.montant_da < 0;
+                  const isEntry = tr.type === 'entree' && !isRefund;
                   const isExpense = tr.type === 'depense';
-                  
+
                   return (
                     <tr key={tr.id} className="hover:bg-slate-50/30">
                       <td className="py-3.5 px-4">
                         <span className={`px-2.5 py-1 rounded-lg font-bold border flex items-center gap-1 w-fit ${
-                          isEntry 
-                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                            : isExpense 
-                              ? 'bg-rose-50 border-rose-100 text-rose-700' 
+                          isEntry
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                            : isExpense || isRefund
+                              ? 'bg-rose-50 border-rose-100 text-rose-700'
                               : 'bg-amber-50 border-amber-100 text-amber-700'
                         }`}>
-                          {isEntry ? '+' : '-'} {isEntry ? (language === 'fr' ? 'Entrée' : 'مداخيل') : isExpense ? (language === 'fr' ? 'Dépense' : 'مصاريف') : (language === 'fr' ? 'Vidage' : 'تفريغ')}
+                          {isEntry ? '+' : '-'} {isEntry ? (language === 'fr' ? 'Entrée' : 'مداخيل') : isRefund ? (language === 'fr' ? 'Remboursement' : 'استرجاع') : isExpense ? (language === 'fr' ? 'Dépense' : 'مصاريف') : (language === 'fr' ? 'Vidage' : 'تفريغ')}
                         </span>
                       </td>
                       <td className={`py-3.5 px-4 ${isRtl ? 'text-right' : 'text-left'}`}>
@@ -383,8 +388,8 @@ export default function Caisse({
                                 ? 'bg-indigo-50 border-indigo-100 text-indigo-700'
                                 : 'bg-amber-50 border-amber-100 text-amber-700'
                             }`}>
-                              {tr.source_argent === 'tresorerie' 
-                                ? (language === 'fr' ? 'Trésorerie' : 'الخزينة') 
+                              {tr.source_argent === 'tresorerie'
+                                ? (language === 'fr' ? 'Trésorerie' : 'الخزينة')
                                 : (language === 'fr' ? 'Caisse' : 'الصندوق')}
                             </span>
                           )}
@@ -395,7 +400,7 @@ export default function Caisse({
                         {tr.date} <span className="text-gray-300">@</span> {tr.heure}
                       </td>
                       <td className={`py-3.5 px-4 text-right font-bold text-sm font-mono ${isEntry ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {isEntry ? '+' : '-'} {formatDa(tr.montant_da)}
+                        {isEntry ? '+' : '-'} {formatDa(Math.abs(tr.montant_da))}
                       </td>
                     </tr>
                   );
