@@ -1,23 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
-  Search, 
-  Filter, 
-  User, 
-  Phone, 
-  Layers, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle, 
-  RotateCcw, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  Search,
+  User,
+  Phone,
+  Clock,
+  CheckCircle2,
   Sparkles,
-  X,
-  Eye,
-  Info,
-  ArrowRight,
-  ArrowLeft
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Reservation, Dress, Cliente, Bijou, Language } from '../types';
@@ -34,6 +26,11 @@ interface CalendrierProps {
   setCurrentTab?: (tab: string) => void;
   onRefreshData?: () => Promise<void>;
 }
+
+// Which of the three dates that matter on a booking this particular calendar
+// day is: the day the dress leaves, the day(s) in between (the event itself),
+// or the day it comes back.
+type DateRole = 'sortie' | 'evenement' | 'retour';
 
 export default function Calendrier({
   reservations,
@@ -54,10 +51,12 @@ export default function Calendrier({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(todayIso());
+  // Tapping a day opens this instead of relying on a panel further down the
+  // page — on a phone that panel sat below the fold and looked like nothing
+  // had happened.
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'en_cours' | 'future' | 'retourne'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [hoveredRes, setHoveredRes] = useState<Reservation | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const [liveReservations, setLiveReservations] = useState<Reservation[]>(reservations);
   const [loadingSupabase, setLoadingSupabase] = useState(false);
 
@@ -174,6 +173,39 @@ export default function Calendrier({
     }).format(amount) + ' DA';
   };
 
+  // What this calendar date means for this particular booking: the dress
+  // leaves, comes back, or — everything strictly between the two — the event
+  // itself is happening. Sortie is checked first, so a same-day rental reads
+  // as a departure rather than a return.
+  const getDateRole = (res: Reservation, dateStr: string): DateRole => {
+    if (dateStr === res.date_sortie) return 'sortie';
+    if (dateStr === res.date_retour) return 'retour';
+    return 'evenement';
+  };
+
+  const dateRoleStyle = (role: DateRole) => {
+    switch (role) {
+      case 'sortie':
+        return {
+          bg: 'bg-orange-100 text-orange-700 border-orange-200',
+          dot: 'bg-orange-500',
+          label: language === 'fr' ? 'Sortie' : 'خروج'
+        };
+      case 'retour':
+        return {
+          bg: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+          dot: 'bg-emerald-500',
+          label: language === 'fr' ? 'Retour' : 'إرجاع'
+        };
+      case 'evenement':
+        return {
+          bg: 'bg-red-100 text-red-700 border-red-200',
+          dot: 'bg-red-500',
+          label: language === 'fr' ? "Jour de l'évènement" : 'يوم المناسبة'
+        };
+    }
+  };
+
   // Date Math Navigation
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -192,8 +224,13 @@ export default function Calendrier({
     setSelectedDay(todayIso());
   };
 
+  const openDayModal = (dateStr: string) => {
+    setSelectedDay(dateStr);
+    setIsDayModalOpen(true);
+  };
+
   const monthNamesFr = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
 
@@ -281,51 +318,13 @@ export default function Calendrier({
 
   // Monthly statistics
   const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const monthReservations = liveReservations.filter(r => 
+  const monthReservations = liveReservations.filter(r =>
     r.date_sortie.startsWith(currentMonthPrefix) || r.date_retour.startsWith(currentMonthPrefix)
   );
 
   const activeRentalsCount = monthReservations.filter(r => r.statut === 'en_cours' || r.statut === 'en_location' || r.statut === 'en_retard').length;
   const futureRentalsCount = monthReservations.filter(r => r.statut === 'future' || r.statut === 'reservee').length;
   const returnedCount = monthReservations.filter(r => r.statut === 'retourne').length;
-
-  // Status Badge Helper
-  const getStatusBadge = (statut: string) => {
-    switch (statut) {
-      case 'en_cours':
-      case 'en_location':
-        return {
-          label: language === 'fr' ? 'Location en cours' : 'تأجير حالي',
-          bg: 'bg-rose-100 text-rose-700 border-rose-200',
-          dot: 'bg-rose-500'
-        };
-      case 'en_retard':
-        return {
-          label: language === 'fr' ? 'En retard' : 'متأخر',
-          bg: 'bg-red-100 text-red-800 border-red-300 font-bold',
-          dot: 'bg-red-600'
-        };
-      case 'future':
-      case 'reservee':
-        return {
-          label: language === 'fr' ? 'Réservation future' : 'حجز مستقبلي',
-          bg: 'bg-violet-100 text-violet-700 border-violet-200',
-          dot: 'bg-violet-500'
-        };
-      case 'retourne':
-        return {
-          label: language === 'fr' ? 'Retourné' : 'تم الإرجاع',
-          bg: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-          dot: 'bg-emerald-500'
-        };
-      default:
-        return {
-          label: statut,
-          bg: 'bg-gray-100 text-gray-700 border-gray-200',
-          dot: 'bg-gray-400'
-        };
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -335,7 +334,7 @@ export default function Calendrier({
       }`}>
         <div>
           <div className={`flex items-center gap-3 mb-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <div className="p-2.5 bg-gradient-to-tr from-violet-600 to-indigo-600 text-white rounded-xl">
+            <div className="p-2.5 bg-orange-600 text-white rounded-xl">
               <CalendarIcon size={22} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -343,8 +342,8 @@ export default function Calendrier({
             </h1>
           </div>
           <p className="text-xs text-gray-500 font-medium">
-            {language === 'fr' 
-              ? 'Aperçu mensuel de la disponibilité des robes et plannings de sortie/retour' 
+            {language === 'fr'
+              ? 'Aperçu mensuel de la disponibilité des robes et plannings de sortie/retour'
               : 'جدول شهري لمتابعة خروج وإرجاع الفساتين وتوفر الموديلات'}
           </p>
         </div>
@@ -354,7 +353,7 @@ export default function Calendrier({
           <button
             id="cal-prev-month-btn"
             onClick={handlePrevMonth}
-            className="p-2.5 bg-slate-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 rounded-xl transition-all cursor-pointer"
+            className="p-2.5 bg-slate-100 hover:bg-orange-100 text-gray-700 hover:text-orange-700 rounded-xl transition-all cursor-pointer"
             title={language === 'fr' ? 'Mois précédent' : 'الشهر السابق'}
           >
             {isRtl ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -367,7 +366,7 @@ export default function Calendrier({
           <button
             id="cal-next-month-btn"
             onClick={handleNextMonth}
-            className="p-2.5 bg-slate-100 hover:bg-violet-100 text-gray-700 hover:text-violet-700 rounded-xl transition-all cursor-pointer"
+            className="p-2.5 bg-slate-100 hover:bg-orange-100 text-gray-700 hover:text-orange-700 rounded-xl transition-all cursor-pointer"
             title={language === 'fr' ? 'Mois suivant' : 'الشهر التالي'}
           >
             {isRtl ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
@@ -376,7 +375,7 @@ export default function Calendrier({
           <button
             id="cal-today-btn"
             onClick={handleToday}
-            className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer ml-1"
+            className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer ml-1"
           >
             {language === 'fr' ? "Aujourd'hui" : 'اليوم'}
           </button>
@@ -390,27 +389,27 @@ export default function Calendrier({
             <p className="text-xs text-gray-400 font-bold uppercase">{language === 'fr' ? 'Réservations ce mois' : 'حجوزات هذا الشهر'}</p>
             <p className="text-2xl font-extrabold text-gray-900 mt-1">{monthReservations.length}</p>
           </div>
-          <div className="p-3 bg-violet-50 text-violet-600 rounded-xl">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
             <CalendarIcon size={20} />
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
-            <p className="text-xs text-rose-500 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
-            <p className="text-2xl font-extrabold text-rose-600 mt-1">{activeRentalsCount}</p>
+            <p className="text-xs text-red-500 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
+            <p className="text-2xl font-extrabold text-red-600 mt-1">{activeRentalsCount}</p>
           </div>
-          <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <div className="p-3 bg-red-50 text-red-600 rounded-xl">
             <Clock size={20} />
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
-            <p className="text-xs text-indigo-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
-            <p className="text-2xl font-extrabold text-indigo-600 mt-1">{futureRentalsCount}</p>
+            <p className="text-xs text-orange-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
+            <p className="text-2xl font-extrabold text-orange-600 mt-1">{futureRentalsCount}</p>
           </div>
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
             <Sparkles size={20} />
           </div>
         </div>
@@ -439,7 +438,7 @@ export default function Calendrier({
             placeholder={language === 'fr' ? 'Rechercher cliente, robe...' : 'بحث عن زبونة أو فستان...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full py-2.5 bg-slate-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-violet-500 ${
+            className={`w-full py-2.5 bg-slate-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-orange-500 ${
               isRtl ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3 text-left'
             }`}
           />
@@ -450,8 +449,8 @@ export default function Calendrier({
           <button
             onClick={() => setStatusFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              statusFilter === 'all' 
-                ? 'bg-slate-900 text-white' 
+              statusFilter === 'all'
+                ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
             }`}
           >
@@ -461,32 +460,32 @@ export default function Calendrier({
           <button
             onClick={() => setStatusFilter('en_cours')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              statusFilter === 'en_cours' 
-                ? 'bg-rose-600 text-white' 
-                : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+              statusFilter === 'en_cours'
+                ? 'bg-red-600 text-white'
+                : 'bg-red-50 text-red-700 hover:bg-red-100'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
             {language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}
           </button>
 
           <button
             onClick={() => setStatusFilter('future')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              statusFilter === 'future' 
-                ? 'bg-violet-600 text-white' 
-                : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
+              statusFilter === 'future'
+                ? 'bg-orange-600 text-white'
+                : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-violet-500"></span>
+            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
             {language === 'fr' ? 'Futures' : 'مستقبلية'}
           </button>
 
           <button
             onClick={() => setStatusFilter('retourne')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              statusFilter === 'retourne' 
-                ? 'bg-emerald-600 text-white' 
+              statusFilter === 'retourne'
+                ? 'bg-emerald-600 text-white'
                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
             }`}
           >
@@ -496,249 +495,283 @@ export default function Calendrier({
         </div>
       </div>
 
-      {/* Main Grid + Side Details View */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Calendar Grid (2 columns on lg) */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-[24px] border border-neutral-200 overflow-hidden">
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-2">
-            {(language === 'fr' ? daysHeaderFr : daysHeaderAr).map((day, idx) => (
-              <div key={idx} className="py-2 text-xs font-extrabold text-gray-400 uppercase tracking-wider">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Days Grid Cells */}
-          <div className="grid grid-cols-7 gap-1.5">
-            {calendarCells.map((cell, index) => {
-              const dayReservations = getReservationsForDate(cell.dateStr);
-              const isToday = cell.dateStr === todayIso();
-              const isSelected = cell.dateStr === selectedDay;
-              const hasReservations = dayReservations.length > 0;
-
-              return (
-                <div
-                  key={`${cell.dateStr}-${index}`}
-                  onClick={() => setSelectedDay(cell.dateStr)}
-                  className={`min-h-[85px] sm:min-h-[95px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
-                    isSelected 
-                      ? 'border-violet-600 bg-violet-50/50 ring-2 ring-violet-500/20' 
-                      : cell.isCurrentMonth 
-                        ? 'border-gray-100 bg-white hover:border-violet-300 hover:bg-slate-50/80' 
-                        : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'
-                  }`}
-                >
-                  {/* Top Bar inside cell: Day Number & Today indicator */}
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold rounded-lg w-6 h-6 flex items-center justify-center ${
-                      isToday 
-                        ? 'bg-violet-600 text-white font-extrabold' 
-                        : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
-                    }`}>
-                      {cell.dayNum}
-                    </span>
-
-                    {hasReservations && (
-                      <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700">
-                        {dayReservations.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Reservation Dots & Badges */}
-                  <div className="mt-1 space-y-1">
-                    {dayReservations.slice(0, 2).map((res) => {
-                      const badge = getStatusBadge(res.statut);
-                      const dressName = getDressName(res);
-
-                      return (
-                        <div
-                          key={res.id}
-                          onMouseEnter={(e) => {
-                            setHoveredRes(res);
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setHoverPos({ x: rect.left, y: rect.top - 10 });
-                          }}
-                          onMouseLeave={() => setHoveredRes(null)}
-                          className={`px-1.5 py-0.5 rounded-lg text-[10px] font-semibold truncate border flex items-center gap-1 transition-transform group-hover:scale-[1.02] ${badge.bg}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`}></span>
-                          <span className="truncate leading-none">{dressName}</span>
-                        </div>
-                      );
-                    })}
-
-                    {dayReservations.length > 2 && (
-                      <p className="text-[9px] text-gray-400 font-bold px-1 text-center">
-                        +{dayReservations.length - 2} {language === 'fr' ? 'autres' : 'آخرين'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span className="text-gray-600 font-medium">{language === 'fr' ? 'Location en cours' : 'تأجير حالي'}</span>
+      {/* Calendar Grid — full width now that a day's detail opens as a popup
+          instead of a panel sharing the row */}
+      <div className="bg-white p-5 rounded-[24px] border border-neutral-200 overflow-hidden">
+        {/* Days of Week Header */}
+        <div className="grid grid-cols-7 gap-1 text-center mb-2">
+          {(language === 'fr' ? daysHeaderFr : daysHeaderAr).map((day, idx) => (
+            <div key={idx} className="py-2 text-xs font-extrabold text-gray-400 uppercase tracking-wider">
+              {day}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
-              <span className="text-gray-600 font-medium">{language === 'fr' ? 'Réservation future' : 'حجز مستقبلي'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span className="text-gray-600 font-medium">{language === 'fr' ? 'Retourné' : 'تم الإرجاع'}</span>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Selected Day Details Panel (1 column on lg) */}
-        <div className="bg-white p-6 rounded-[24px] border border-neutral-200 space-y-4">
-          <div className={`flex items-center justify-between pb-4 border-b border-gray-100 ${
-            isRtl ? 'flex-row-reverse text-right' : 'text-left'
-          }`}>
-            <div>
-              <h2 className="text-base font-bold text-gray-900">
-                {selectedDay 
-                  ? new Date(selectedDay).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'ar-DZ', {
+        {/* Days Grid Cells */}
+        <div className="grid grid-cols-7 gap-1.5">
+          {calendarCells.map((cell, index) => {
+            const dayReservations = getReservationsForDate(cell.dateStr);
+            const isToday = cell.dateStr === todayIso();
+            const isSelected = cell.dateStr === selectedDay;
+            const hasReservations = dayReservations.length > 0;
+
+            return (
+              <div
+                key={`${cell.dateStr}-${index}`}
+                id={`cal-day-${cell.dateStr}`}
+                onClick={() => openDayModal(cell.dateStr)}
+                className={`min-h-[85px] sm:min-h-[95px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                  isSelected
+                    ? 'border-orange-600 bg-orange-50/50 ring-2 ring-orange-500/20'
+                    : cell.isCurrentMonth
+                      ? 'border-gray-100 bg-white hover:border-orange-300 hover:bg-slate-50/80'
+                      : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'
+                }`}
+              >
+                {/* Top Bar inside cell: Day Number & Today indicator */}
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold rounded-lg w-6 h-6 flex items-center justify-center ${
+                    isToday
+                      ? 'bg-orange-600 text-white font-extrabold'
+                      : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
+                  }`}>
+                    {cell.dayNum}
+                  </span>
+
+                  {hasReservations && (
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700">
+                      {dayReservations.length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Reservation Dots & Badges — colour tells what this day is
+                    for the booking: departure, event, or return. */}
+                <div className="mt-1 space-y-1">
+                  {dayReservations.slice(0, 2).map((res) => {
+                    const role = getDateRole(res, cell.dateStr);
+                    const style = dateRoleStyle(role);
+                    const dressName = getDressName(res);
+
+                    return (
+                      <div
+                        key={res.id}
+                        className={`px-1.5 py-0.5 rounded-lg text-[10px] font-semibold truncate border flex items-center gap-1 transition-transform group-hover:scale-[1.02] ${style.bg}`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${style.dot}`}></span>
+                        <span className="truncate leading-none">{dressName}</span>
+                      </div>
+                    );
+                  })}
+
+                  {dayReservations.length > 2 && (
+                    <p className="text-[9px] text-gray-400 font-bold px-1 text-center">
+                      +{dayReservations.length - 2} {language === 'fr' ? 'autres' : 'آخرين'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+            <span className="text-gray-600 font-medium">{language === 'fr' ? 'Jour de sortie' : 'يوم الخروج'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+            <span className="text-gray-600 font-medium">{language === 'fr' ? "Jour de l'évènement" : 'يوم المناسبة'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span className="text-gray-600 font-medium">{language === 'fr' ? 'Jour de retour' : 'يوم الإرجاع'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Day Detail Popup — opens the instant a cell is tapped, on phone and
+          desktop alike, instead of a panel the visitor had to scroll to. */}
+      <AnimatePresence>
+        {isDayModalOpen && selectedDay && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDayModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className={`p-5 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <h2 className="text-base font-bold text-gray-900">
+                    {new Date(selectedDay).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'ar-DZ', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
-                    })
-                  : (language === 'fr' ? 'Sélectionnez un jour' : 'اختر يوماً')}
-              </h2>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {selectedDayReservations.length}{' '}
-                {language === 'fr' ? 'réservation(s) pour cette date' : 'حجز في هذا التاريخ'}
-              </p>
-            </div>
-
-            {selectedDay === todayIso() && (
-              <span className="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-lg">
-                {language === 'fr' ? "Aujourd'hui" : 'اليوم'}
-              </span>
-            )}
-          </div>
-
-          {/* List of Reservations for selected date */}
-          {selectedDayReservations.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto text-gray-300">
-                <CalendarIcon size={24} />
+                    })}
+                  </h2>
+                  <p className="text-xs text-gray-400 font-medium mt-0.5">
+                    {selectedDayReservations.length}{' '}
+                    {language === 'fr' ? 'réservation(s) pour cette date' : 'حجز في هذا التاريخ'}
+                  </p>
+                </div>
+                <button
+                  id="cal-day-modal-close-btn"
+                  onClick={() => setIsDayModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <p className="text-xs font-semibold">
-                {language === 'fr' ? 'Aucune réservation prévue à cette date' : 'لا توجد حجوزات في هذا اليوم'}
-              </p>
-              <button
-                onClick={() => setCurrentTab?.('reservations')}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 hover:text-violet-700 hover:underline cursor-pointer"
-              >
-                <span>{language === 'fr' ? '+ Créer une réservation' : '+ إضافة حجز جديد'}</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-              {selectedDayReservations.map((res) => {
-                const badge = getStatusBadge(res.statut);
-                const dressName = getDressName(res);
-                const dressPhoto = getDressPhoto(res);
-                const clientName = getClientName(res);
-                const clientPhone = getClientPhone(res);
 
-                return (
-                  <motion.div
-                    key={res.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-2xl bg-slate-50 border border-neutral-200 hover:border-violet-300 transition-all space-y-3 group"
-                  >
-                    {/* Header: Photo, Dress Name & Status */}
-                    <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                      <img
-                        src={dressPhoto}
-                        alt={dressName}
-                        className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.bg}`}>
-                            {badge.label}
-                          </span>
-                          <span className="text-[10px] font-mono text-gray-400">
-                            #{res.id.slice(-6).toUpperCase()}
-                          </span>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-5">
+                {selectedDayReservations.length === 0 ? (
+                  <div className="py-10 text-center text-gray-400 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto text-gray-300">
+                      <CalendarIcon size={24} />
+                    </div>
+                    <p className="text-xs font-semibold">
+                      {language === 'fr' ? 'Aucune réservation prévue à cette date' : 'لا توجد حجوزات في هذا اليوم'}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setIsDayModalOpen(false);
+                        setCurrentTab?.('reservations');
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 hover:text-orange-700 hover:underline cursor-pointer"
+                    >
+                      <span>{language === 'fr' ? '+ Créer une réservation' : '+ إضافة حجز جديد'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedDayReservations.map((res) => {
+                      const role = getDateRole(res, selectedDay);
+                      const style = dateRoleStyle(role);
+                      const dressName = getDressName(res);
+                      const dressPhoto = getDressPhoto(res);
+                      const clientName = getClientName(res);
+                      const clientPhone = getClientPhone(res);
+
+                      return (
+                        <div
+                          key={res.id}
+                          className="p-4 rounded-2xl bg-slate-50 border border-neutral-200 space-y-3"
+                        >
+                          {/* Header: Photo, Dress Name & Day-role badge */}
+                          <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                            <img
+                              src={dressPhoto}
+                              alt={dressName}
+                              className="w-14 h-14 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className={`flex items-center gap-1.5 mb-1 flex-wrap ${isRtl ? 'flex-row-reverse' : ''}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${style.bg}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`}></span>
+                                  {style.label}
+                                </span>
+                                {res.statut === 'en_retard' && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-red-100 text-red-800 border-red-300">
+                                    {language === 'fr' ? 'En retard' : 'متأخر'}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-mono text-gray-400 ml-auto">
+                                  #{res.id.slice(-6).toUpperCase()}
+                                </span>
+                              </div>
+                              <h3 className="text-sm font-extrabold text-gray-900 truncate">
+                                {dressName}
+                              </h3>
+                            </div>
+                          </div>
+
+                          {/* Client Info */}
+                          <div className={`p-2.5 bg-white rounded-xl border border-gray-100 text-xs space-y-1 ${
+                            isRtl ? 'text-right' : 'text-left'
+                          }`}>
+                            <div className={`flex items-center gap-2 text-gray-800 font-bold ${isRtl ? 'flex-row-reverse' : ''}`}>
+                              <User size={14} className="text-orange-500" />
+                              <span>{clientName}</span>
+                            </div>
+                            {clientPhone && (
+                              <div className={`flex items-center gap-2 text-gray-500 font-mono text-[11px] ${isRtl ? 'flex-row-reverse' : ''}`}>
+                                <Phone size={12} className="text-gray-400" />
+                                <span>{clientPhone}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Dates Range */}
+                          <div className={`flex items-center justify-between text-xs text-gray-600 pt-1 border-t border-gray-200/60 ${
+                            isRtl ? 'flex-row-reverse' : ''
+                          }`}>
+                            <div>
+                              <span className="text-[10px] text-gray-400 uppercase font-bold block">
+                                {language === 'fr' ? 'Sortie' : 'تاريخ الخروج'}
+                              </span>
+                              <span className="font-bold text-gray-900">{res.date_sortie}</span>
+                            </div>
+
+                            <div className="text-gray-300">➔</div>
+
+                            <div>
+                              <span className="text-[10px] text-gray-400 uppercase font-bold block">
+                                {language === 'fr' ? 'Retour' : 'تاريخ الإرجاع'}
+                              </span>
+                              <span className="font-bold text-gray-900">{res.date_retour}</span>
+                            </div>
+                          </div>
+
+                          {/* Financial details — what remains to be paid is
+                              always shown, not folded away behind a status. */}
+                          <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1 border-t border-gray-200/60">
+                            <div>
+                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                {language === 'fr' ? 'Total' : 'المجموع'}
+                              </span>
+                              <span className="font-extrabold text-gray-900 font-mono">{formatDa(res.montant_total_da)}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                {language === 'fr' ? 'Payé' : 'مدفوع'}
+                              </span>
+                              <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                {language === 'fr' ? 'Reste à payer' : 'الباقي'}
+                              </span>
+                              <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${
+                                res.reste_a_payer_da > 0 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'
+                              }`}>
+                                {formatDa(res.reste_a_payer_da)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <h3 className="text-sm font-extrabold text-gray-900 truncate group-hover:text-violet-600 transition-colors">
-                          {dressName}
-                        </h3>
-                      </div>
-                    </div>
-
-                    {/* Client Info */}
-                    <div className={`p-2.5 bg-white rounded-xl border border-gray-100 text-xs space-y-1 ${
-                      isRtl ? 'text-right' : 'text-left'
-                    }`}>
-                      <div className={`flex items-center gap-2 text-gray-800 font-bold ${isRtl ? 'flex-row-reverse' : ''}`}>
-                        <User size={14} className="text-violet-500" />
-                        <span>{clientName}</span>
-                      </div>
-                      {clientPhone && (
-                        <div className={`flex items-center gap-2 text-gray-500 font-mono text-[11px] ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          <Phone size={12} className="text-gray-400" />
-                          <span>{clientPhone}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Dates Range */}
-                    <div className={`flex items-center justify-between text-xs text-gray-600 pt-1 border-t border-gray-200/60 ${
-                      isRtl ? 'flex-row-reverse' : ''
-                    }`}>
-                      <div>
-                        <span className="text-[10px] text-gray-400 uppercase font-bold block">
-                          {language === 'fr' ? 'Sortie' : 'تاريخ الخروج'}
-                        </span>
-                        <span className="font-bold text-gray-900">{res.date_sortie}</span>
-                      </div>
-
-                      <div className="text-gray-300">➔</div>
-
-                      <div>
-                        <span className="text-[10px] text-gray-400 uppercase font-bold block">
-                          {language === 'fr' ? 'Retour' : 'تاريخ الإرجاع'}
-                        </span>
-                        <span className="font-bold text-gray-900">{res.date_retour}</span>
-                      </div>
-                    </div>
-
-                    {/* Financial details */}
-                    <div className={`flex items-center justify-between text-xs font-bold pt-1 ${
-                      isRtl ? 'flex-row-reverse' : ''
-                    }`}>
-                      <span className="text-gray-500">{language === 'fr' ? 'Total' : 'المجموع'}: {formatDa(res.montant_total_da)}</span>
-                      {res.reste_a_payer_da > 0 ? (
-                        <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md text-[11px]">
-                          {language === 'fr' ? 'Reste' : 'المتبقي'}: {formatDa(res.reste_a_payer_da)}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-[11px]">
-                          {language === 'fr' ? 'Payé intégralement' : 'مدفوع بالكامل'}
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
