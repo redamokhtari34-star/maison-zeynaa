@@ -107,6 +107,12 @@ export default function Reservations({
     return clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.telephone || '';
   };
 
+  // What actually shows up in a caisse transaction's description — the
+  // article(s), not the reservation's internal id, which meant nothing to
+  // anyone reading the till later.
+  const itemsLabel = (res: Reservation) =>
+    res.items.map(i => i.nom_article).filter(Boolean).join(', ') || 'Article';
+
   const findClientByName = (name: string) =>
     clientes.find(c => c.nom_complet.trim().toLowerCase() === name.trim().toLowerCase());
 
@@ -184,7 +190,7 @@ export default function Reservations({
           id: crypto.randomUUID(),
           type: 'entree',
           montant_da: -res.montant_paye_da,
-          description: `Remboursement acompte - réservation #${id.toUpperCase()} annulée - ${getClientName(res.cliente_id)}`,
+          description: `Remboursement ${itemsLabel(res)} - ${getClientName(res.cliente_id)}`,
           categorie: 'Réservation',
           date: todayStr,
           heure: nowTime(),
@@ -240,7 +246,7 @@ export default function Reservations({
         id: crypto.randomUUID(),
         type: 'entree',
         montant_da: amountToPay,
-        description: `Paiement Solde Réservation ${res.id.toUpperCase()} - ${getClientName(res.cliente_id)}`,
+        description: `Solde ${itemsLabel(res)} - ${getClientName(res.cliente_id)}`,
         categorie: 'Réservation',
         date: todayStr,
         heure: new Date().toTimeString().split(' ')[0].substring(0, 5),
@@ -460,7 +466,7 @@ export default function Reservations({
         id: crypto.randomUUID(),
         type: 'entree',
         montant_da: paidDelta,
-        description: `Correction acompte Réservation - ${clientName}`,
+        description: `Correction acompte ${itemsLabel(updated)} - ${clientName}`,
         categorie: 'Réservation',
         date: todayStr,
         heure: nowTime(),
@@ -574,7 +580,7 @@ export default function Reservations({
           montant: paidDelta,
           source: 'caisse',
           beneficiaire: null,
-          motif: `Correction acompte Réservation - ${clientName}`
+          motif: `Correction acompte ${itemsLabel(updated)} - ${clientName}`
         }]);
         if (trError) throw new Error(trError.message);
       }
@@ -652,7 +658,7 @@ export default function Reservations({
         id: crypto.randomUUID(),
         type: 'entree',
         montant_da: montantPaye,
-        description: `Acompte Réservation - ${clientName}`,
+        description: `Acompte ${itemsLabel(localReservation)} - ${clientName}`,
         categorie: 'Réservation',
         date: todayStr,
         heure: nowTime(),
@@ -772,7 +778,7 @@ export default function Reservations({
           montant: montantPaye,
           source: 'caisse',
           beneficiaire: null,
-          motif: `Acompte Réservation - ${clientName}`
+          motif: `Acompte ${itemsLabel(localReservation)} - ${clientName}`
         };
 
         const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
