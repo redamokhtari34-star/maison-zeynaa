@@ -113,12 +113,12 @@ export default function Retours({
 
     const supabase = getSupabaseClient();
 
-    // 1. Update Reservation status
+    // 1. Update Reservation status. What the client still owes is untouched —
+    // returning the dress is not the same as being paid for it, and a balance
+    // is only ever collected when the operator presses "Encaisser le solde".
     const updatedResObj: Reservation = {
       ...selectedRes,
-      statut: 'retourne',
-      reste_a_payer_da: 0,
-      montant_paye_da: selectedRes.montant_total_da
+      statut: 'retourne'
     };
 
     if (supabase) {
@@ -162,27 +162,6 @@ export default function Retours({
 
     onSaveDresses(updatedDresses);
     onSaveBijoux(updatedBijoux);
-
-    // 2.5 Log remaining balance paid as transaction in Caisse
-    const balanceAmount = selectedRes.reste_a_payer_da;
-    if (balanceAmount > 0) {
-      const balanceTr: Transaction = {
-        id: crypto.randomUUID(),
-        type: 'entree',
-        montant_da: balanceAmount,
-        description: `Règlement Solde au Retour - #${selectedRes.id.toUpperCase()} - ${getClientName(selectedRes.cliente_id)}`,
-        categorie: 'Réservation',
-        date: todayStr,
-        heure: new Date().toTimeString().split(' ')[0].substring(0, 5),
-        utilisateur: 'Zeyna',
-        note: `Solde payé automatiquement lors de la restitution des articles`
-      };
-
-      if (supabase) {
-        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(balanceTr)]), LOCAL_SYNC_FAIL);
-      }
-      onAddTransaction(balanceTr);
-    }
 
     // 3. Penalty transaction logging
     if (penalite > 0) {

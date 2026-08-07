@@ -415,39 +415,75 @@ export async function ensurePublicUrl(url: string, bucketName: string = 'robes')
   return url;
 }
 
-export function mapReservationFromDb(row: any): Reservation {
+// robeRows/bijouRows are this reservation's rows from reservation_robes /
+// reservation_bijoux — every article booked, with the price actually
+// charged. Names come from the current catalogue, since neither join table
+// stores one; a robe_id/bijou_id no longer in the catalogue (or a booking
+// made before these tables existed, which only ever held one of each) falls
+// back to the legacy single columns on the reservation row itself, so older
+// data still shows something better than a bare "Robe".
+export function mapReservationFromDb(row: any, robeRows: any[] = [], bijouRows: any[] = []): Reservation {
   const items: ReservationItem[] = [];
-  if (row.robe_id) {
+
+  if (robeRows.length) {
+    for (const r of robeRows) {
+      const dress = memoryState.dresses.find(d => d.id === String(r.robe_id));
+      items.push({
+        id: String(r.id),
+        reservation_id: String(row.id),
+        type_article: 'robe',
+        article_id: String(r.robe_id),
+        prix_da: Number(r.prix || 0),
+        nom_article: dress?.nom || 'Robe'
+      });
+    }
+  } else if (row.robe_id) {
+    const dress = memoryState.dresses.find(d => d.id === String(row.robe_id));
     items.push({
       id: `item-${row.id}-robe`,
       reservation_id: String(row.id),
       type_article: 'robe',
       article_id: String(row.robe_id),
       prix_da: Number(row.prix_total || 0),
-      nom_article: 'Robe'
+      nom_article: dress?.nom || 'Robe'
     });
   }
-  if (row.bijou_id) {
+
+  if (bijouRows.length) {
+    for (const r of bijouRows) {
+      const bijou = memoryState.bijoux.find(b => b.id === String(r.bijou_id));
+      items.push({
+        id: String(r.id),
+        reservation_id: String(row.id),
+        type_article: 'bijou',
+        article_id: String(r.bijou_id),
+        prix_da: Number(r.prix || 0),
+        nom_article: bijou?.nom || 'Bijou'
+      });
+    }
+  } else if (row.bijou_id) {
+    const bijou = memoryState.bijoux.find(b => b.id === String(row.bijou_id));
     items.push({
       id: `item-${row.id}-bijou`,
       reservation_id: String(row.id),
       type_article: 'bijou',
       article_id: String(row.bijou_id),
       prix_da: 0,
-      nom_article: 'Bijou'
+      nom_article: bijou?.nom || 'Bijou'
     });
   }
+
   return {
     id: String(row.id),
     cliente_id: String(row.client_id || row.nom_cliente || row.client_nom || (row.client ? `${row.client.prenom || ''} ${row.client.nom || ''}`.trim() : '') || ''),
     date_sortie: row.date_debut || '',
     date_retour: row.date_fin || '',
     montant_total_da: Number(row.prix_total || 0),
-    caution_da: 0,
+    caution_da: Number(row.caution_totale || 0),
     montant_paye_da: Number(row.acompte || 0),
     reste_a_payer_da: Number(row.reste_a_payer || 0),
     statut: (row.statut_reservation || 'future') as ReservationStatus,
-    notes: '',
+    notes: row.notes || '',
     date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     items: items
   };
@@ -726,6 +762,8 @@ export async function fetchFullDatabaseStateFromSupabase() {
     { data: bijouxDb, error: bijouxErr },
     { data: clientsDb, error: clientsErr },
     { data: reservationsDb, error: reservationsErr },
+    { data: reservationRobesDb, error: reservationRobesErr },
+    { data: reservationBijouxDb, error: reservationBijouxErr },
     { data: transactionsDb, error: transactionsErr },
     { data: historyDb, error: historyErr }
   ] = await Promise.all([
@@ -733,6 +771,8 @@ export async function fetchFullDatabaseStateFromSupabase() {
     supabase.from('bijoux').select('*'),
     supabase.from('clients').select('*'),
     supabase.from('reservations').select('*'),
+    supabase.from('reservation_robes').select('*'),
+    supabase.from('reservation_bijoux').select('*'),
     supabase.from('mouvements_caisse').select('*'),
     supabase.from('historique_actions').select('*').order('created_at', { ascending: false }).limit(300)
   ]);
@@ -748,6 +788,12 @@ export async function fetchFullDatabaseStateFromSupabase() {
   }
   if (reservationsErr) {
     console.error('Error loading reservations from Supabase:', reservationsErr);
+  }
+  if (reservationRobesErr) {
+    console.error('Error loading reservation_robes from Supabase:', reservationRobesErr);
+  }
+  if (reservationBijouxErr) {
+    console.error('Error loading reservation_bijoux from Supabase:', reservationBijouxErr);
   }
   if (transactionsErr) {
     console.error('Error loading mouvements_caisse from Supabase:', transactionsErr);
@@ -775,10 +821,33 @@ export async function fetchFullDatabaseStateFromSupabase() {
     return rows.map(map);
   };
 
+  // Dresses and bijoux land first, so mapReservationFromDb below resolves
+  // each booked article against the catalogue as it stands right now, not
+  // the one from before this sync.
   memoryState.dresses = adopt(dressesDb, mapDressFromDb, memoryState.dresses);
   memoryState.bijoux = adopt(bijouxDb, mapBijouFromDb, memoryState.bijoux);
   memoryState.clientes = adopt(clientsDb, mapClientFromDb, memoryState.clientes);
-  memoryState.reservations = adopt(reservationsDb, mapReservationFromDb, memoryState.reservations);
+
+  const robeRowsByReservation = new Map<string, any[]>();
+  for (const r of reservationRobesDb || []) {
+    const key = String(r.reservation_id);
+    (robeRowsByReservation.get(key) || robeRowsByReservation.set(key, []).get(key)!).push(r);
+  }
+  const bijouRowsByReservation = new Map<string, any[]>();
+  for (const r of reservationBijouxDb || []) {
+    const key = String(r.reservation_id);
+    (bijouRowsByReservation.get(key) || bijouRowsByReservation.set(key, []).get(key)!).push(r);
+  }
+  memoryState.reservations = adopt(
+    reservationsDb,
+    (row: any) => mapReservationFromDb(
+      row,
+      robeRowsByReservation.get(String(row.id)) || [],
+      bijouRowsByReservation.get(String(row.id)) || []
+    ),
+    memoryState.reservations
+  );
+
   memoryState.transactions = adopt(transactionsDb, mapTransactionFromDb, memoryState.transactions);
   memoryState.history = adopt(historyDb, mapHistoryFromDb, memoryState.history);
 
