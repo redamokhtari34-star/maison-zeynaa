@@ -793,16 +793,20 @@ export default function Reservations({
     }
   };
 
-  // Filter reservations
-  const filteredReservations = reservations.filter(res => {
-    const clientName = getClientName(res.cliente_id).toLowerCase();
-    const clientPhone = getClientPhone(res.cliente_id);
-    const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
-    
-    const matchesStatus = statusFilter === 'all' || res.statut === statusFilter;
+  // Filter reservations, soonest departure first — a reservation made last
+  // week for a client leaving tomorrow belongs above one just booked for
+  // next month.
+  const filteredReservations = reservations
+    .filter(res => {
+      const clientName = getClientName(res.cliente_id).toLowerCase();
+      const clientPhone = getClientPhone(res.cliente_id);
+      const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
 
-    return matchesSearch && matchesStatus;
-  });
+      const matchesStatus = statusFilter === 'all' || res.statut === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => a.date_sortie.localeCompare(b.date_sortie));
 
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
