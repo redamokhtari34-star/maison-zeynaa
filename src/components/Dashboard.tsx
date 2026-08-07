@@ -18,7 +18,8 @@ import {
   Settings,
   Activity,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  X
 } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
@@ -39,6 +40,9 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
 
   const todayStr = todayIso();
   const [period, setPeriod] = useState<Period>('mois');
+  // What actually composes the revenue figure — every encaissement on the
+  // period, not just the total.
+  const [isRevenueModalOpen, setIsRevenueModalOpen] = useState(false);
 
   // A transaction counts towards the selected period when its date falls in it.
   const inPeriod = (date: string) => {
@@ -176,23 +180,31 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     { id: 'qa-create-receipt-btn', onClick: () => setCurrentTab('documents'), icon: FileSpreadsheet, label: t.qa_create_receipt },
   ];
 
-  const Metric = ({ label, value, unit, note, icon }: {
-    label: string; value: string; unit?: string; note: string; icon: React.ReactNode;
-  }) => (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <div className={`flex items-start justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-        <span className="eyebrow leading-tight">{label}</span>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
-          {icon}
-        </span>
-      </div>
-      <p className={`mt-6 flex items-baseline gap-1.5 ${isRtl ? 'flex-row-reverse justify-end' : ''}`}>
-        <span className="figure text-3xl text-neutral-900">{value}</span>
-        {unit && <span className="text-xs font-medium text-neutral-500">{unit}</span>}
-      </p>
-      <p className="mt-2 text-[13px] leading-snug text-neutral-500">{note}</p>
-    </div>
-  );
+  const Metric = ({ label, value, unit, note, icon, onClick }: {
+    label: string; value: string; unit?: string; note: string; icon: React.ReactNode; onClick?: () => void;
+  }) => {
+    const Tag = onClick ? 'button' : 'div';
+    return (
+      <Tag
+        onClick={onClick}
+        className={`rounded-2xl border border-neutral-200 bg-white p-5 ${isRtl ? 'text-right' : 'text-left'} ${
+          onClick ? 'w-full cursor-pointer transition-colors hover:border-orange-300 hover:bg-orange-50/30' : ''
+        }`}
+      >
+        <div className={`flex items-start justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <span className="eyebrow leading-tight">{label}</span>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+            {icon}
+          </span>
+        </div>
+        <p className={`mt-6 flex items-baseline gap-1.5 ${isRtl ? 'flex-row-reverse justify-end' : ''}`}>
+          <span className="figure text-3xl text-neutral-900">{value}</span>
+          {unit && <span className="text-xs font-medium text-neutral-500">{unit}</span>}
+        </p>
+        <p className="mt-2 text-[13px] leading-snug text-neutral-500">{note}</p>
+      </Tag>
+    );
+  };
 
   return (
     <div className={`mx-auto max-w-[1200px] space-y-6 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
@@ -233,8 +245,9 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           label={language === 'fr' ? "Chiffre d'affaires" : 'رقم الأعمال'}
           value={formatDa(revenue)}
           unit={t.currency}
-          note={language === 'fr' ? 'Encaissements sur la période' : 'المداخيل خلال الفترة'}
+          note={language === 'fr' ? 'Encaissements sur la période — voir le détail' : 'المداخيل خلال الفترة — عرض التفاصيل'}
           icon={<TrendingUp size={15} />}
+          onClick={() => setIsRevenueModalOpen(true)}
         />
         <Metric
           label={language === 'fr' ? 'Dépenses' : 'المصاريف'}
@@ -439,6 +452,99 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           )}
         </section>
       </div>
+
+      {/* Revenue breakdown — every encaissement behind the headline figure,
+          not just its total. */}
+      {isRevenueModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              onClick={() => setIsRevenueModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <div
+              className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-up"
+            >
+              <div className={`flex items-center justify-between border-b border-neutral-200 bg-neutral-50 p-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={isRtl ? 'text-right' : 'text-left'}>
+                  <h2 className="text-base font-bold text-neutral-900">
+                    {language === 'fr' ? "Détail du chiffre d'affaires" : 'تفاصيل رقم الأعمال'}
+                  </h2>
+                  <p className="mt-0.5 text-xs font-medium text-neutral-400">
+                    {periods.find(p => p.id === period)?.label} · {formatDa(revenue)} {t.currency}
+                  </p>
+                </div>
+                <button
+                  id="revenue-detail-close-btn"
+                  onClick={() => setIsRevenueModalOpen(false)}
+                  className="rounded-xl p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5">
+                {(() => {
+                  const entries = scoped.filter(tr => tr.type === 'entree');
+
+                  if (entries.length === 0) {
+                    return (
+                      <p className="py-8 text-center text-xs font-semibold text-neutral-400">
+                        {language === 'fr' ? 'Aucun encaissement sur cette période.' : 'لا توجد مداخيل خلال هذه الفترة.'}
+                      </p>
+                    );
+                  }
+
+                  // Sub-total per category, so the shop sees at a glance what
+                  // the money is actually from before scanning every line.
+                  const byCategory = new Map<string, number>();
+                  for (const tr of entries) {
+                    byCategory.set(tr.categorie, (byCategory.get(tr.categorie) || 0) + tr.montant_da);
+                  }
+                  const sortedEntries = [...entries].sort((a, b) =>
+                    `${b.date} ${b.heure}`.localeCompare(`${a.date} ${a.heure}`)
+                  );
+
+                  return (
+                    <div className="space-y-5">
+                      <div className="space-y-1.5">
+                        <p className="eyebrow !text-neutral-400">
+                          {language === 'fr' ? 'Par catégorie' : 'حسب الفئة'}
+                        </p>
+                        {[...byCategory.entries()].map(([cat, amount]) => (
+                          <div key={cat} className="flex items-center justify-between rounded-xl bg-neutral-50 px-3 py-2 text-xs">
+                            <span className="font-semibold text-neutral-700">{cat}</span>
+                            <span className="figure font-bold text-neutral-900">{formatDa(amount)} {t.currency}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <p className="eyebrow !text-neutral-400">
+                          {language === 'fr' ? `Chaque encaissement (${entries.length})` : `كل مدخول (${entries.length})`}
+                        </p>
+                        <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
+                          {sortedEntries.map(tr => (
+                            <div key={tr.id} className={`flex items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-neutral-900">{tr.description}</p>
+                                <p className="mt-0.5 text-[11px] text-neutral-400">
+                                  {tr.date} · {tr.heure} · {tr.categorie}
+                                </p>
+                              </div>
+                              <span className="figure shrink-0 font-bold text-emerald-600">
+                                +{formatDa(tr.montant_da)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
