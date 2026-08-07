@@ -63,8 +63,10 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     db.transactions.filter(tr => tr.type === 'depense' && tr.source_argent !== 'tresorerie').reduce((s, tr) => s + tr.montant_da, 0) -
     db.transactions.filter(tr => tr.type === 'vidage_caisse').reduce((s, tr) => s + tr.montant_da, 0);
 
+  // A returned dress does not mean the balance was collected — the solde
+  // stays owed until "Encaisser le solde" is pressed, so this counts every
+  // reservation with money still due regardless of rental status.
   const owedByClients = db.reservations
-    .filter(r => r.statut !== 'retourne')
     .reduce((s, r) => s + (r.reste_a_payer_da || 0), 0);
 
   const dressesOut = db.reservations.filter(r => r.statut === 'en_cours' || r.statut === 'en_retard').length;

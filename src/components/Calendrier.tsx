@@ -187,8 +187,8 @@ export default function Calendrier({
     switch (role) {
       case 'sortie':
         return {
-          bg: 'bg-orange-100 text-orange-700 border-orange-200',
-          dot: 'bg-orange-500',
+          bg: 'bg-blue-100 text-blue-700 border-blue-200',
+          dot: 'bg-blue-500',
           label: language === 'fr' ? 'Sortie' : 'خروج'
         };
       case 'retour':
@@ -406,10 +406,10 @@ export default function Calendrier({
 
         <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
-            <p className="text-xs text-orange-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
-            <p className="text-2xl font-extrabold text-orange-600 mt-1">{futureRentalsCount}</p>
+            <p className="text-xs text-blue-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
+            <p className="text-2xl font-extrabold text-blue-600 mt-1">{futureRentalsCount}</p>
           </div>
-          <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <Sparkles size={20} />
           </div>
         </div>
@@ -473,11 +473,11 @@ export default function Calendrier({
             onClick={() => setStatusFilter('future')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'future'
-                ? 'bg-orange-600 text-white'
-                : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                ? 'bg-blue-600 text-white'
+                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
             {language === 'fr' ? 'Futures' : 'مستقبلية'}
           </button>
 
