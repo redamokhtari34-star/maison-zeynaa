@@ -505,13 +505,42 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                   );
 
                   // Older transactions were logged with the reservation's raw
-                  // id in the text — meaningless to read back. Strips it so
-                  // even that historical data reads cleanly here.
-                  const readable = (description: string) =>
+                  // id in the text, or no article at all — meaningless to
+                  // read back. Strips the id first…
+                  const stripId = (description: string) =>
                     description
                       .replace(/#?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g, '')
                       .replace(/\s{2,}/g, ' ')
                       .trim();
+
+                  const clientNameOf = (id: string) =>
+                    db.clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.nom_complet || id;
+                  const itemsLabelOf = (r: typeof db.reservations[number]) =>
+                    r.items.map(i => i.nom_article).filter(Boolean).join(', ') || 'Article';
+
+                  // …then, for the generic pre-fix wording that never named an
+                  // article, recovers it by matching the client named in the
+                  // text to a reservation booked the same day. Best effort:
+                  // display only, nothing is rewritten in storage.
+                  const readable = (tr: typeof entries[number]) => {
+                    const base = stripId(tr.description);
+                    if (tr.categorie !== 'Réservation' || !/r[ée]servation/i.test(base)) return base;
+
+                    const clientFragment = base.split(' - ').pop()?.trim().toLowerCase();
+                    if (!clientFragment) return base;
+
+                    const match = db.reservations.find(r =>
+                      r.date_creation === tr.date && clientNameOf(r.cliente_id).toLowerCase() === clientFragment
+                    );
+                    if (!match) return base;
+
+                    const prefix = /remboursement/i.test(base) ? (language === 'fr' ? 'Remboursement' : 'استرجاع')
+                      : /correction/i.test(base) ? (language === 'fr' ? 'Correction acompte' : 'تعديل العربون')
+                      : /solde/i.test(base) ? (language === 'fr' ? 'Solde' : 'باقي المبلغ')
+                      : (language === 'fr' ? 'Acompte' : 'عربون');
+
+                    return `${prefix} ${itemsLabelOf(match)} - ${clientNameOf(match.cliente_id)}`;
+                  };
 
                   return (
                     <div className="space-y-5">
@@ -535,7 +564,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                           {sortedEntries.map(tr => (
                             <div key={tr.id} className={`flex items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
                               <div className="min-w-0">
-                                <p className="truncate font-semibold text-neutral-900">{readable(tr.description)}</p>
+                                <p className="truncate font-semibold text-neutral-900">{readable(tr)}</p>
                                 <p className="mt-0.5 text-[11px] text-neutral-400">
                                   {tr.date} · {tr.heure} · {tr.categorie}
                                 </p>
