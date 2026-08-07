@@ -504,6 +504,15 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                     `${b.date} ${b.heure}`.localeCompare(`${a.date} ${a.heure}`)
                   );
 
+                  // Older transactions were logged with the reservation's raw
+                  // id in the text — meaningless to read back. Strips it so
+                  // even that historical data reads cleanly here.
+                  const readable = (description: string) =>
+                    description
+                      .replace(/#?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g, '')
+                      .replace(/\s{2,}/g, ' ')
+                      .trim();
+
                   return (
                     <div className="space-y-5">
                       <div className="space-y-1.5">
@@ -526,7 +535,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                           {sortedEntries.map(tr => (
                             <div key={tr.id} className={`flex items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
                               <div className="min-w-0">
-                                <p className="truncate font-semibold text-neutral-900">{tr.description}</p>
+                                <p className="truncate font-semibold text-neutral-900">{readable(tr.description)}</p>
                                 <p className="mt-0.5 text-[11px] text-neutral-400">
                                   {tr.date} · {tr.heure} · {tr.categorie}
                                 </p>

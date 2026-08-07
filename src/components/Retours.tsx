@@ -169,7 +169,7 @@ export default function Retours({
         id: crypto.randomUUID(),
         type: 'entree',
         montant_da: penalite,
-        description: `Pénalité dégradation - Retour #${selectedRes.id.toUpperCase()}`,
+        description: `Pénalité dégradation - ${selectedRes.items.map(i => i.nom_article).filter(Boolean).join(', ') || 'Article'} - ${getClientName(selectedRes.cliente_id)}`,
         categorie: 'Réparation',
         date: todayStr,
         heure: new Date().toTimeString().split(' ')[0].substring(0, 5),
