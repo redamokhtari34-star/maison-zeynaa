@@ -578,7 +578,7 @@ export default function Calendrier({
         {/* Legend */}
         <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
             <span className="text-gray-600 font-medium">{language === 'fr' ? 'Jour de sortie' : 'يوم الخروج'}</span>
           </div>
           <div className="flex items-center gap-1.5">
