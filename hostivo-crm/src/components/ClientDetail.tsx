@@ -22,7 +22,6 @@ interface FormState {
   derniereMiseAJour: string;
   compteDemarche: string;
   reseauxSouhaites: string[];
-  liens: string;
   statutSite: string;
   statutModification: string;
   notes: string;
@@ -40,7 +39,6 @@ function toForm(client: Client): FormState {
     derniereMiseAJour: client.derniereMiseAJour ?? '',
     compteDemarche: client.compteDemarche ?? '',
     reseauxSouhaites: client.reseauxSouhaites,
-    liens: client.liens.join('\n'),
     statutSite: client.statutSite ?? '',
     statutModification: client.statutModification ?? '',
     notes: client.notes ?? '',
@@ -83,7 +81,6 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
     if (!client || !form) return false;
     const original = toForm(client);
     if (TEXT_KEYS.some((k) => form[k] !== original[k])) return true;
-    if (form.liens !== original.liens) return true;
     return form.reseauxSouhaites.join('|') !== original.reseauxSouhaites.join('|');
   }, [client, form]);
 
@@ -106,12 +103,6 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
     }
     if (form.reseauxSouhaites.join('|') !== original.reseauxSouhaites.join('|')) {
       updates.reseauxSouhaites = form.reseauxSouhaites;
-    }
-    if (form.liens !== original.liens) {
-      updates.liens = form.liens
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
     }
     if (!Object.keys(updates).length) return;
 
@@ -331,39 +322,27 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                 />
               )}
 
-              {canEdit ? (
-                <EditField label="Liens (un par ligne)">
-                  <textarea
-                    value={form.liens}
-                    onChange={(e) => setForm({ ...form, liens: e.target.value })}
-                    rows={3}
-                    className={textareaCls}
-                    placeholder="https://instagram.com/…"
-                  />
-                </EditField>
-              ) : (
-                <div>
-                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Liens</div>
-                  {client.liens.length ? (
-                    <div className="flex flex-col gap-1.5">
-                      {client.liens.map((url) => (
-                        <a
-                          key={url}
-                          href={toAbsoluteUrl(url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-slate-400 hover:text-slate-900"
-                        >
-                          <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
-                          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty text="Aucun lien" />
-                  )}
-                </div>
-              )}
+              <div>
+                <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Liens</div>
+                {client.liens.length ? (
+                  <div className="flex flex-col gap-1.5">
+                    {client.liens.map((url) => (
+                      <a
+                        key={url}
+                        href={toAbsoluteUrl(url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-slate-400 hover:text-slate-900"
+                      >
+                        <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty text="Aucun lien" />
+                )}
+              </div>
 
               <div className="h-px bg-slate-100" />
 
