@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Client, ClientUpdates } from '../types';
 import { formatDate, toAbsoluteUrl } from '../lib/parse';
 import { telHref, whatsappHref, formatPhoneDisplay } from '../lib/phone';
-import { STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
+import { RESEAUX_OPTIONS, STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
 import { ModificationBadge, StatusBadge } from './StatusBadge';
 import { SocialIcon } from './SocialIcons';
 
@@ -14,20 +14,46 @@ interface Props {
 }
 
 interface FormState {
+  nomEntreprise: string;
+  secteur: string;
+  telephone: string;
+  dateDemande: string;
+  dateMiseEnLigne: string;
+  derniereMiseAJour: string;
+  compteDemarche: string;
+  reseauxSouhaites: string[];
+  liens: string;
   statutSite: string;
   statutModification: string;
   notes: string;
   noteModification: string;
+  dateModification: string;
 }
 
 function toForm(client: Client): FormState {
   return {
+    nomEntreprise: client.nomEntreprise,
+    secteur: client.secteur ?? '',
+    telephone: client.telephone ?? '',
+    dateDemande: client.dateDemande ?? '',
+    dateMiseEnLigne: client.dateMiseEnLigne ?? '',
+    derniereMiseAJour: client.derniereMiseAJour ?? '',
+    compteDemarche: client.compteDemarche ?? '',
+    reseauxSouhaites: client.reseauxSouhaites,
+    liens: client.liens.join('\n'),
     statutSite: client.statutSite ?? '',
     statutModification: client.statutModification ?? '',
     notes: client.notes ?? '',
     noteModification: client.noteModification ?? '',
+    dateModification: client.dateModification ?? '',
   };
 }
+
+const TEXT_KEYS: (keyof FormState)[] = [
+  'nomEntreprise', 'secteur', 'telephone', 'dateDemande', 'dateMiseEnLigne',
+  'derniereMiseAJour', 'compteDemarche', 'statutSite', 'statutModification',
+  'notes', 'noteModification', 'dateModification',
+];
 
 export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
   const [form, setForm] = useState<FormState | null>(client ? toForm(client) : null);
@@ -56,17 +82,37 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
   const dirty = useMemo(() => {
     if (!client || !form) return false;
     const original = toForm(client);
-    return (Object.keys(form) as (keyof FormState)[]).some((k) => form[k] !== original[k]);
+    if (TEXT_KEYS.some((k) => form[k] !== original[k])) return true;
+    if (form.liens !== original.liens) return true;
+    return form.reseauxSouhaites.join('|') !== original.reseauxSouhaites.join('|');
   }, [client, form]);
+
+  function toggleReseau(network: string) {
+    if (!form) return;
+    setForm({
+      ...form,
+      reseauxSouhaites: form.reseauxSouhaites.includes(network)
+        ? form.reseauxSouhaites.filter((n) => n !== network)
+        : [...form.reseauxSouhaites, network],
+    });
+  }
 
   async function handleSave() {
     if (!client || !form) return;
     const original = toForm(client);
     const updates: ClientUpdates = {};
-    if (form.statutSite !== original.statutSite) updates.statutSite = form.statutSite;
-    if (form.statutModification !== original.statutModification) updates.statutModification = form.statutModification;
-    if (form.notes !== original.notes) updates.notes = form.notes;
-    if (form.noteModification !== original.noteModification) updates.noteModification = form.noteModification;
+    for (const k of TEXT_KEYS) {
+      if (form[k] !== original[k]) (updates as Record<string, string>)[k] = form[k] as string;
+    }
+    if (form.reseauxSouhaites.join('|') !== original.reseauxSouhaites.join('|')) {
+      updates.reseauxSouhaites = form.reseauxSouhaites;
+    }
+    if (form.liens !== original.liens) {
+      updates.liens = form.liens
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
     if (!Object.keys(updates).length) return;
 
     setSaving(true);
@@ -76,7 +122,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
       setSavedPulse(true);
       setTimeout(() => setSavedPulse(false), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec de l\'enregistrement.');
+      setError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
     } finally {
       setSaving(false);
     }
@@ -99,10 +145,15 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
           <div>
             <div className="border-b border-slate-200 px-5 pb-4 pt-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
+                {canEdit ? (
+                  <input
+                    value={form.nomEntreprise}
+                    onChange={(e) => setForm({ ...form, nomEntreprise: e.target.value })}
+                    className="-mx-1 w-full rounded-md border border-transparent px-1 text-[17px] font-semibold tracking-tight text-slate-900 outline-none hover:border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400"
+                  />
+                ) : (
                   <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">{client.nomEntreprise}</h2>
-                  <div className="text-[12.5px] text-slate-500">{client.secteur || 'Secteur non renseigné'}</div>
-                </div>
+                )}
                 <button
                   onClick={onClose}
                   aria-label="Fermer"
@@ -113,6 +164,16 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                   </svg>
                 </button>
               </div>
+              {canEdit ? (
+                <input
+                  value={form.secteur}
+                  onChange={(e) => setForm({ ...form, secteur: e.target.value })}
+                  placeholder="Secteur non renseigné"
+                  className="-mx-1 mt-1 w-full rounded-md border border-transparent px-1 text-[12.5px] text-slate-500 outline-none hover:border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-400"
+                />
+              ) : (
+                <div className="text-[12.5px] text-slate-500">{client.secteur || 'Secteur non renseigné'}</div>
+              )}
             </div>
 
             <div className="flex flex-col gap-4 px-5 pb-8 pt-4">
@@ -141,7 +202,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
               {!canEdit && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11.5px] text-slate-500">
                   Édition indisponible — connectez l'écriture vers le Sheet (voir README.md, section "Modifier les
-                  clients depuis l'app") pour changer le statut ou les notes directement ici.
+                  clients depuis l'app") pour tout modifier directement ici.
                 </div>
               )}
 
@@ -192,48 +253,117 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
 
               <div className="h-px bg-slate-100" />
 
-              <div className="grid grid-cols-2 gap-3.5">
-                <Field label="Date de demande" value={<span className="font-mono">{formatDate(client.dateDemande)}</span>} />
-                <Field
-                  label="Mise en ligne"
-                  value={<span className="font-mono">{client.dateMiseEnLigne ? formatDate(client.dateMiseEnLigne) : '—'}</span>}
-                />
-                <Field label="Téléphone" value={<span className="font-mono">{formatPhoneDisplay(client.telephone)}</span>} />
-                <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
-                {client.derniereMiseAJour && (
-                  <Field label="Dernière mise à jour" value={<span className="font-mono">{formatDate(client.derniereMiseAJour)}</span>} />
-                )}
-                {client.compteDemarche && <Field label="Compte démarché" value={client.compteDemarche} />}
-              </div>
+              {canEdit ? (
+                <div className="grid grid-cols-2 gap-3.5">
+                  <EditField label="Date de demande">
+                    <input value={form.dateDemande} onChange={(e) => setForm({ ...form, dateDemande: e.target.value })} className={inputCls} />
+                  </EditField>
+                  <EditField label="Mise en ligne">
+                    <input
+                      value={form.dateMiseEnLigne}
+                      onChange={(e) => setForm({ ...form, dateMiseEnLigne: e.target.value })}
+                      className={inputCls}
+                    />
+                  </EditField>
+                  <EditField label="Téléphone">
+                    <input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} className={inputCls} />
+                  </EditField>
+                  <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
+                  <EditField label="Dernière mise à jour">
+                    <input
+                      value={form.derniereMiseAJour}
+                      onChange={(e) => setForm({ ...form, derniereMiseAJour: e.target.value })}
+                      className={inputCls}
+                    />
+                  </EditField>
+                  <EditField label="Compte démarché">
+                    <input
+                      value={form.compteDemarche}
+                      onChange={(e) => setForm({ ...form, compteDemarche: e.target.value })}
+                      className={inputCls}
+                    />
+                  </EditField>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3.5">
+                  <Field label="Date de demande" value={<span className="font-mono">{formatDate(client.dateDemande)}</span>} />
+                  <Field
+                    label="Mise en ligne"
+                    value={<span className="font-mono">{client.dateMiseEnLigne ? formatDate(client.dateMiseEnLigne) : '—'}</span>}
+                  />
+                  <Field label="Téléphone" value={<span className="font-mono">{formatPhoneDisplay(client.telephone)}</span>} />
+                  <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
+                  {client.derniereMiseAJour && (
+                    <Field label="Dernière mise à jour" value={<span className="font-mono">{formatDate(client.derniereMiseAJour)}</span>} />
+                  )}
+                  {client.compteDemarche && <Field label="Compte démarché" value={client.compteDemarche} />}
+                </div>
+              )}
 
               <div className="h-px bg-slate-100" />
 
-              <Field
-                label="Réseaux souhaités"
-                value={client.reseauxSouhaites.length ? client.reseauxSouhaites.join(', ') : <Empty text="Aucun renseigné" />}
-              />
-
-              <div>
-                <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Liens</div>
-                {client.liens.length ? (
-                  <div className="flex flex-col gap-1.5">
-                    {client.liens.map((url) => (
-                      <a
-                        key={url}
-                        href={toAbsoluteUrl(url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-slate-400 hover:text-slate-900"
-                      >
-                        <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
-                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
-                      </a>
-                    ))}
+              {canEdit ? (
+                <EditField label="Réseaux souhaités">
+                  <div className="flex flex-wrap gap-1.5">
+                    {RESEAUX_OPTIONS.map((network) => {
+                      const active = form.reseauxSouhaites.includes(network);
+                      return (
+                        <button
+                          type="button"
+                          key={network}
+                          onClick={() => toggleReseau(network)}
+                          className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium ${
+                            active
+                              ? 'border-slate-400 bg-slate-100 text-slate-900'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-400'
+                          }`}
+                        >
+                          {network}
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <Empty text="Aucun lien" />
-                )}
-              </div>
+                </EditField>
+              ) : (
+                <Field
+                  label="Réseaux souhaités"
+                  value={client.reseauxSouhaites.length ? client.reseauxSouhaites.join(', ') : <Empty text="Aucun renseigné" />}
+                />
+              )}
+
+              {canEdit ? (
+                <EditField label="Liens (un par ligne)">
+                  <textarea
+                    value={form.liens}
+                    onChange={(e) => setForm({ ...form, liens: e.target.value })}
+                    rows={3}
+                    className={textareaCls}
+                    placeholder="https://instagram.com/…"
+                  />
+                </EditField>
+              ) : (
+                <div>
+                  <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Liens</div>
+                  {client.liens.length ? (
+                    <div className="flex flex-col gap-1.5">
+                      {client.liens.map((url) => (
+                        <a
+                          key={url}
+                          href={toAbsoluteUrl(url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-slate-400 hover:text-slate-900"
+                        >
+                          <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
+                          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty text="Aucun lien" />
+                  )}
+                </div>
+              )}
 
               <div className="h-px bg-slate-100" />
 
@@ -257,6 +387,13 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                       placeholder="Aucune"
                     />
                   </EditField>
+                  <EditField label="Date de modification">
+                    <input
+                      value={form.dateModification}
+                      onChange={(e) => setForm({ ...form, dateModification: e.target.value })}
+                      className={inputCls}
+                    />
+                  </EditField>
 
                   {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{error}</div>}
 
@@ -275,10 +412,10 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                 <>
                   <Field label="Notes" value={client.notes || <Empty text="Aucune note" />} />
                   <Field label="Note de modification" value={client.noteModification || <Empty text="Aucune" />} />
+                  {client.dateModification && (
+                    <Field label="Date de modification" value={<span className="font-mono">{formatDate(client.dateModification)}</span>} />
+                  )}
                 </>
-              )}
-              {client.dateModification && (
-                <Field label="Date de modification" value={<span className="font-mono">{formatDate(client.dateModification)}</span>} />
               )}
             </div>
           </div>
@@ -288,8 +425,9 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
   );
 }
 
-const selectCls =
+const inputCls =
   'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 outline-none focus:ring-2 focus:ring-slate-400';
+const selectCls = inputCls;
 const textareaCls =
   'w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13px] leading-snug text-slate-700 outline-none focus:ring-2 focus:ring-slate-400';
 

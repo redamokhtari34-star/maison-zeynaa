@@ -35,10 +35,20 @@ export type SourceMode = 'sheet' | 'demo';
 
 /** Champs que l'app peut réécrire dans le Sheet — voir lib/sheetsWrite.ts. */
 export interface ClientUpdates {
+  dateDemande?: string;
+  nomEntreprise?: string;
+  telephone?: string;
+  secteur?: string;
+  reseauxSouhaites?: string[];
+  liens?: string[];
+  compteDemarche?: string;
   statutSite?: string;
-  statutModification?: string;
+  derniereMiseAJour?: string;
+  dateMiseEnLigne?: string;
   notes?: string;
+  statutModification?: string;
   noteModification?: string;
+  dateModification?: string;
 }
 
 /** Champs saisis à la création d'un nouveau client — voir lib/sheetsWrite.ts. */

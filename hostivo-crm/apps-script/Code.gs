@@ -36,23 +36,72 @@
  * envoyés sont touchées.
  */
 
-var UPDATE_FIELDS = {
-  statutSite: function (h) { return h.indexOf('statut') !== -1 && h.indexOf('modif') === -1; },
-  statutModification: function (h) { return h.indexOf('statut') !== -1 && h.indexOf('modif') !== -1; },
-  notes: function (h) { return h.indexOf('note') !== -1 && h.indexOf('modif') === -1; },
-  noteModification: function (h) { return h.indexOf('note') !== -1 && h.indexOf('modif') !== -1; },
-};
-
-var CREATE_FIELDS = {
+/**
+ * Un seul jeu de règles de correspondance en-tête → champ, partagé par la
+ * création et la modification. "reseauxSouhaitesSeparate"/"reseauxCombined"
+ * et "liens" sont mutuellement dépendants : voir writeReseauxFields_.
+ */
+var FIELD_MATCHERS = {
   dateDemande: function (h) { return h.indexOf('date') !== -1 && h.indexOf('demande') !== -1; },
   nomEntreprise: function (h) { return h.indexOf('entreprise') !== -1; },
   telephone: function (h) { return h.indexOf('telephone') !== -1 || h === 'tel'; },
   secteur: function (h) { return h.indexOf('secteur') !== -1; },
   reseauxSouhaitesSeparate: function (h) { return h.indexOf('reseau') !== -1 && h.indexOf('souhait') !== -1; },
   reseauxCombined: function (h) { return h.indexOf('reseau') !== -1 && h.indexOf('souhait') === -1; },
+  liens: function (h) { return h.indexOf('lien') !== -1; },
+  compteDemarche: function (h) { return h.indexOf('compte') !== -1 && h.indexOf('demarch') !== -1; },
   statutSite: function (h) { return h.indexOf('statut') !== -1 && h.indexOf('modif') === -1; },
+  derniereMiseAJour: function (h) { return h.indexOf('derniere') !== -1 && h.indexOf('mise') !== -1; },
+  dateMiseEnLigne: function (h) { return h.indexOf('mise en ligne') !== -1; },
   notes: function (h) { return h.indexOf('note') !== -1 && h.indexOf('modif') === -1; },
+  statutModification: function (h) { return h.indexOf('statut') !== -1 && h.indexOf('modif') !== -1; },
+  noteModification: function (h) { return h.indexOf('note') !== -1 && h.indexOf('modif') !== -1; },
+  dateModification: function (h) { return h.indexOf('date') !== -1 && h.indexOf('modif') !== -1; },
 };
+
+/** Champs "texte simple" — une valeur, une colonne, écrasement direct. */
+var SIMPLE_FIELDS = [
+  'dateDemande', 'nomEntreprise', 'telephone', 'secteur', 'compteDemarche',
+  'statutSite', 'derniereMiseAJour', 'dateMiseEnLigne', 'notes',
+  'statutModification', 'noteModification', 'dateModification',
+];
+
+/**
+ * Écrit les réseaux souhaités et/ou les liens. Si le Sheet a des colonnes
+ * séparées pour chacun, écriture directe. S'ils partagent une seule colonne
+ * combinée ("Souhaités : …\nLiens :\n…"), on relit la cellule pour ne
+ * remplacer que la partie effectivement modifiée et ne pas effacer l'autre.
+ */
+function writeReseauxFields_(sheet, row, headers, souhaitesList, liensList) {
+  if (souhaitesList === undefined && liensList === undefined) return [];
+  var written = [];
+  var souhaitesCol = findColumn_(headers, FIELD_MATCHERS.reseauxSouhaitesSeparate);
+  var combinedCol = findColumn_(headers, FIELD_MATCHERS.reseauxCombined);
+  var liensCol = findColumn_(headers, FIELD_MATCHERS.liens);
+
+  if (souhaitesCol !== -1 && souhaitesList !== undefined) {
+    sheet.getRange(row, souhaitesCol).setValue(souhaitesList.join(', '));
+    written.push('reseauxSouhaites');
+  }
+  if (liensCol !== -1 && liensList !== undefined) {
+    sheet.getRange(row, liensCol).setValue(liensList.join('\n'));
+    written.push('liens');
+  }
+  if (combinedCol !== -1 && (souhaitesCol === -1 || liensCol === -1) && (souhaitesList !== undefined || liensList !== undefined)) {
+    var current = String(sheet.getRange(row, combinedCol).getValue() || '');
+    var souhaitesMatch = current.match(/Souhait[ée]s?\s*:\s*([^\n]+)/i);
+    var liensMatch = current.match(/Liens?\s*:\s*([\s\S]+)/i);
+    var finalSouhaites = souhaitesCol === -1 && souhaitesList !== undefined ? souhaitesList.join(', ') : souhaitesMatch ? souhaitesMatch[1].trim() : '';
+    var finalLiens = liensCol === -1 && liensList !== undefined ? liensList.join('\n') : liensMatch ? liensMatch[1].trim() : '';
+    var parts = [];
+    if (finalSouhaites) parts.push('Souhaités : ' + finalSouhaites);
+    if (finalLiens) parts.push('Liens :\n' + finalLiens);
+    sheet.getRange(row, combinedCol).setValue(parts.join('\n'));
+    if (souhaitesCol === -1 && souhaitesList !== undefined) written.push('reseauxSouhaites');
+    if (liensCol === -1 && liensList !== undefined) written.push('liens');
+  }
+  return written;
+}
 
 function normalizeHeader_(label) {
   return String(label || '')
@@ -325,15 +374,18 @@ function handleUpdate_(sheet, data) {
 
   var updates = data.updates || {};
   var written = [];
-  for (var key in UPDATE_FIELDS) {
+  for (var i = 0; i < SIMPLE_FIELDS.length; i++) {
+    var key = SIMPLE_FIELDS[i];
     if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
     var value = updates[key];
     if (value === undefined) continue;
-    var col = findColumn_(headers, UPDATE_FIELDS[key]);
+    var col = findColumn_(headers, FIELD_MATCHERS[key]);
     if (col === -1) continue;
     sheet.getRange(rowNumber, col).setValue(value);
     written.push(key);
   }
+
+  written = written.concat(writeReseauxFields_(sheet, rowNumber, headers, updates.reseauxSouhaites, updates.liens));
 
   return jsonResponse_({ ok: true, written: written });
 }
@@ -361,32 +413,18 @@ function handleCreate_(sheet, data) {
     sheet.getRange(newRow, numeroCol).setValue(numero);
   }
 
-  var souhaitesCol = findColumn_(headers, CREATE_FIELDS.reseauxSouhaitesSeparate);
-  var combinedCol = findColumn_(headers, CREATE_FIELDS.reseauxCombined);
-  var souhaitesList = fields.reseauxSouhaites; // tableau de chaînes envoyé par l'app
-
   var written = [];
-  var simpleFields = ['dateDemande', 'nomEntreprise', 'telephone', 'secteur', 'statutSite', 'notes'];
-  for (var i = 0; i < simpleFields.length; i++) {
-    var key = simpleFields[i];
+  for (var i = 0; i < SIMPLE_FIELDS.length; i++) {
+    var key = SIMPLE_FIELDS[i];
     var value = fields[key];
     if (value === undefined || value === null || value === '') continue;
-    var col = findColumn_(headers, CREATE_FIELDS[key]);
+    var col = findColumn_(headers, FIELD_MATCHERS[key]);
     if (col === -1) continue;
     sheet.getRange(newRow, col).setValue(value);
     written.push(key);
   }
 
-  if (souhaitesList && souhaitesList.length) {
-    var joined = souhaitesList.join(', ');
-    if (souhaitesCol !== -1) {
-      sheet.getRange(newRow, souhaitesCol).setValue(joined);
-      written.push('reseauxSouhaites');
-    } else if (combinedCol !== -1) {
-      sheet.getRange(newRow, combinedCol).setValue('Souhaités : ' + joined);
-      written.push('reseauxSouhaites');
-    }
-  }
+  written = written.concat(writeReseauxFields_(sheet, newRow, headers, fields.reseauxSouhaites, fields.liens));
 
   return jsonResponse_({ ok: true, rowNumber: newRow, numero: numero, written: written });
 }

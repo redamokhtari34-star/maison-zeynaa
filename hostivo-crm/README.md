@@ -98,11 +98,13 @@ que par une API tierce :
 
 Redémarrez `npm run dev`. Une fois ces variables renseignées :
 
-- la fiche client affiche des champs modifiables (statut du site, statut de
-  modification, notes) avec un bouton **Enregistrer** qui écrit directement
-  dans la bonne ligne du Sheet — le script revérifie le nom de l'entreprise
-  avant d'écrire, pour éviter d'altérer la mauvaise ligne si le Sheet a été
-  trié entre-temps ;
+- la fiche client devient entièrement modifiable — nom, secteur, téléphone,
+  dates, statut du site, statut de modification, réseaux souhaités, liens,
+  notes, note de modification — avec un bouton **Enregistrer** qui écrit
+  directement dans la bonne ligne du Sheet — le script revérifie le nom de
+  l'entreprise avant d'écrire, pour éviter d'altérer la mauvaise ligne si le
+  Sheet a été trié entre-temps. Quand réseaux souhaités et liens partagent
+  une seule colonne dans le Sheet, modifier l'un ne touche jamais l'autre ;
 - un bouton **+ Nouveau client** apparaît au-dessus du tableau : il ouvre un
   formulaire (nom, téléphone, secteur, date de la demande, réseaux
   souhaités, statut, notes) et ajoute une nouvelle ligne en bas du Sheet dès
@@ -166,10 +168,10 @@ avant d'avoir déployé le script).
   numéro de téléphone.
 - **Fiche client** (panneau latéral) : toutes les colonnes du Sheet, notes et
   historique de modification.
-- **Édition et ajout de clients** (optionnels, voir ci-dessus) : changer le
-  statut du site, le statut de modification et les notes depuis la fiche
-  client, ou ajouter un nouveau client via un formulaire dédié — écriture
-  directe dans le Sheet dans les deux cas.
+- **Édition et ajout de clients** (optionnels, voir ci-dessus) : tout
+  modifier depuis la fiche client (nom, secteur, téléphone, dates, statuts,
+  réseaux souhaités, liens, notes), ou ajouter un nouveau client via un
+  formulaire dédié — écriture directe dans le Sheet dans les deux cas.
 - **Connexion par compte** (optionnelle, voir ci-dessus) : écran de
   connexion avec un compte par collaborateur (Jules, Anis, Reda),
   changement de mot de passe imposé à la première connexion selon des
