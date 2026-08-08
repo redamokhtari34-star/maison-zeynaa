@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { RESEAUX_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
+import { RESEAUX_OPTIONS, STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
 import type { NewClientInput } from '../types';
 
 interface Props {
@@ -19,7 +19,13 @@ const emptyForm = {
   secteur: '',
   dateDemande: today(),
   statutSite: 'En attente client',
+  dateMiseEnLigne: '',
+  derniereMiseAJour: '',
+  compteDemarche: '',
   notes: '',
+  statutModification: '',
+  noteModification: '',
+  dateModification: '',
 };
 
 export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
@@ -61,7 +67,13 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
         secteur: form.secteur.trim() || undefined,
         dateDemande: form.dateDemande || undefined,
         statutSite: form.statutSite || undefined,
+        dateMiseEnLigne: form.dateMiseEnLigne.trim() || undefined,
+        derniereMiseAJour: form.derniereMiseAJour.trim() || undefined,
+        compteDemarche: form.compteDemarche.trim() || undefined,
         notes: form.notes.trim() || undefined,
+        statutModification: form.statutModification || undefined,
+        noteModification: form.noteModification.trim() || undefined,
+        dateModification: form.dateModification.trim() || undefined,
         reseauxSouhaites: reseaux.length ? reseaux : undefined,
       });
       reset();
@@ -137,6 +149,63 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
               </datalist>
             </FormField>
 
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Statut du site">
+                <select
+                  value={form.statutSite}
+                  onChange={(e) => setForm({ ...form, statutSite: e.target.value })}
+                  className={inputCls}
+                >
+                  {STATUT_SITE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Modification">
+                <select
+                  value={form.statutModification}
+                  onChange={(e) => setForm({ ...form, statutModification: e.target.value })}
+                  className={inputCls}
+                >
+                  {STATUT_MODIFICATION_OPTIONS.map((s) => (
+                    <option key={s || 'none'} value={s}>
+                      {s || '—'}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Mise en ligne">
+                <input
+                  value={form.dateMiseEnLigne}
+                  onChange={(e) => setForm({ ...form, dateMiseEnLigne: e.target.value })}
+                  className={inputCls}
+                  placeholder="Optionnel"
+                />
+              </FormField>
+              <FormField label="Dernière mise à jour">
+                <input
+                  value={form.derniereMiseAJour}
+                  onChange={(e) => setForm({ ...form, derniereMiseAJour: e.target.value })}
+                  className={inputCls}
+                  placeholder="Optionnel"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Compte démarché">
+              <input
+                value={form.compteDemarche}
+                onChange={(e) => setForm({ ...form, compteDemarche: e.target.value })}
+                className={inputCls}
+                placeholder="Optionnel"
+              />
+            </FormField>
+
             <FormField label="Réseaux souhaités">
               <div className="flex flex-wrap gap-1.5">
                 {RESEAUX_OPTIONS.map((network) => {
@@ -159,26 +228,31 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
               </div>
             </FormField>
 
-            <FormField label="Statut du site">
-              <select
-                value={form.statutSite}
-                onChange={(e) => setForm({ ...form, statutSite: e.target.value })}
-                className={inputCls}
-              >
-                {STATUT_SITE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
             <FormField label="Notes">
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={3}
                 className={`${inputCls} resize-none`}
+                placeholder="Optionnel"
+              />
+            </FormField>
+
+            <FormField label="Note de modification">
+              <textarea
+                value={form.noteModification}
+                onChange={(e) => setForm({ ...form, noteModification: e.target.value })}
+                rows={2}
+                className={`${inputCls} resize-none`}
+                placeholder="Optionnel"
+              />
+            </FormField>
+
+            <FormField label="Date de modification">
+              <input
+                value={form.dateModification}
+                onChange={(e) => setForm({ ...form, dateModification: e.target.value })}
+                className={inputCls}
                 placeholder="Optionnel"
               />
             </FormField>

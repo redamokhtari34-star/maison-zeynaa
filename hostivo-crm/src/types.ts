@@ -58,8 +58,14 @@ export interface NewClientInput {
   telephone?: string;
   secteur?: string;
   reseauxSouhaites?: string[];
+  compteDemarche?: string;
   statutSite?: string;
+  derniereMiseAJour?: string;
+  dateMiseEnLigne?: string;
   notes?: string;
+  statutModification?: string;
+  noteModification?: string;
+  dateModification?: string;
 }
 
 /** Session utilisateur — voir lib/auth.ts. */

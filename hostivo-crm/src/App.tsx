@@ -218,8 +218,14 @@ function CrmApp({
       secteur: input.secteur ?? '',
       reseauxSouhaites: input.reseauxSouhaites ?? [],
       liens: [],
+      compteDemarche: input.compteDemarche,
       statutSite: input.statutSite ?? '',
+      derniereMiseAJour: input.derniereMiseAJour,
+      dateMiseEnLigne: input.dateMiseEnLigne,
       notes: input.notes,
+      statutModification: input.statutModification,
+      noteModification: input.noteModification,
+      dateModification: input.dateModification,
     };
     setClients((prev) => [newClient, ...prev]);
   }
