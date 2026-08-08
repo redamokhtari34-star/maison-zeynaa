@@ -40,11 +40,13 @@ interface ReservationsProps {
   initialOpenForm?: boolean;
   onFormOpenHandled?: () => void;
   onRefreshData?: () => void;
+  initialSearchTerm?: string | null;
+  onSearchTermHandled?: () => void;
 }
 
-export default function Reservations({ 
-  reservations, 
-  onSaveReservations, 
+export default function Reservations({
+  reservations,
+  onSaveReservations,
   clientes,
   onSaveClientes,
   dresses,
@@ -55,7 +57,9 @@ export default function Reservations({
   setInvoiceReservationId,
   initialOpenForm,
   onFormOpenHandled,
-  onRefreshData
+  onRefreshData,
+  initialSearchTerm,
+  onSearchTermHandled
 }: ReservationsProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -65,6 +69,16 @@ export default function Reservations({
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Arriving from elsewhere (e.g. a transaction in the revenue detail)
+  // with a specific client already in mind — the search field picks it up
+  // instead of showing every reservation and making them find it again.
+  React.useEffect(() => {
+    if (initialSearchTerm) {
+      setSearchTerm(initialSearchTerm);
+      onSearchTermHandled?.();
+    }
+  }, [initialSearchTerm, onSearchTermHandled]);
 
   // Wizard state. The same wizard records a new booking and corrects an
   // existing one; editingId tells the two apart and is the booking being

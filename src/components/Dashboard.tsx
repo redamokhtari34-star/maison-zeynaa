@@ -30,11 +30,12 @@ interface DashboardProps {
   setCurrentTab: (tab: string) => void;
   language: Language;
   onOpenQuickAction?: (action: string) => void;
+  onOpenReservation?: (searchQuery: string) => void;
 }
 
 type Period = 'jour' | 'semaine' | 'mois' | 'annee';
 
-export default function Dashboard({ db, setCurrentTab, language, onOpenQuickAction }: DashboardProps) {
+export default function Dashboard({ db, setCurrentTab, language, onOpenQuickAction, onOpenReservation }: DashboardProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
 
@@ -515,23 +516,33 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
 
                   const clientNameOf = (id: string) =>
                     db.clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.nom_complet || id;
+                  const clientPhoneOf = (id: string) =>
+                    db.clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.telephone || '';
                   const itemsLabelOf = (r: typeof db.reservations[number]) =>
                     r.items.map(i => i.nom_article).filter(Boolean).join(', ') || 'Article';
 
-                  // …then, for the generic pre-fix wording that never named an
-                  // article, recovers it by matching the client named in the
-                  // text to a reservation booked the same day. Best effort:
-                  // display only, nothing is rewritten in storage.
+                  // The booking behind a transaction: matched by the client
+                  // named in its text and the day it was logged, since
+                  // transactions don't carry a reservation id of their own.
+                  // Used both to enrich the wording and to jump to the right
+                  // reservation on click — best effort either way.
+                  const findReservationFor = (tr: typeof entries[number]) => {
+                    if (tr.categorie !== 'Réservation') return undefined;
+                    const clientFragment = stripId(tr.description).split(' - ').pop()?.trim().toLowerCase();
+                    if (!clientFragment) return undefined;
+                    return db.reservations.find(r =>
+                      r.date_creation === tr.date && clientNameOf(r.cliente_id).toLowerCase() === clientFragment
+                    );
+                  };
+
+                  // For the generic pre-fix wording that never named an
+                  // article, recovers it from the matched booking. Best
+                  // effort: display only, nothing is rewritten in storage.
                   const readable = (tr: typeof entries[number]) => {
                     const base = stripId(tr.description);
                     if (tr.categorie !== 'Réservation' || !/r[ée]servation/i.test(base)) return base;
 
-                    const clientFragment = base.split(' - ').pop()?.trim().toLowerCase();
-                    if (!clientFragment) return base;
-
-                    const match = db.reservations.find(r =>
-                      r.date_creation === tr.date && clientNameOf(r.cliente_id).toLowerCase() === clientFragment
-                    );
+                    const match = findReservationFor(tr);
                     if (!match) return base;
 
                     const prefix = /remboursement/i.test(base) ? (language === 'fr' ? 'Remboursement' : 'استرجاع')
@@ -561,19 +572,32 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                           {language === 'fr' ? `Chaque encaissement (${entries.length})` : `كل مدخول (${entries.length})`}
                         </p>
                         <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
-                          {sortedEntries.map(tr => (
-                            <div key={tr.id} className={`flex items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
-                              <div className="min-w-0">
-                                <p className="truncate font-semibold text-neutral-900">{readable(tr)}</p>
-                                <p className="mt-0.5 text-[11px] text-neutral-400">
-                                  {tr.date} · {tr.heure} · {tr.categorie}
-                                </p>
-                              </div>
-                              <span className="figure shrink-0 font-bold text-emerald-600">
-                                +{formatDa(tr.montant_da)}
-                              </span>
-                            </div>
-                          ))}
+                          {sortedEntries.map(tr => {
+                            const match = findReservationFor(tr);
+                            const Row = match && onOpenReservation ? 'button' : 'div';
+                            return (
+                              <Row
+                                key={tr.id}
+                                onClick={match && onOpenReservation ? () => {
+                                  setIsRevenueModalOpen(false);
+                                  onOpenReservation(clientPhoneOf(match.cliente_id) || clientNameOf(match.cliente_id));
+                                } : undefined}
+                                className={`flex w-full items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : 'text-left'} ${
+                                  match && onOpenReservation ? 'cursor-pointer transition-colors hover:bg-orange-50/60' : ''
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-neutral-900">{readable(tr)}</p>
+                                  <p className="mt-0.5 text-[11px] text-neutral-400">
+                                    {tr.date} · {tr.heure} · {tr.categorie}
+                                  </p>
+                                </div>
+                                <span className="figure shrink-0 font-bold text-emerald-600">
+                                  +{formatDa(tr.montant_da)}
+                                </span>
+                              </Row>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>

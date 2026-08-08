@@ -127,6 +127,18 @@ export default function App() {
     setQuickAction(null);
   };
 
+  // A transaction in the revenue detail leads to a specific reservation —
+  // carried across the tab switch as a search query for Reservations to
+  // pick up.
+  const [pendingReservationSearch, setPendingReservationSearch] = useState<string | null>(null);
+  const handleOpenReservation = (searchQuery: string) => {
+    setPendingReservationSearch(searchQuery);
+    setCurrentTab('reservations');
+  };
+  const handleSearchTermHandled = () => {
+    setPendingReservationSearch(null);
+  };
+
   const isRtl = language === 'ar';
 
   // Feeds the top bar: what actually needs the manager's attention today.
@@ -194,11 +206,12 @@ export default function App() {
     switch (currentTab) {
       case 'accueil':
         return (
-          <Dashboard 
+          <Dashboard
             db={db}
             language={language}
             setCurrentTab={setCurrentTab}
             onOpenQuickAction={handleOpenQuickAction}
+            onOpenReservation={handleOpenReservation}
           />
         );
       case 'robes':
@@ -251,6 +264,8 @@ export default function App() {
             initialOpenForm={quickAction === 'reservation'}
             onFormOpenHandled={handleFormOpenHandled}
             onRefreshData={refreshFromSupabase}
+            initialSearchTerm={pendingReservationSearch}
+            onSearchTermHandled={handleSearchTermHandled}
           />
         );
       case 'calendrier':
