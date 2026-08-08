@@ -9,9 +9,9 @@ import { StatsBar } from './components/StatsBar';
 import { TopBar } from './components/TopBar';
 import { sampleClients } from './data/sampleData';
 import * as auth from './lib/auth';
+import { fetchClients, isSupabaseConfigured } from './lib/clients';
+import { createClient, isWriteConfigured, writeClientUpdates } from './lib/clientsWrite';
 import { parseLooseDate } from './lib/parse';
-import { fetchClientsFromSheet, isSheetConfigured } from './lib/sheets';
-import { createClient, isWriteConfigured, writeClientUpdates } from './lib/sheetsWrite';
 import type { Client, ClientUpdates, NewClientInput, Session, SourceMode } from './types';
 
 type AuthState = 'checking' | 'loggedOut' | 'mustChangePassword' | 'loggedIn' | 'changingPasswordVoluntary';
@@ -22,26 +22,21 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.isAuthConfigured) return;
-    const stored = auth.loadStoredSession();
-    if (!stored) {
-      setAuthState('loggedOut');
-      return;
-    }
     auth
-      .verifySession(stored.token)
+      .restoreSession()
       .then((s) => {
+        if (!s) {
+          setAuthState('loggedOut');
+          return;
+        }
         setSession(s);
         setAuthState(s.mustChangePassword ? 'mustChangePassword' : 'loggedIn');
       })
-      .catch(() => {
-        auth.clearSession();
-        setAuthState('loggedOut');
-      });
+      .catch(() => setAuthState('loggedOut'));
   }, []);
 
   async function handleLogin(username: string, password: string) {
     const s = await auth.login(username, password);
-    auth.storeSession(s);
     setSession(s);
     setAuthState(s.mustChangePassword ? 'mustChangePassword' : 'loggedIn');
   }
@@ -49,7 +44,6 @@ export default function App() {
   async function handleForcedChangePassword(currentPassword: string, newPassword: string) {
     if (!session) return;
     const s = await auth.changePassword(session, currentPassword, newPassword);
-    auth.storeSession(s);
     setSession(s);
     setAuthState('loggedIn');
   }
@@ -57,13 +51,12 @@ export default function App() {
   async function handleVoluntaryChangePassword(currentPassword: string, newPassword: string) {
     if (!session) return;
     const s = await auth.changePassword(session, currentPassword, newPassword);
-    auth.storeSession(s);
     setSession(s);
     setAuthState('loggedIn');
   }
 
   function handleLogout() {
-    auth.clearSession();
+    auth.logout();
     setSession(null);
     setAuthState('loggedOut');
   }
@@ -121,17 +114,17 @@ function CrmApp({
   const [showAddModal, setShowAddModal] = useState(false);
 
   async function load() {
-    if (!isSheetConfigured) return;
+    if (!isSupabaseConfigured) return;
     setLoading(true);
     setError(null);
     try {
-      const fromSheet = await fetchClientsFromSheet();
-      if (fromSheet.length) {
-        setClients(fromSheet);
-        setSource('sheet');
+      const fromSupabase = await fetchClients();
+      if (fromSupabase.length) {
+        setClients(fromSupabase);
+        setSource('supabase');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue lors de la lecture du Sheet.');
+      setError(err instanceof Error ? err.message : 'Erreur inconnue lors du chargement des données.');
     } finally {
       setLoading(false);
     }
@@ -198,7 +191,7 @@ function CrmApp({
     setModification('');
   }
 
-  const canEdit = isWriteConfigured && source === 'sheet';
+  const canEdit = isWriteConfigured && source === 'supabase';
 
   async function handleSaveClient(client: Client, updates: ClientUpdates) {
     await writeClientUpdates(client, updates);
@@ -207,11 +200,10 @@ function CrmApp({
   }
 
   async function handleCreateClient(input: NewClientInput) {
-    const { sheetRow, numero } = await createClient(input);
+    const { id, numero } = await createClient(input);
     const newClient: Client = {
-      id: `new-${sheetRow}-${input.nomEntreprise}`,
+      id,
       numero,
-      sheetRow,
       dateDemande: input.dateDemande ?? '',
       nomEntreprise: input.nomEntreprise,
       telephone: input.telephone ?? '',
@@ -232,15 +224,16 @@ function CrmApp({
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-      {!isSheetConfigured && (
+      {!isSupabaseConfigured && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">
           <svg className="h-3.5 w-3.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4M12 16h.01" />
           </svg>
-          Aucun Google Sheet connecté — affichage des données de démonstration. Renseignez{' '}
-          <code className="rounded bg-amber-100 px-1 font-mono">VITE_GOOGLE_SHEET_ID</code> dans <code className="rounded bg-amber-100 px-1 font-mono">.env.local</code>{' '}
-          pour lire vos vraies données (voir README.md).
+          Aucune base Supabase connectée — affichage des données de démonstration. Renseignez{' '}
+          <code className="rounded bg-amber-100 px-1 font-mono">VITE_SUPABASE_URL</code> et{' '}
+          <code className="rounded bg-amber-100 px-1 font-mono">VITE_SUPABASE_ANON_KEY</code> dans{' '}
+          <code className="rounded bg-amber-100 px-1 font-mono">.env.local</code> pour lire vos vraies données (voir README.md).
         </div>
       )}
       {error && (

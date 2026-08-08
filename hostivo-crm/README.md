@@ -1,7 +1,8 @@
 # Hostivo CRM — Suivi Clients
 
 Interface de suivi des ~80 clients Hostivo (demande, secteur, réseaux sociaux,
-statut du site, dates, notes) branchée sur le Google Sheet existant.
+statut du site, dates, notes) branchée sur une base **Supabase** (Postgres +
+authentification).
 
 ## Lancer en local
 
@@ -17,142 +18,66 @@ npm run lint      # vérification TypeScript
 ```
 
 Sans configuration, l'app affiche un jeu de données de démonstration (extrait
-du récapitulatif PDF) — pratique pour visualiser l'interface sans toucher au
-vrai Sheet.
+du récapitulatif PDF) — pratique pour visualiser l'interface sans toucher à
+la vraie base.
 
-## Connecter le vrai Google Sheet
+## Connecter Supabase
 
-L'app lit le Sheet directement depuis le navigateur, sans backend ni clé API,
-via l'export JSON public de Google Sheets. Deux étapes :
-
-1. **Partager le Sheet en lecture publique** : dans Google Sheets,
-   *Partager* → *Toute personne disposant du lien* → rôle *Lecteur*. (Rien
-   n'est modifiable depuis l'extérieur avec ce réglage — c'est une lecture
-   seule.)
-2. **Renseigner l'identifiant** : copiez `.env.example` vers `.env.local` et
-   collez l'ID du Sheet et le gid de l'onglet, tous deux visibles dans
-   l'URL :
+1. Copiez `.env.example` vers `.env.local` et renseignez l'URL et la clé
+   publique (anon) du projet Supabase, visibles dans **Project Settings →
+   API** :
 
    ```
-   https://docs.google.com/spreadsheets/d/CET_ID_LA/edit?gid=CE_GID_LA#gid=CE_GID_LA
+   VITE_SUPABASE_URL="https://xxxxxxxxxxxx.supabase.co"
+   VITE_SUPABASE_ANON_KEY="sb_publishable_xxxxxxxxxxxxxxxxxxxxxxxx"
    ```
 
-   ```
-   VITE_GOOGLE_SHEET_ID="CET_ID_LA"
-   VITE_GOOGLE_SHEET_GID="CE_GID_LA"   # cible l'onglet sans dépendre de son nom
-   VITE_GOOGLE_SHEET_NAME=""            # alternative si vous préférez cibler par nom
-   ```
+2. Redémarrez `npm run dev`.
 
-Redémarrez `npm run dev`. L'app lit désormais les colonnes du Sheet par leur
-**intitulé** (peu importe leur ordre exact ou l'ajout de colonnes) :
-
-| Colonne attendue (intitulé contient…)     | Champ                          |
-| ------------------------------------------ | ------------------------------ |
-| `date` + `demande`                         | Date de la demande              |
-| `entreprise`                                | Nom de l'entreprise              |
-| `téléphone` / `telephone`                   | Téléphone                        |
-| `secteur`                                   | Secteur d'activité               |
-| `réseaux` + `souhait`                       | Réseaux sociaux souhaités        |
-| `réseaux` (seul)                            | Cellule combinée souhaités+liens |
-| `lien`                                      | Liens (Instagram, TikTok, …)     |
-| `compte` + `démarch`                        | Compte démarché                  |
-| `statut` + `modif`                          | Statut de modification           |
-| `statut` (seul)                             | Statut du site                   |
-| `dernière` + `mise`                         | Dernière mise à jour             |
-| `mise en ligne`                             | Date de mise en ligne            |
-| `note` + `modif`                            | Note de modification             |
-| `note` (seul)                               | Notes                            |
-| `date` + `modif`                            | Date de modification             |
-
-Si une entreprise n'apparaît pas, vérifiez que la ligne a bien un nom en
-colonne « Nom entreprise » — les lignes vides sont ignorées.
-
-## Modifier les clients depuis l'app
-
-Par défaut l'app est en **lecture seule**. Pour qu'Anis, Jules et les autres
-collaborateurs puissent changer le statut du site, le statut de modification
-ou les notes directement depuis la fiche client (sans ouvrir le Sheet), il
-faut déployer un petit point d'écriture — l'app est un frontend statique
-sans serveur, donc l'écriture passe par un script côté Google Sheets plutôt
-que par une API tierce :
-
-1. Dans le Google Sheet, **Extensions → Apps Script**.
-2. Collez le contenu de [`apps-script/Code.gs`](apps-script/Code.gs) à la
-   place du code par défaut.
-3. **Project Settings** (⚙️) → **Script Properties** → ajoutez deux
-   propriétés :
-   - `WRITE_SECRET` : une phrase secrète de votre choix (ex.
-     `hostivo-2026-xyz`).
-   - `AUTH_SECRET` : une **autre** phrase secrète, aléatoire, dédiée à la
-     connexion (ne réutilisez pas la même valeur que `WRITE_SECRET`).
-4. **Déployer → Nouveau déploiement → Application Web**.
-   - *Exécuter en tant que* : Moi
-   - *Qui a accès* : Tout le monde
-5. Copiez l'URL du déploiement (se termine par `/exec`) et complétez
-   `.env.local` :
-
-   ```
-   VITE_SHEET_WRITE_URL="https://script.google.com/macros/s/AKfycb.../exec"
-   VITE_SHEET_WRITE_SECRET="hostivo-2026-xyz"   # même valeur que WRITE_SECRET
-   ```
-
-Redémarrez `npm run dev`. Une fois ces variables renseignées :
-
-- la fiche client devient entièrement modifiable — nom, secteur, téléphone,
-  dates, statut du site, statut de modification, réseaux souhaités, liens,
-  notes, note de modification — avec un bouton **Enregistrer** qui écrit
-  directement dans la bonne ligne du Sheet — le script revérifie le nom de
-  l'entreprise avant d'écrire, pour éviter d'altérer la mauvaise ligne si le
-  Sheet a été trié entre-temps. Quand réseaux souhaités et liens partagent
-  une seule colonne dans le Sheet, modifier l'un ne touche jamais l'autre ;
-- un bouton **+ Nouveau client** apparaît au-dessus du tableau : il ouvre un
-  formulaire (nom, téléphone, secteur, date de la demande, réseaux
-  souhaités, statut, notes) et ajoute une nouvelle ligne en bas du Sheet dès
-  la validation, avec son numéro attribué automatiquement.
-
-La clé `WRITE_SECRET` est visible dans le code source envoyé au navigateur :
-elle empêche les écritures accidentelles ou aléatoires, mais ce n'est pas
-elle qui protège l'accès aux données — c'est l'écran de connexion ci-dessous.
+Les clients sont stockés dans la table `public.hostivo_clients`, protégée par
+des règles RLS (Row Level Security) qui n'autorisent la lecture et
+l'écriture qu'aux utilisateurs connectés (`authenticated`) — personne ne peut
+lire ou modifier les données sans être identifié, contrairement à l'ancien
+Google Sheet en lecture publique.
 
 ## Connexion (comptes Jules / Anis / Reda)
 
-Dès que `VITE_SHEET_WRITE_URL` est renseigné (étape précédente), l'app
-n'affiche plus le tableau directement : elle demande de se connecter avec
-un compte nominatif. Trois comptes sont prévus, un par collaborateur.
+L'app n'affiche jamais le tableau sans connexion : trois comptes nominatifs
+sont prévus, gérés par **Supabase Auth**.
 
-**Mise en place, une seule fois :**
+**Mise en place, une seule fois**, depuis le [dashboard Supabase](https://supabase.com/dashboard)
+du projet → **Authentication → Users → Add user** :
 
-1. Dans l'éditeur Apps Script (celui où vous avez collé `Code.gs`),
-   sélectionnez la fonction `initUsers_` dans le menu déroulant en haut,
-   puis cliquez **▶ Exécuter**. La première exécution demandera
-   d'autoriser le script — acceptez.
-2. Cela crée les 3 comptes avec des mots de passe temporaires (définis en
-   clair dans le corps de `initUsers_`, uniquement pour cette création
-   initiale — ils ne sont jamais stockés en clair, seul leur hash l'est
-   ensuite) :
+| Compte | Email à saisir | Mot de passe temporaire |
+| --- | --- | --- |
+| `jules` | `jules@hostivo-crm.local` | `R%#K4y7Sb9R_abcp` |
+| `anis` | `anis@hostivo-crm.local` | `-%7GByRHy+nT9Lu*` |
+| `reda` | `reda@hostivo-crm.local` | `7BHMQA=@GT%@y*q9` |
 
-   | Compte | Mot de passe temporaire |
-   | --- | --- |
-   | `jules` | `R%#K4y7Sb9R_abcp` |
-   | `anis` | `-%7GByRHy+nT9Lu*` |
-   | `reda` | `7BHMQA=@GT%@y*q9` |
+Pour chacun des 3 comptes :
 
-3. Communiquez à chacun son identifiant et son mot de passe temporaire.
-   À la première connexion, l'app impose de le remplacer par un mot de
-   passe personnel respectant : **8 caractères minimum, une majuscule, un
-   chiffre, un caractère spécial**.
-4. Ne ré-exécutez plus `initUsers_` ensuite — cela réinitialiserait tous
-   les comptes vers ces mots de passe temporaires, écrasant ceux choisis
-   par Jules/Anis/Reda.
+1. **Add user → Create new user**.
+2. Email : copiez exactement l'adresse `@hostivo-crm.local` ci-dessus (ce
+   sont des identifiants internes, aucun mail n'est réellement envoyé à ces
+   adresses).
+3. Password : le mot de passe temporaire correspondant ci-dessus.
+4. Cochez **Auto Confirm User** (sinon Supabase attend une confirmation par
+   email qui ne peut pas arriver, l'adresse étant fictive).
+5. Créez.
+
+Le profil applicatif (nom affiché, obligation de changer le mot de passe)
+est créé automatiquement en base à la toute première connexion de chaque
+personne — rien d'autre à faire manuellement.
+
+Communiquez à chacun son identifiant (`jules`, `anis` ou `reda` — sélectionné
+depuis une liste déroulante sur l'écran de connexion) et son mot de passe
+temporaire. À la première connexion, l'app impose de le remplacer par un mot
+de passe personnel respectant : **8 caractères minimum, une majuscule, un
+chiffre, un caractère spécial**.
 
 Chaque personne peut aussi changer son mot de passe à tout moment via le
 bouton **Mot de passe** en haut de l'app, et se déconnecter via
-**Déconnexion**. Les sessions durent 7 jours, après quoi une reconnexion
-est demandée.
-
-Tant que `VITE_SHEET_WRITE_URL` n'est pas renseigné, l'app reste
-accessible directement, sans connexion (pratique en développement local
-avant d'avoir déployé le script).
+**Déconnexion**.
 
 ## Fonctionnalités
 
@@ -160,23 +85,20 @@ avant d'avoir déployé le script).
   ligne) avec recherche libre et filtres par secteur / statut du site /
   statut de modification.
 - **Statuts colorés** : Mis en ligne (vert), Maquette envoyée (ambre), En
-  attente client (gris), Refus (rouge), Site en cours (bleu) — cliquables
+  attente client (gris), Refus (rouge), Site en cours (violet) — cliquables
   depuis les tuiles de statistiques en haut de page pour filtrer d'un coup.
 - **Accès rapide aux réseaux sociaux** : icônes cliquables (Instagram,
   TikTok, Facebook, LinkedIn, YouTube) directement dans le tableau et dans
   la fiche détail, plus boutons **Appeler** et **WhatsApp** générés depuis le
   numéro de téléphone.
-- **Fiche client** (panneau latéral) : toutes les colonnes du Sheet, notes et
-  historique de modification.
-- **Édition et ajout de clients** (optionnels, voir ci-dessus) : tout
-  modifier depuis la fiche client (nom, secteur, téléphone, dates, statuts,
-  réseaux souhaités, liens, notes), ou ajouter un nouveau client via un
-  formulaire dédié — écriture directe dans le Sheet dans les deux cas.
-- **Connexion par compte** (optionnelle, voir ci-dessus) : écran de
-  connexion avec un compte par collaborateur (Jules, Anis, Reda),
-  changement de mot de passe imposé à la première connexion selon des
-  critères de robustesse (majuscule, chiffre, caractère spécial, 8
-  caractères minimum).
+- **Fiche client** (panneau latéral) : tous les champs, notes et historique
+  de modification, entièrement modifiables une fois connecté.
+- **Ajout de clients** : bouton **+ Nouveau client** au-dessus du tableau,
+  avec les mêmes champs que la fiche détail.
+- **Connexion par compte** : écran de connexion avec un compte par
+  collaborateur (Jules, Anis, Reda), changement de mot de passe imposé à la
+  première connexion selon des critères de robustesse (majuscule, chiffre,
+  caractère spécial, 8 caractères minimum).
 
 ## Déploiement sur Vercel
 
@@ -189,16 +111,10 @@ Le dépôt contient `vercel.json` (build Vite standard). Étapes :
    pendant la configuration).
 3. Le framework Vite est détecté automatiquement à partir de `vercel.json`.
 4. Dans **Settings → Environment Variables**, ajoutez :
-   - `VITE_GOOGLE_SHEET_ID` et `VITE_GOOGLE_SHEET_NAME` (lecture du Sheet)
-   - `VITE_SHEET_WRITE_URL` et `VITE_SHEET_WRITE_SECRET` (si l'édition est
-     activée — voir la section précédente)
+   - `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (connexion à la base)
    - `BASIC_AUTH_USER` et `BASIC_AUTH_PASSWORD` (pour sécuriser le lien —
      voir ci-dessous)
 5. **Deploy**.
-
-Je n'ai pas d'accès direct à un compte Vercel depuis cette session pour
-lancer le déploiement à votre place — ces étapes prennent normalement 2
-minutes depuis le dashboard Vercel.
 
 ## Sécuriser le lien
 
@@ -206,7 +122,8 @@ Comme le CRM affiche des données clients réelles (téléphones, notes), le
 projet inclut `middleware.ts` : une authentification HTTP Basic exécutée par
 Vercel Edge Middleware, qui protège **toute** l'app derrière un couple
 identifiant / mot de passe, avant même de servir la moindre page. Gratuit,
-aucun plan Vercel payant requis.
+aucun plan Vercel payant requis. C'est une protection complémentaire à la
+connexion Supabase — pas un remplacement.
 
 Pour l'activer, définissez dans **Settings → Environment Variables** du
 projet Vercel :
@@ -231,10 +148,27 @@ modifiant la variable d'environnement et en redéployant.
 src/
   components/   TopBar, StatsBar, Filters, ClientTable, ClientDetail, …
   lib/
-    sheets.ts   lecture du Google Sheet (export JSON public) + mapping des colonnes
-    parse.ts    parsing dates, réseaux sociaux et liens
-    phone.ts    liens tel: / wa.me à partir du numéro
+    supabaseClient.ts   client Supabase (URL + clé anon)
+    clients.ts          lecture des clients (table hostivo_clients)
+    clientsWrite.ts      création / mise à jour des clients
+    auth.ts             connexion, session, changement de mot de passe (Supabase Auth)
+    parse.ts            parsing dates, détection réseau social depuis une URL
+    phone.ts            liens tel: / wa.me à partir du numéro
   data/
     sampleData.ts   données de démonstration (hors ligne)
   types.ts      modèle de données Client
 ```
+
+## Base de données Supabase
+
+Le projet réutilise un projet Supabase existant (partagé avec l'app Maison
+Zeyna), avec des tables dédiées préfixées `hostivo_` pour ne rien mélanger :
+
+- `public.hostivo_clients` : une ligne par client (numéro, dates, secteur,
+  réseaux souhaités, liens, statut du site, statut de modification, notes…).
+- `public.hostivo_profiles` : un profil par compte utilisateur (`id` = même
+  UUID que dans `auth.users`), avec le nom affiché et l'obligation ou non de
+  changer son mot de passe.
+
+Les deux tables ont RLS activé, avec des règles réservées au rôle
+`authenticated` — aucun accès anonyme, contrairement à l'ancien Sheet public.

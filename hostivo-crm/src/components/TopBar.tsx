@@ -43,8 +43,8 @@ export function TopBar({ query, onQueryChange, source, loading, onRefresh, sessi
         disabled={loading}
         className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11.5px] font-medium text-slate-500 hover:border-slate-400 hover:text-slate-900 disabled:opacity-60"
       >
-        <span className={`h-1.5 w-1.5 rounded-full ${source === 'sheet' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-        {loading ? 'Synchronisation…' : source === 'sheet' ? 'Connecté au Sheet' : 'Mode démo'}
+        <span className={`h-1.5 w-1.5 rounded-full ${source === 'supabase' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+        {loading ? 'Synchronisation…' : source === 'supabase' ? 'Connecté à Supabase' : 'Mode démo'}
       </button>
 
       {session && (

@@ -1,10 +1,10 @@
 import type { Client } from '../types';
 
 /**
- * Instantané du Google Sheet Hostivo (export PDF "CRM Hostivo — Suivi Clients"),
- * utilisé comme données de démonstration tant qu'aucun Sheet n'est connecté
- * (VITE_GOOGLE_SHEET_ID vide). Une fois le Sheet branché, ces données sont
- * remplacées par la lecture en direct — voir src/lib/sheets.ts.
+ * Instantané des clients Hostivo (export PDF "CRM Hostivo — Suivi Clients"),
+ * utilisé comme données de démonstration tant que Supabase n'est pas
+ * connecté (VITE_SUPABASE_URL vide). Une fois connecté, ces données sont
+ * remplacées par la lecture en direct — voir src/lib/clients.ts.
  */
 
 type SeedClient = Omit<Client, 'id'>;

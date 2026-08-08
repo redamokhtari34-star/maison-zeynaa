@@ -9,12 +9,10 @@ export type StatutSite =
 export type StatutModification = 'Modification à faire' | 'Modification faite' | (string & {});
 
 export interface Client {
-  /** Identifiant stable côté app (pas forcément le numéro affiché dans le Sheet). */
+  /** UUID de la ligne dans public.hostivo_clients (Supabase). */
   id: string;
-  /** Colonne "#" du Sheet, quand elle existe. */
+  /** Numéro d'ordre affiché, hérité de l'ancien Sheet — informatif uniquement. */
   numero?: number;
-  /** Numéro de ligne réel dans le Sheet (1-indexé), utilisé pour écrire les modifications. Absent en mode démo. */
-  sheetRow?: number;
   dateDemande: string;
   nomEntreprise: string;
   telephone: string;
@@ -31,9 +29,9 @@ export interface Client {
   dateModification?: string;
 }
 
-export type SourceMode = 'sheet' | 'demo';
+export type SourceMode = 'supabase' | 'demo';
 
-/** Champs que l'app peut réécrire dans le Sheet — voir lib/sheetsWrite.ts. */
+/** Champs que l'app peut réécrire dans Supabase — voir lib/clientsWrite.ts. */
 export interface ClientUpdates {
   dateDemande?: string;
   nomEntreprise?: string;
@@ -51,7 +49,7 @@ export interface ClientUpdates {
   dateModification?: string;
 }
 
-/** Champs saisis à la création d'un nouveau client — voir lib/sheetsWrite.ts. */
+/** Champs saisis à la création d'un nouveau client — voir lib/clientsWrite.ts. */
 export interface NewClientInput {
   nomEntreprise: string;
   dateDemande?: string;
@@ -70,7 +68,7 @@ export interface NewClientInput {
 
 /** Session utilisateur — voir lib/auth.ts. */
 export interface Session {
-  token: string;
+  userId: string;
   username: string;
   displayName: string;
   mustChangePassword: boolean;

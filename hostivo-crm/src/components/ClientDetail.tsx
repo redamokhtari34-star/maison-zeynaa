@@ -192,8 +192,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
 
               {!canEdit && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11.5px] text-slate-500">
-                  Édition indisponible — connectez l'écriture vers le Sheet (voir README.md, section "Modifier les
-                  clients depuis l'app") pour tout modifier directement ici.
+                  Édition indisponible — connectez Supabase (voir README.md) pour tout modifier directement ici.
                 </div>
               )}
 
@@ -259,7 +258,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                   <EditField label="Téléphone">
                     <input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} className={inputCls} />
                   </EditField>
-                  <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
+                  <Field label="N°" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
                   <EditField label="Dernière mise à jour">
                     <input
                       value={form.derniereMiseAJour}
@@ -283,7 +282,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                     value={<span className="font-mono">{client.dateMiseEnLigne ? formatDate(client.dateMiseEnLigne) : '—'}</span>}
                   />
                   <Field label="Téléphone" value={<span className="font-mono">{formatPhoneDisplay(client.telephone)}</span>} />
-                  <Field label="N° dans le Sheet" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
+                  <Field label="N°" value={<span className="font-mono">{client.numero ?? '—'}</span>} />
                   {client.derniereMiseAJour && (
                     <Field label="Dernière mise à jour" value={<span className="font-mono">{formatDate(client.derniereMiseAJour)}</span>} />
                   )}
