@@ -128,15 +128,21 @@ export default function App() {
   };
 
   // A transaction in the revenue detail leads to a specific reservation —
-  // carried across the tab switch as a search query for Reservations to
-  // pick up.
+  // carried across the tab switch to Reservations. When the booking itself
+  // was identified, it opens directly for editing; otherwise the search is
+  // pre-filled so it's at most a glance away.
   const [pendingReservationSearch, setPendingReservationSearch] = useState<string | null>(null);
-  const handleOpenReservation = (searchQuery: string) => {
+  const [pendingReservationId, setPendingReservationId] = useState<string | null>(null);
+  const handleOpenReservation = (reservationId: string | null, searchQuery: string) => {
+    setPendingReservationId(reservationId);
     setPendingReservationSearch(searchQuery);
     setCurrentTab('reservations');
   };
   const handleSearchTermHandled = () => {
     setPendingReservationSearch(null);
+  };
+  const handleEditReservationHandled = () => {
+    setPendingReservationId(null);
   };
 
   const isRtl = language === 'ar';
@@ -266,6 +272,8 @@ export default function App() {
             onRefreshData={refreshFromSupabase}
             initialSearchTerm={pendingReservationSearch}
             onSearchTermHandled={handleSearchTermHandled}
+            initialEditReservationId={pendingReservationId}
+            onEditReservationHandled={handleEditReservationHandled}
           />
         );
       case 'calendrier':

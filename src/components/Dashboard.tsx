@@ -30,7 +30,7 @@ interface DashboardProps {
   setCurrentTab: (tab: string) => void;
   language: Language;
   onOpenQuickAction?: (action: string) => void;
-  onOpenReservation?: (searchQuery: string) => void;
+  onOpenReservation?: (reservationId: string | null, searchQuery: string) => void;
 }
 
 type Period = 'jour' | 'semaine' | 'mois' | 'annee';
@@ -521,36 +521,42 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                   const itemsLabelOf = (r: typeof db.reservations[number]) =>
                     r.items.map(i => i.nom_article).filter(Boolean).join(', ') || 'Article';
 
+                  // Every one of these formats ends with " - {client}" —
+                  // recovered whether or not a matching booking is found, so
+                  // even an unmatched row can still be searched on click.
+                  const clientFragmentOf = (tr: typeof entries[number]) =>
+                    stripId(tr.description).split(' - ').pop()?.trim() || '';
+
                   // The booking behind a transaction: matched by the client
                   // named in its text and the day it was logged, since
                   // transactions don't carry a reservation id of their own.
-                  // Used both to enrich the wording and to jump to the right
+                  // Used both to name the article and to jump to the right
                   // reservation on click — best effort either way.
                   const findReservationFor = (tr: typeof entries[number]) => {
                     if (tr.categorie !== 'Réservation') return undefined;
-                    const clientFragment = stripId(tr.description).split(' - ').pop()?.trim().toLowerCase();
+                    const clientFragment = clientFragmentOf(tr).toLowerCase();
                     if (!clientFragment) return undefined;
                     return db.reservations.find(r =>
                       r.date_creation === tr.date && clientNameOf(r.cliente_id).toLowerCase() === clientFragment
                     );
                   };
 
-                  // For the generic pre-fix wording that never named an
-                  // article, recovers it from the matched booking. Best
-                  // effort: display only, nothing is rewritten in storage.
+                  // The article is what matters here, not who rented it —
+                  // her name is already what got us to the right booking.
+                  // Falls back to the cleaned original text when no booking
+                  // could be matched, since there is no article to name.
                   const readable = (tr: typeof entries[number]) => {
                     const base = stripId(tr.description);
-                    if (tr.categorie !== 'Réservation' || !/r[ée]servation/i.test(base)) return base;
-
                     const match = findReservationFor(tr);
                     if (!match) return base;
 
                     const prefix = /remboursement/i.test(base) ? (language === 'fr' ? 'Remboursement' : 'استرجاع')
                       : /correction/i.test(base) ? (language === 'fr' ? 'Correction acompte' : 'تعديل العربون')
                       : /solde/i.test(base) ? (language === 'fr' ? 'Solde' : 'باقي المبلغ')
+                      : /pénalité/i.test(base) ? (language === 'fr' ? 'Pénalité' : 'غرامة')
                       : (language === 'fr' ? 'Acompte' : 'عربون');
 
-                    return `${prefix} ${itemsLabelOf(match)} - ${clientNameOf(match.cliente_id)}`;
+                    return `${prefix} ${itemsLabelOf(match)}`;
                   };
 
                   return (
@@ -574,16 +580,24 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                         <div className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
                           {sortedEntries.map(tr => {
                             const match = findReservationFor(tr);
-                            const Row = match && onOpenReservation ? 'button' : 'div';
+                            const Row = onOpenReservation ? 'button' : 'div';
                             return (
                               <Row
                                 key={tr.id}
-                                onClick={match && onOpenReservation ? () => {
+                                onClick={onOpenReservation ? () => {
                                   setIsRevenueModalOpen(false);
-                                  onOpenReservation(clientPhoneOf(match.cliente_id) || clientNameOf(match.cliente_id));
+                                  // Matched: open the booking itself. Not
+                                  // matched: still land on Reservations,
+                                  // searched by whatever client name the
+                                  // transaction carried — better than a dead
+                                  // click.
+                                  onOpenReservation(
+                                    match?.id ?? null,
+                                    match ? (clientPhoneOf(match.cliente_id) || clientNameOf(match.cliente_id)) : clientFragmentOf(tr)
+                                  );
                                 } : undefined}
                                 className={`flex w-full items-center justify-between gap-3 p-3 text-xs ${isRtl ? 'flex-row-reverse text-right' : 'text-left'} ${
-                                  match && onOpenReservation ? 'cursor-pointer transition-colors hover:bg-orange-50/60' : ''
+                                  onOpenReservation ? 'cursor-pointer transition-colors hover:bg-orange-50/60' : ''
                                 }`}
                               >
                                 <div className="min-w-0">

@@ -42,6 +42,8 @@ interface ReservationsProps {
   onRefreshData?: () => void;
   initialSearchTerm?: string | null;
   onSearchTermHandled?: () => void;
+  initialEditReservationId?: string | null;
+  onEditReservationHandled?: () => void;
 }
 
 export default function Reservations({
@@ -59,7 +61,9 @@ export default function Reservations({
   onFormOpenHandled,
   onRefreshData,
   initialSearchTerm,
-  onSearchTermHandled
+  onSearchTermHandled,
+  initialEditReservationId,
+  onEditReservationHandled
 }: ReservationsProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -335,6 +339,17 @@ export default function Reservations({
     setWizardStep(1);
     setIsWizardOpen(true);
   };
+
+  // Arriving from elsewhere with a specific booking already identified (e.g.
+  // a transaction in the revenue detail) opens it directly for editing,
+  // rather than just filtering the list down to it.
+  React.useEffect(() => {
+    if (!initialEditReservationId) return;
+    const match = reservations.find(r => r.id === initialEditReservationId);
+    if (match) openEditWizard(match);
+    onEditReservationHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEditReservationId, onEditReservationHandled]);
 
   // Handle addition/removal of items in wizard
   const toggleDressSelect = (dress: Dress) => {
