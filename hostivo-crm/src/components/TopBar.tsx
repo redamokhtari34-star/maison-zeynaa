@@ -1,4 +1,4 @@
-import type { SourceMode } from '../types';
+import type { Session, SourceMode } from '../types';
 
 interface Props {
   query: string;
@@ -6,9 +6,12 @@ interface Props {
   source: SourceMode;
   loading: boolean;
   onRefresh: () => void;
+  session: Session | null;
+  onChangePassword: () => void;
+  onLogout: () => void;
 }
 
-export function TopBar({ query, onQueryChange, source, loading, onRefresh }: Props) {
+export function TopBar({ query, onQueryChange, source, loading, onRefresh, session, onChangePassword, onLogout }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-center gap-2.5">
@@ -43,6 +46,26 @@ export function TopBar({ query, onQueryChange, source, loading, onRefresh }: Pro
         <span className={`h-1.5 w-1.5 rounded-full ${source === 'sheet' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
         {loading ? 'Synchronisation…' : source === 'sheet' ? 'Connecté au Sheet' : 'Mode démo'}
       </button>
+
+      {session && (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[12px] text-slate-500">
+            <span className="font-medium text-slate-700">{session.displayName}</span>
+          </span>
+          <button
+            onClick={onChangePassword}
+            className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+          >
+            Mot de passe
+          </button>
+          <button
+            onClick={onLogout}
+            className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-500 hover:border-rose-300 hover:text-rose-600"
+          >
+            Déconnexion
+          </button>
+        </div>
+      )}
     </div>
   );
 }

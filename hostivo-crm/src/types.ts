@@ -51,3 +51,11 @@ export interface NewClientInput {
   statutSite?: string;
   notes?: string;
 }
+
+/** Session utilisateur — voir lib/auth.ts. */
+export interface Session {
+  token: string;
+  username: string;
+  displayName: string;
+  mustChangePassword: boolean;
+}

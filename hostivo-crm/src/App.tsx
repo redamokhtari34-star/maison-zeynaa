@@ -1,17 +1,111 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AddClientModal } from './components/AddClientModal';
+import { ChangePasswordScreen } from './components/ChangePasswordScreen';
 import { ClientDetail } from './components/ClientDetail';
 import { ClientTable, type SortKey } from './components/ClientTable';
 import { Filters } from './components/Filters';
+import { LoginScreen } from './components/LoginScreen';
 import { StatsBar } from './components/StatsBar';
 import { TopBar } from './components/TopBar';
 import { sampleClients } from './data/sampleData';
+import * as auth from './lib/auth';
+import { parseLooseDate } from './lib/parse';
 import { fetchClientsFromSheet, isSheetConfigured } from './lib/sheets';
 import { createClient, isWriteConfigured, writeClientUpdates } from './lib/sheetsWrite';
-import { parseLooseDate } from './lib/parse';
-import type { Client, ClientUpdates, NewClientInput, SourceMode } from './types';
+import type { Client, ClientUpdates, NewClientInput, Session, SourceMode } from './types';
+
+type AuthState = 'checking' | 'loggedOut' | 'mustChangePassword' | 'loggedIn' | 'changingPasswordVoluntary';
 
 export default function App() {
+  const [authState, setAuthState] = useState<AuthState>(auth.isAuthConfigured ? 'checking' : 'loggedIn');
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    if (!auth.isAuthConfigured) return;
+    const stored = auth.loadStoredSession();
+    if (!stored) {
+      setAuthState('loggedOut');
+      return;
+    }
+    auth
+      .verifySession(stored.token)
+      .then((s) => {
+        setSession(s);
+        setAuthState(s.mustChangePassword ? 'mustChangePassword' : 'loggedIn');
+      })
+      .catch(() => {
+        auth.clearSession();
+        setAuthState('loggedOut');
+      });
+  }, []);
+
+  async function handleLogin(username: string, password: string) {
+    const s = await auth.login(username, password);
+    auth.storeSession(s);
+    setSession(s);
+    setAuthState(s.mustChangePassword ? 'mustChangePassword' : 'loggedIn');
+  }
+
+  async function handleForcedChangePassword(currentPassword: string, newPassword: string) {
+    if (!session) return;
+    const s = await auth.changePassword(session, currentPassword, newPassword);
+    auth.storeSession(s);
+    setSession(s);
+    setAuthState('loggedIn');
+  }
+
+  async function handleVoluntaryChangePassword(currentPassword: string, newPassword: string) {
+    if (!session) return;
+    const s = await auth.changePassword(session, currentPassword, newPassword);
+    auth.storeSession(s);
+    setSession(s);
+    setAuthState('loggedIn');
+  }
+
+  function handleLogout() {
+    auth.clearSession();
+    setSession(null);
+    setAuthState('loggedOut');
+  }
+
+  if (authState === 'checking') {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-100 text-[13px] text-slate-400">Chargement…</div>;
+  }
+  if (authState === 'loggedOut') {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+  if (authState === 'mustChangePassword' && session) {
+    return <ChangePasswordScreen displayName={session.displayName} forced onSubmit={handleForcedChangePassword} />;
+  }
+  if (authState === 'changingPasswordVoluntary' && session) {
+    return (
+      <ChangePasswordScreen
+        displayName={session.displayName}
+        forced={false}
+        onSubmit={handleVoluntaryChangePassword}
+        onCancel={() => setAuthState('loggedIn')}
+      />
+    );
+  }
+
+  return (
+    <CrmApp
+      session={session}
+      onChangePassword={() => setAuthState('changingPasswordVoluntary')}
+      onLogout={handleLogout}
+    />
+  );
+}
+
+function CrmApp({
+  session,
+  onChangePassword,
+  onLogout,
+}: {
+  session: Session | null;
+  onChangePassword: () => void;
+  onLogout: () => void;
+}) {
   const [clients, setClients] = useState<Client[]>(sampleClients);
   const [source, setSource] = useState<SourceMode>('demo');
   const [loading, setLoading] = useState(false);
@@ -148,7 +242,16 @@ export default function App() {
       )}
 
       <div className="mb-4">
-        <TopBar query={query} onQueryChange={setQuery} source={source} loading={loading} onRefresh={load} />
+        <TopBar
+          query={query}
+          onQueryChange={setQuery}
+          source={source}
+          loading={loading}
+          onRefresh={load}
+          session={session}
+          onChangePassword={onChangePassword}
+          onLogout={onLogout}
+        />
       </div>
 
       <div className="mb-4">

@@ -79,9 +79,12 @@ que par une API tierce :
 1. Dans le Google Sheet, **Extensions → Apps Script**.
 2. Collez le contenu de [`apps-script/Code.gs`](apps-script/Code.gs) à la
    place du code par défaut.
-3. **Project Settings** (⚙️) → **Script Properties** → ajoutez
-   `WRITE_SECRET` avec une valeur secrète de votre choix (une phrase
-   aléatoire suffit, ex. `hostivo-2026-xyz`).
+3. **Project Settings** (⚙️) → **Script Properties** → ajoutez deux
+   propriétés :
+   - `WRITE_SECRET` : une phrase secrète de votre choix (ex.
+     `hostivo-2026-xyz`).
+   - `AUTH_SECRET` : une **autre** phrase secrète, aléatoire, dédiée à la
+     connexion (ne réutilisez pas la même valeur que `WRITE_SECRET`).
 4. **Déployer → Nouveau déploiement → Application Web**.
    - *Exécuter en tant que* : Moi
    - *Qui a accès* : Tout le monde
@@ -105,11 +108,49 @@ Redémarrez `npm run dev`. Une fois ces variables renseignées :
   souhaités, statut, notes) et ajoute une nouvelle ligne en bas du Sheet dès
   la validation, avec son numéro attribué automatiquement.
 
-Cette clé secrète est visible dans le code source envoyé au navigateur : elle
-empêche les écritures accidentelles ou aléatoires, mais ne remplace pas une
-authentification par utilisateur. Suffisant pour un outil interne à
-quelques collaborateurs de confiance ; à éviter si le lien de l'app venait à
-être partagé publiquement.
+La clé `WRITE_SECRET` est visible dans le code source envoyé au navigateur :
+elle empêche les écritures accidentelles ou aléatoires, mais ce n'est pas
+elle qui protège l'accès aux données — c'est l'écran de connexion ci-dessous.
+
+## Connexion (comptes Jules / Anis / Reda)
+
+Dès que `VITE_SHEET_WRITE_URL` est renseigné (étape précédente), l'app
+n'affiche plus le tableau directement : elle demande de se connecter avec
+un compte nominatif. Trois comptes sont prévus, un par collaborateur.
+
+**Mise en place, une seule fois :**
+
+1. Dans l'éditeur Apps Script (celui où vous avez collé `Code.gs`),
+   sélectionnez la fonction `initUsers_` dans le menu déroulant en haut,
+   puis cliquez **▶ Exécuter**. La première exécution demandera
+   d'autoriser le script — acceptez.
+2. Cela crée les 3 comptes avec des mots de passe temporaires (définis en
+   clair dans le corps de `initUsers_`, uniquement pour cette création
+   initiale — ils ne sont jamais stockés en clair, seul leur hash l'est
+   ensuite) :
+
+   | Compte | Mot de passe temporaire |
+   | --- | --- |
+   | `jules` | `8!Wq3zkH?t` |
+   | `anis` | `38#?4iSGRT` |
+   | `reda` | `DcE8rP*xJn` |
+
+3. Communiquez à chacun son identifiant et son mot de passe temporaire.
+   À la première connexion, l'app impose de le remplacer par un mot de
+   passe personnel respectant : **8 caractères minimum, une majuscule, un
+   chiffre, un caractère spécial**.
+4. Ne ré-exécutez plus `initUsers_` ensuite — cela réinitialiserait tous
+   les comptes vers ces mots de passe temporaires, écrasant ceux choisis
+   par Jules/Anis/Reda.
+
+Chaque personne peut aussi changer son mot de passe à tout moment via le
+bouton **Mot de passe** en haut de l'app, et se déconnecter via
+**Déconnexion**. Les sessions durent 7 jours, après quoi une reconnexion
+est demandée.
+
+Tant que `VITE_SHEET_WRITE_URL` n'est pas renseigné, l'app reste
+accessible directement, sans connexion (pratique en développement local
+avant d'avoir déployé le script).
 
 ## Fonctionnalités
 
@@ -129,6 +170,11 @@ quelques collaborateurs de confiance ; à éviter si le lien de l'app venait à
   statut du site, le statut de modification et les notes depuis la fiche
   client, ou ajouter un nouveau client via un formulaire dédié — écriture
   directe dans le Sheet dans les deux cas.
+- **Connexion par compte** (optionnelle, voir ci-dessus) : écran de
+  connexion avec un compte par collaborateur (Jules, Anis, Reda),
+  changement de mot de passe imposé à la première connexion selon des
+  critères de robustesse (majuscule, chiffre, caractère spécial, 8
+  caractères minimum).
 
 ## Déploiement sur Vercel
 

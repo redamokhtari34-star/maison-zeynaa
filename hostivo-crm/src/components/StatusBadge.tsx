@@ -2,22 +2,22 @@ import type { StatutModification, StatutSite } from '../types';
 
 const STATUT_STYLES: Record<string, string> = {
   'Mis en ligne': 'bg-emerald-50 text-emerald-700',
-  'Site fini': 'bg-emerald-50 text-emerald-700',
+  'Site fini': 'bg-teal-50 text-teal-700',
   'En attente client': 'bg-slate-100 text-slate-600',
   'Maquette envoyée': 'bg-amber-50 text-amber-700',
   Refus: 'bg-rose-50 text-rose-700',
   'Site en cours': 'bg-sky-50 text-sky-700',
-  'Site à faire': 'bg-slate-100 text-slate-600',
+  'Site à faire': 'bg-violet-50 text-violet-700',
 };
 
 const DOT_STYLES: Record<string, string> = {
   'Mis en ligne': 'bg-emerald-500',
-  'Site fini': 'bg-emerald-500',
+  'Site fini': 'bg-teal-500',
   'En attente client': 'bg-slate-400',
   'Maquette envoyée': 'bg-amber-500',
   Refus: 'bg-rose-500',
   'Site en cours': 'bg-sky-500',
-  'Site à faire': 'bg-slate-400',
+  'Site à faire': 'bg-violet-500',
 };
 
 export function StatusBadge({ statut }: { statut: StatutSite }) {
