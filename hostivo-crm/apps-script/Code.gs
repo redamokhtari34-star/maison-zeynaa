@@ -213,7 +213,7 @@ function passwordMeetsPolicy_(pw) {
 
 function handleLogin_(data) {
   var username = String(data.username || '').trim().toLowerCase();
-  var password = String(data.password || '');
+  var password = String(data.password || '').trim();
   var users = getUsers_();
   var user = users[username];
   if (!user || hashPassword_(password, user.salt) !== user.hash) {
@@ -251,12 +251,12 @@ function handleChangePassword_(data) {
   var user = users[payload.u];
   if (!user) return jsonResponse_({ ok: false, error: 'Compte introuvable.' });
 
-  var currentPassword = String(data.currentPassword || '');
+  var currentPassword = String(data.currentPassword || '').trim();
   if (hashPassword_(currentPassword, user.salt) !== user.hash) {
     return jsonResponse_({ ok: false, error: 'Mot de passe actuel incorrect.' });
   }
 
-  var newPassword = String(data.newPassword || '');
+  var newPassword = String(data.newPassword || '').trim();
   if (!passwordMeetsPolicy_(newPassword)) {
     return jsonResponse_({
       ok: false,

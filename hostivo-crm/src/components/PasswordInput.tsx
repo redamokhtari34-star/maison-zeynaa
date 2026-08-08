@@ -1,14 +1,24 @@
-import { useState, type InputHTMLAttributes } from 'react';
+import { useState, type ChangeEvent, type InputHTMLAttributes } from 'react';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
-export function PasswordInput({ className = '', ...rest }: Props) {
+export function PasswordInput({ className = '', onChange, ...rest }: Props) {
   const [visible, setVisible] = useState(false);
+
+  // Un espace collé par erreur avant/après le mot de passe (fréquent en copiant
+  // depuis un tableau ou un chat) ferait échouer la connexion sans que ce soit
+  // visible — on le retire dès la saisie/le collage plutôt que de laisser
+  // deviner pourquoi "le bon" mot de passe est refusé.
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    e.target.value = e.target.value.trim();
+    onChange?.(e);
+  }
 
   return (
     <div className="relative">
       <input
         {...rest}
+        onChange={handleChange}
         type={visible ? 'text' : 'password'}
         className={`w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 pr-9 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-slate-400 ${className}`}
       />
