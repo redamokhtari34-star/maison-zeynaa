@@ -131,9 +131,9 @@ un compte nominatif. Trois comptes sont prévus, un par collaborateur.
 
    | Compte | Mot de passe temporaire |
    | --- | --- |
-   | `jules` | `8!Wq3zkH?t` |
-   | `anis` | `38#?4iSGRT` |
-   | `reda` | `DcE8rP*xJn` |
+   | `jules` | `R%#K4y7Sb9R_abcp` |
+   | `anis` | `-%7GByRHy+nT9Lu*` |
+   | `reda` | `7BHMQA=@GT%@y*q9` |
 
 3. Communiquez à chacun son identifiant et son mot de passe temporaire.
    À la première connexion, l'app impose de le remplacer par un mot de

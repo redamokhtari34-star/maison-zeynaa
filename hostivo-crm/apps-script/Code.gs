@@ -287,9 +287,9 @@ function handleChangePassword_(data) {
  */
 function initUsers_() {
   var seed = {
-    jules: { displayName: 'Jules', password: '8!Wq3zkH?t' },
-    anis: { displayName: 'Anis', password: '38#?4iSGRT' },
-    reda: { displayName: 'Reda', password: 'DcE8rP*xJn' },
+    jules: { displayName: 'Jules', password: 'R%#K4y7Sb9R_abcp' },
+    anis: { displayName: 'Anis', password: '-%7GByRHy+nT9Lu*' },
+    reda: { displayName: 'Reda', password: '7BHMQA=@GT%@y*q9' },
   };
   var users = {};
   for (var username in seed) {
