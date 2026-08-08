@@ -4,8 +4,14 @@ interface Props {
   onLogin: (username: string, password: string) => Promise<void>;
 }
 
+const ACCOUNTS = [
+  { value: 'jules', label: 'Jules' },
+  { value: 'anis', label: 'Anis' },
+  { value: 'reda', label: 'Reda' },
+];
+
 export function LoginScreen({ onLogin }: Props) {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(ACCOUNTS[0].value);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,13 +45,18 @@ export function LoginScreen({ onLogin }: Props) {
         <div className="flex flex-col gap-3.5">
           <label className="flex flex-col gap-1">
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Identifiant</span>
-            <input
+            <select
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="jules, anis ou reda"
               className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            >
+              {ACCOUNTS.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Mot de passe</span>
