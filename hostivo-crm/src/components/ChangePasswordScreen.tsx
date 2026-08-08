@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { checkPassword, passwordIsValid, PASSWORD_MIN_LENGTH } from '../lib/auth';
+import { PasswordInput } from './PasswordInput';
 
 interface Props {
   displayName: string;
@@ -57,33 +58,17 @@ export function ChangePasswordScreen({ displayName, forced, onSubmit, onCancel }
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
               Mot de passe {forced ? 'temporaire' : 'actuel'}
             </span>
-            <input
-              autoFocus
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            <PasswordInput autoFocus value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Nouveau mot de passe</span>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Confirmer le nouveau mot de passe</span>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             {confirmPassword.length > 0 && !matches && <span className="text-[11px] text-rose-600">Ne correspond pas.</span>}
           </label>
 

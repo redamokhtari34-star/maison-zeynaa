@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { PasswordInput } from './PasswordInput';
 
 interface Props {
   onLogin: (username: string, password: string) => Promise<void>;
@@ -60,12 +61,7 @@ export function LoginScreen({ onLogin }: Props) {
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">Mot de passe</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
-            />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
 
           {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">{error}</div>}
