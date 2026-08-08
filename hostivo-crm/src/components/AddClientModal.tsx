@@ -84,7 +84,7 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
               type="button"
               onClick={handleClose}
               aria-label="Fermer"
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-400 hover:text-slate-900"
             >
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -148,8 +148,8 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
                       onClick={() => toggleReseau(network)}
                       className={`rounded-full border px-2.5 py-1 text-[11.5px] font-medium ${
                         active
-                          ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                          : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-300'
+                          ? 'border-slate-400 bg-slate-100 text-slate-900'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-slate-400'
                       }`}
                     >
                       {network}
@@ -197,7 +197,7 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
             <button
               type="submit"
               disabled={saving || !form.nomEntreprise.trim()}
-              className="rounded-lg bg-indigo-600 px-3.5 py-2 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              className="rounded-lg bg-slate-900 px-3.5 py-2 text-[12.5px] font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
             >
               {saving ? 'Ajout…' : 'Créer le client'}
             </button>
@@ -209,7 +209,7 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
 }
 
 const inputCls =
-  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400';
+  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 outline-none focus:ring-2 focus:ring-slate-400';
 
 function FormField({ label, children }: { label: string; children: ReactNode }) {
   return (

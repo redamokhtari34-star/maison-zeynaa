@@ -59,7 +59,7 @@ export function SocialLinkRow({ links, max = 4 }: { links: string[]; max?: numbe
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           title={url}
-          className="flex h-6 w-6 flex-none items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-indigo-400 hover:text-indigo-600"
+          className="flex h-6 w-6 flex-none items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-400 hover:text-slate-900"
         >
           <SocialIcon url={url} />
         </a>

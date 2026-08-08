@@ -106,7 +106,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                 <button
                   onClick={onClose}
                   aria-label="Fermer"
-                  className="flex h-7 w-7 flex-none items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+                  className="flex h-7 w-7 flex-none items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-400 hover:text-slate-900"
                 >
                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 6 6 18M6 6l12 12" />
@@ -122,7 +122,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                     href={whatsappHref(client.telephone)!}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-indigo-700"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-black"
                   >
                     <SocialIcon url="wa.me" className="h-3.5 w-3.5" />
                     WhatsApp
@@ -131,7 +131,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                 {telHref(client.telephone) && (
                   <a
                     href={telHref(client.telephone)!}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-slate-700 hover:border-indigo-300"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] font-semibold text-slate-700 hover:border-slate-400"
                   >
                     Appeler
                   </a>
@@ -223,7 +223,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                         href={toAbsoluteUrl(url)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                        className="flex items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-600 hover:border-slate-400 hover:text-slate-900"
                       >
                         <SocialIcon url={url} className="h-3.5 w-3.5 flex-none" />
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{url}</span>
@@ -264,7 +264,7 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
                     <button
                       onClick={handleSave}
                       disabled={!dirty || saving}
-                      className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                      className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                     >
                       {saving ? 'Enregistrement…' : 'Enregistrer les modifications'}
                     </button>
@@ -289,9 +289,9 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
 }
 
 const selectCls =
-  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400';
+  'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 outline-none focus:ring-2 focus:ring-slate-400';
 const textareaCls =
-  'w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13px] leading-snug text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400';
+  'w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13px] leading-snug text-slate-700 outline-none focus:ring-2 focus:ring-slate-400';
 
 function EditField({ label, children }: { label: string; children: ReactNode }) {
   return (

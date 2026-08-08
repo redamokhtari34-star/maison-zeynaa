@@ -31,7 +31,7 @@ export function StatsBar({ clients, activeStatut, onSelectStatut }: Props) {
       <Tile
         label="Total clients"
         value={clients.length}
-        valueCls="text-indigo-600"
+        valueCls="text-slate-900"
         active={activeStatut === ''}
         onClick={() => onSelectStatut('')}
       />
@@ -69,7 +69,7 @@ function Tile({
     <button
       onClick={onClick}
       className={`rounded-xl border bg-white p-3 text-left shadow-sm transition-colors ${
-        active ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-slate-200 hover:border-indigo-300'
+        active ? 'border-slate-400 ring-1 ring-slate-400' : 'border-slate-200 hover:border-slate-400'
       } ${className}`}
     >
       <div className={`font-mono text-xl font-semibold tabular-nums tracking-tight ${valueCls}`}>{value}</div>

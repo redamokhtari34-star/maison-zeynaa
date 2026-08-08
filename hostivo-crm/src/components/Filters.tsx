@@ -13,7 +13,7 @@ interface Props {
 }
 
 const selectCls =
-  'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12.5px] text-slate-600 outline-none focus:ring-2 focus:ring-indigo-400';
+  'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12.5px] text-slate-600 outline-none focus:ring-2 focus:ring-slate-400';
 
 export function Filters({
   secteurs,
@@ -56,7 +56,7 @@ export function Filters({
 
       <button
         onClick={onReset}
-        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12.5px] text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12.5px] text-slate-500 hover:border-slate-400 hover:text-slate-900"
       >
         Réinitialiser
       </button>

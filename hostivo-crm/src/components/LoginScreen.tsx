@@ -34,7 +34,7 @@ export function LoginScreen({ onLogin }: Props) {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-[360px] rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-indigo-600 font-mono text-base font-bold text-white">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-slate-900 font-mono text-base font-bold text-white">
             H
           </div>
           <div>
@@ -50,7 +50,7 @@ export function LoginScreen({ onLogin }: Props) {
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[13.5px] text-slate-700 outline-none focus:ring-2 focus:ring-slate-400"
             >
               {ACCOUNTS.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -69,7 +69,7 @@ export function LoginScreen({ onLogin }: Props) {
           <button
             type="submit"
             disabled={loading || !username.trim() || !password}
-            className="mt-1 rounded-lg bg-indigo-600 px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+            className="mt-1 rounded-lg bg-slate-900 px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
