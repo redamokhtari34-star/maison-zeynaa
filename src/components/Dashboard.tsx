@@ -534,10 +534,28 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
                   // reservation on click — best effort either way.
                   const findReservationFor = (tr: typeof entries[number]) => {
                     if (tr.categorie !== 'Réservation') return undefined;
-                    const clientFragment = clientFragmentOf(tr).toLowerCase();
+                    const clientFragment = clientFragmentOf(tr).toLowerCase().replace(/\s+/g, ' ');
                     if (!clientFragment) return undefined;
-                    return db.reservations.find(r =>
-                      r.date_creation === tr.date && clientNameOf(r.cliente_id).toLowerCase() === clientFragment
+
+                    const sameName = db.reservations.filter(r =>
+                      clientNameOf(r.cliente_id).toLowerCase().replace(/\s+/g, ' ') === clientFragment
+                    );
+                    if (sameName.length === 0) return undefined;
+                    if (sameName.length === 1) return sameName[0];
+
+                    // Several bookings share this client's name: the one made
+                    // the same day as the transaction is almost always the
+                    // right one — a deposit is logged the moment the booking
+                    // is created. Failing that (a balance settled, or a
+                    // correction made, days later), the closest booking date
+                    // is the best guess available.
+                    const sameDay = sameName.find(r => r.date_creation === tr.date);
+                    if (sameDay) return sameDay;
+
+                    return sameName.reduce((closest, r) =>
+                      Math.abs(new Date(r.date_creation).getTime() - new Date(tr.date).getTime()) <
+                      Math.abs(new Date(closest.date_creation).getTime() - new Date(tr.date).getTime())
+                        ? r : closest
                     );
                   };
 
