@@ -222,13 +222,14 @@ export default function App() {
         );
       case 'robes':
         return (
-          <Robes 
+          <Robes
             dresses={db.dresses}
             onSaveDresses={handleSaveDresses}
             language={language}
             initialOpenForm={quickAction === 'robe'}
             onFormOpenHandled={handleFormOpenHandled}
             onRefreshData={refreshFromSupabase}
+            reservations={db.reservations}
           />
         );
       case 'bijoux':
