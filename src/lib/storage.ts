@@ -1092,9 +1092,11 @@ export function checkItemAvailability(
     if (res.id === excludeReservationId) continue;
     if (res.statut === 'retourne') continue; // Completed rentals don't block anymore
 
-    // Check overlap
-    // Period A overlaps with Period B if: StartA <= EndB AND EndA >= StartB
-    const overlap = startDate <= res.date_retour && endDate >= res.date_sortie;
+    // Check overlap. Strict on both ends, not inclusive: a dress back in
+    // the morning can go straight back out in the afternoon, so the day it
+    // is returned is not itself blocked for a new rental starting (or a
+    // previous one ending) that same day.
+    const overlap = startDate < res.date_retour && endDate > res.date_sortie;
 
     if (overlap) {
       const containsItem = res.items.some(
