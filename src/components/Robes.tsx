@@ -13,9 +13,10 @@ import {
   AlertTriangle, 
   Wrench,
   ChevronRight,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
-import { Dress, DressCategory, DressStatus, Language } from '../types';
+import { Dress, DressCategory, DressStatus, Language, Reservation } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapDressToDb, uploadImageToSupabase, ensurePublicUrl } from '../lib/storage';
 import { todayIso } from '../lib/dates';
@@ -33,15 +34,17 @@ interface RobesProps {
   initialOpenForm?: boolean;
   onFormOpenHandled?: () => void;
   onRefreshData?: () => void;
+  reservations?: Reservation[];
 }
 
-export default function Robes({ 
-  dresses, 
-  onSaveDresses, 
+export default function Robes({
+  dresses,
+  onSaveDresses,
   language,
   initialOpenForm,
   onFormOpenHandled,
-  onRefreshData
+  onRefreshData,
+  reservations = []
 }: RobesProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -397,6 +400,17 @@ export default function Robes({
     }).format(amount) + ' DA';
   };
 
+  // "Occupée" on the badge doesn't say when it frees up — worth a line on
+  // the card itself for the one case that matters most: it can go straight
+  // back out this afternoon.
+  const todayStr = todayIso();
+  const returningToday = (dressId: string) =>
+    reservations.some(r =>
+      (r.statut === 'en_cours' || r.statut === 'en_retard') &&
+      r.date_retour === todayStr &&
+      r.items.some(i => i.type_article === 'robe' && i.article_id === dressId)
+    );
+
   // Status Badge Mapper
   const renderStatusBadge = (status: DressStatus) => {
     const badgeBase = "px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5 w-fit";
@@ -647,6 +661,13 @@ export default function Robes({
                       <strong>{t.color} :</strong> {dress.couleur}
                     </span>
                   </div>
+
+                  {returningToday(dress.id) && (
+                    <p className={`mt-2 text-[11px] font-semibold text-blue-600 flex items-center gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                      <RotateCcw size={11} />
+                      {language === 'fr' ? "Revient aujourd'hui" : 'تعود اليوم'}
+                    </p>
+                  )}
 
                   <p className="text-xs text-gray-500 leading-relaxed mt-4 line-clamp-2">
                     {dress.description || (language === 'fr' ? 'Aucune description fournie.' : 'لا يوجد وصف.')}
