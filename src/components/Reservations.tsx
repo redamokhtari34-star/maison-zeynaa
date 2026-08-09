@@ -19,7 +19,7 @@ import { Reservation, Cliente, Dress, Bijou, Language, ReservationItem, Transact
 import { translations } from '../translations';
 import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactions, getSupabaseClient, mapReservationToDb, mapTransactionToDb, isUuid } from '../lib/storage';
 import { todayIso, isoInDays, nowTime } from '../lib/dates';
-import { notifyError, notifySuccess } from '../lib/toast';
+import { notify, notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
 import { askConfirm } from '../lib/confirm';
 
@@ -368,6 +368,26 @@ export default function Reservations({
         notifyError(warningMsg);
         return;
       }
+
+      // The robe is selectable because its current rental ends before this
+      // one begins — worth saying out loud, since "occupée" on the catalogue
+      // card doesn't explain why picking it here was still allowed.
+      const current = reservations.find(r =>
+        r.id !== editingId &&
+        (r.statut === 'en_cours' || r.statut === 'en_retard') &&
+        r.items.some(i => i.type_article === 'robe' && i.article_id === dress.id)
+      );
+      if (current) {
+        const returnMsg = current.date_retour === todayStr
+          ? (language === 'fr'
+              ? `"${dress.nom}" est encore en location, mais revient aujourd'hui.`
+              : `"${dress.nom}" لا تزال مؤجرة، لكنها تعود اليوم.`)
+          : (language === 'fr'
+              ? `"${dress.nom}" est encore en location, retour prévu le ${current.date_retour}.`
+              : `"${dress.nom}" لا تزال مؤجرة، الإرجاع متوقع في ${current.date_retour}.`);
+        notify(returnMsg, 'info');
+      }
+
       setSelectedDresses([...selectedDresses, dress]);
     }
   };
