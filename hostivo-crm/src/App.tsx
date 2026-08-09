@@ -68,7 +68,18 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
   if (authState === 'mustChangePassword' && session) {
-    return <ChangePasswordScreen displayName={session.displayName} forced onSubmit={handleForcedChangePassword} />;
+    return (
+      <ChangePasswordScreen
+        displayName={session.displayName}
+        forced
+        onSubmit={handleForcedChangePassword}
+        onCancel={() => {
+          auth.logout();
+          setSession(null);
+          setAuthState('loggedOut');
+        }}
+      />
+    );
   }
   if (authState === 'changingPasswordVoluntary' && session) {
     return (

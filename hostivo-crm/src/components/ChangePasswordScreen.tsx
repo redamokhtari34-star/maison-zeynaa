@@ -44,6 +44,20 @@ export function ChangePasswordScreen({ displayName, forced, onSubmit, onCancel }
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-[380px] rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+              title="Retour"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+        </div>
         <h1 className="text-[16px] font-semibold tracking-tight text-slate-900">
           {forced ? 'Choisissez votre mot de passe' : 'Changer le mot de passe'}
         </h1>
