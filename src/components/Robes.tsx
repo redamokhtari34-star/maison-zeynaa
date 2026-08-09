@@ -637,8 +637,14 @@ export default function Robes({
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className={`absolute top-4 ${isRtl ? 'left-4' : 'right-4'} z-10`}>
+                <div className={`absolute top-4 ${isRtl ? 'left-4' : 'right-4'} z-10 flex flex-col ${isRtl ? 'items-start' : 'items-end'} gap-1.5`}>
                   {renderStatusBadge(dress.statut)}
+                  {returningToday(dress.id) && (
+                    <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border flex items-center gap-1.5 w-fit bg-blue-50 border-blue-100 text-blue-700 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                      <RotateCcw size={11} />
+                      {language === 'fr' ? "Revient aujourd'hui" : 'تعود اليوم'}
+                    </span>
+                  )}
                 </div>
                 <div className={`absolute bottom-4 ${isRtl ? 'right-4' : 'left-4'} bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-xl text-white font-bold text-xs uppercase tracking-wide`}>
                   {categoriesList.find(c => c.id === dress.categorie)?.label || dress.categorie}
@@ -661,13 +667,6 @@ export default function Robes({
                       <strong>{t.color} :</strong> {dress.couleur}
                     </span>
                   </div>
-
-                  {returningToday(dress.id) && (
-                    <p className={`mt-2 text-[11px] font-semibold text-blue-600 flex items-center gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <RotateCcw size={11} />
-                      {language === 'fr' ? "Revient aujourd'hui" : 'تعود اليوم'}
-                    </p>
-                  )}
 
                   <p className="text-xs text-gray-500 leading-relaxed mt-4 line-clamp-2">
                     {dress.description || (language === 'fr' ? 'Aucune description fournie.' : 'لا يوجد وصف.')}
