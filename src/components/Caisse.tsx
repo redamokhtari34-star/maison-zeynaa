@@ -4,18 +4,19 @@ import {
   ArrowUpRight, 
   ArrowDownRight, 
   ArrowDownLeft,
-  Trash2, 
-  Wallet, 
+  Trash2,
+  Wallet,
   Banknote,
-  RefreshCcw, 
-  AlertTriangle, 
-  DollarSign, 
-  Calendar, 
-  Clock, 
-  User, 
-  History, 
-  X, 
-  FileText 
+  RefreshCcw,
+  AlertTriangle,
+  DollarSign,
+  Calendar,
+  Clock,
+  User,
+  History,
+  X,
+  FileText,
+  Tag
 } from 'lucide-react';
 import { Transaction, TransactionType, Language } from '../types';
 import { translations } from '../translations';
@@ -52,6 +53,7 @@ export default function Caisse({
   // Forms states
   const [isExpenseOpen, setIsExpenseOpen] = useState(initialOpenExpense || false);
   const [isEmptyCaisseOpen, setIsEmptyCaisseOpen] = useState(false);
+  const [isRecoverOpen, setIsRecoverOpen] = useState(false);
 
   React.useEffect(() => {
     if (initialOpenExpense) {
@@ -68,6 +70,9 @@ export default function Caisse({
   const [beneficiaire, setBeneficiaire] = useState('');
   const [sourceArgent, setSourceArgent] = useState<'caisse' | 'tresorerie'>('caisse');
   const [retraitMontant, setRetraitMontant] = useState<number | ''>('');
+  const [recoverMontant, setRecoverMontant] = useState<number | ''>('');
+  const [recoverCategory, setRecoverCategory] = useState('Salaire / Rémunération');
+  const [recoverNote, setRecoverNote] = useState('');
 
   // Calculations
   const totalEntries = transactions
@@ -216,13 +221,91 @@ export default function Caisse({
     setBeneficiaire('');
   };
 
+  // Handle Categorized Recovery Withdrawal ("Récupérer un montant")
+  const openRecoverModal = () => {
+    if (currentBalance <= 0) return;
+    setRecoverMontant('');
+    setRecoverCategory('Salaire / Rémunération');
+    setRecoverNote('');
+    setIsRecoverOpen(true);
+  };
+
+  const recoverCategoriesMap: { [key: string]: string } = {
+    'Salaire / Rémunération': language === 'fr' ? 'Salaire / Rémunération' : 'راتب / أجرة',
+    'Bénéfice personnel': language === 'fr' ? 'Bénéfice personnel' : 'ربح شخصي',
+    'Loyer': language === 'fr' ? 'Loyer' : 'كراء',
+    'Fournisseur': language === 'fr' ? 'Fournisseur' : 'مورد',
+    'Épargne / Coffre-fort': language === 'fr' ? 'Épargne / Coffre-fort' : 'ادخار / خزنة',
+    'Autre': language === 'fr' ? 'Autre' : 'أخرى'
+  };
+
+  const handleRecoverAmount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountToRecover = Number(recoverMontant);
+
+    if (isNaN(amountToRecover) || amountToRecover <= 0) {
+      notifyError(language === 'fr' ? 'Le montant doit être supérieur à 0 DA.' : 'يجب أن يكون المبلغ أكبر من 0 دج.');
+      return;
+    }
+
+    if (amountToRecover > currentBalance) {
+      notifyError(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
+      return;
+    }
+
+    const categoryLabel = recoverCategoriesMap[recoverCategory] || recoverCategory;
+    const finalNote = recoverNote.trim();
+
+    const newTr: Transaction = {
+      id: crypto.randomUUID(),
+      type: 'vidage_caisse',
+      montant_da: amountToRecover,
+      description: language === 'fr'
+        ? `Montant récupéré - ${categoryLabel}`
+        : `مبلغ مسترجع - ${categoryLabel}`,
+      categorie: recoverCategory,
+      date: todayStr,
+      heure: new Date().toTimeString().split(' ')[0].substring(0, 5),
+      utilisateur: 'Zeyna',
+      note: finalNote || undefined
+    };
+
+    onSaveTransactions([newTr, ...transactions]);
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      mirrorToCloud(async () => {
+        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        await updateTresorerieInDb();
+        return res;
+      }, LOCAL_SYNC_FAIL);
+    }
+
+    addHistoryEntry(
+      language === 'fr' ? 'Montant récupéré' : 'مبلغ مسترجع',
+      language === 'fr'
+        ? `Récupération de ${formatDa(amountToRecover)} pour "${categoryLabel}"${finalNote ? ` - Note: ${finalNote}` : ''}.`
+        : `استرجاع ${formatDa(amountToRecover)} لأجل "${categoryLabel}"${finalNote ? ` - ملاحظة: ${finalNote}` : ''}.`
+    );
+
+    setIsRecoverOpen(false);
+    setRecoverMontant('');
+    setRecoverNote('');
+    setRecoverCategory('Salaire / Rémunération');
+  };
+
   // Expense categories translation
   const categoriesMap: { [key: string]: string } = {
     'Entretien des robes': t.exp_entretien,
     'Achat d\'accessoires': t.exp_achat,
     'Réparation': t.exp_reparation,
     'Transport': t.exp_transport,
-    'Autre': t.exp_autre
+    'Autre': t.exp_autre,
+    'Salaire / Rémunération': recoverCategoriesMap['Salaire / Rémunération'],
+    'Bénéfice personnel': recoverCategoriesMap['Bénéfice personnel'],
+    'Loyer': recoverCategoriesMap['Loyer'],
+    'Fournisseur': recoverCategoriesMap['Fournisseur'],
+    'Épargne / Coffre-fort': recoverCategoriesMap['Épargne / Coffre-fort']
   };
 
   return (
@@ -262,6 +345,17 @@ export default function Caisse({
           >
             <Wallet size={14} />
             <span>{language === 'fr' ? 'Effectuer un retrait' : 'إجراء سحب'}</span>
+          </button>
+
+          <button
+            id="open-recover-amount-btn"
+            onClick={openRecoverModal}
+            disabled={currentBalance <= 0}
+            title={currentBalance <= 0 ? (language === 'fr' ? 'La caisse est vide (0 DA)' : 'الصندوق فارغ (0 دج)') : undefined}
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-slate-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-violet-600/10 transition-all"
+          >
+            <Tag size={14} />
+            <span>{language === 'fr' ? 'Récupérer un montant' : 'استرجاع مبلغ'}</span>
           </button>
         </div>
       </div>
@@ -716,6 +810,137 @@ export default function Caisse({
                 className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
               >
                 {language === 'fr' ? 'Valider le retrait' : 'تأكيد السحب'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Categorized Recovery Modal ("Récupérer un montant") */}
+      {isRecoverOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setIsRecoverOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <form onSubmit={handleRecoverAmount} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-violet-100">
+            <div className={`p-5 border-b border-violet-100 bg-violet-50/80 flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2.5 text-violet-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className="p-2 bg-violet-100 text-violet-700 rounded-xl">
+                  <Tag size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">
+                    {language === 'fr' ? 'Récupérer un montant' : 'استرجاع مبلغ'}
+                  </h3>
+                  <p className="text-[11px] text-violet-700 font-medium">
+                    {language === 'fr' ? 'Choisissez une catégorie et le montant à récupérer' : 'اختاري فئة والمبلغ المراد استرجاعه'}
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setIsRecoverOpen(false)} className="p-1 text-violet-800 hover:bg-violet-100 rounded-lg transition-colors cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Card showing current available balance */}
+              <div className="p-4 bg-violet-600 text-white rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] uppercase font-bold text-violet-100 block">
+                    {language === 'fr' ? 'Solde disponible en caisse' : 'الرصيد المتوفر في الصندوق'}
+                  </span>
+                  <span className="text-xl font-black font-mono tracking-tight text-white block mt-0.5">
+                    {formatDa(currentBalance)}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <Wallet size={20} className="text-white" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 block">
+                  {language === 'fr' ? 'Catégorie *' : 'الفئة *'}
+                </label>
+                <select
+                  id="form-recover-category"
+                  value={recoverCategory}
+                  onChange={(e) => setRecoverCategory(e.target.value)}
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:border-violet-500"
+                >
+                  {Object.keys(recoverCategoriesMap).map(key => (
+                    <option key={key} value={key}>{recoverCategoriesMap[key]}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 block">
+                  {language === 'fr' ? 'Montant à récupérer (DA) *' : 'المبلغ المراد استرجاعه (دج) *'}
+                </label>
+                <div className="relative">
+                  <input
+                    id="form-recover-montant"
+                    type="number"
+                    required
+                    min={1}
+                    max={currentBalance}
+                    value={recoverMontant}
+                    onChange={(e) => setRecoverMontant(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="0"
+                    className={`w-full p-3.5 pr-14 border rounded-xl text-base font-extrabold font-mono focus:outline-none transition-colors ${
+                      typeof recoverMontant === 'number' && recoverMontant > currentBalance
+                        ? 'border-rose-400 bg-rose-50/30 text-rose-700'
+                        : 'border-neutral-200 focus:border-violet-500'
+                    } ${isRtl ? 'text-right' : 'text-left'}`}
+                  />
+                  <span className="absolute right-3.5 top-3.5 text-xs font-bold text-gray-400 font-mono pointer-events-none">
+                    DA
+                  </span>
+                </div>
+
+                {typeof recoverMontant === 'number' && recoverMontant > currentBalance && (
+                  <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                    <AlertTriangle size={12} />
+                    <span>{language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible.' : 'المبلغ لا يمكن أن يتجاوز الرصيد المتوفر.'}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 block">
+                  {language === 'fr' ? 'Note (facultatif)' : 'ملاحظات (اختياري)'}
+                </label>
+                <input
+                  id="form-recover-note"
+                  type="text"
+                  value={recoverNote}
+                  onChange={(e) => setRecoverNote(e.target.value)}
+                  placeholder={language === 'fr' ? 'Ex: Salaire du mois d\'août...' : 'مثال: راتب شهر أوت...'}
+                  className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 ${
+                    isRtl ? 'text-right' : 'text-left'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-gray-100 flex gap-3 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setIsRecoverOpen(false)}
+                className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="submit"
+                id="confirm-recover-btn"
+                disabled={
+                  recoverMontant === '' ||
+                  Number(recoverMontant) <= 0 ||
+                  Number(recoverMontant) > currentBalance
+                }
+                className="flex-1 py-2.5 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                {language === 'fr' ? 'Valider la récupération' : 'تأكيد الاسترجاع'}
               </button>
             </div>
           </form>
