@@ -1,0 +1,49 @@
+# Supabase Local Development Configuration
+# Generated for hostivo-crm project
+
+[project]
+project_id = "ldmwnqbuwryqnoftbxfh"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+default_schema = "public"
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54323
+major_version = 15
+
+[realtime]
+enabled = true
+max_bytes_per_second = 1048576
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+smtp_port = 54324
+pop3_port = 54325
+api_port = 54326
+
+[storage]
+file_size_limit = 52428800
+
+[auth]
+enabled = true
+email.enable_signup = true
+email.double_confirm_changes = true
+email.double_confirm_change_email = true
+email.max_enrolled_sec = 864000
+email.autoconfirm = false
+email.template.confirmation_link = "/auth/v1/verify?token={{.ConfirmationURL}}&type=email_change"
+email.template.invite_link = "/auth/v1/verify?token={{.ConfirmationURL}}&type=invite"
+email.template.magic_link = "/auth/v1/verify?token={{.ConfirmationURL}}&type=magiclink"
+email.template.recovery_link = "/auth/v1/verify?token={{.ConfirmationURL}}&type=recovery"
+
+[functions]
+nodejs_version = 18

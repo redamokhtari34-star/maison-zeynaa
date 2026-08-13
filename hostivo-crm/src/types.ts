@@ -73,3 +73,19 @@ export interface Session {
   displayName: string;
   mustChangePassword: boolean;
 }
+
+/** Paiement Stripe — voir supabase/migrations/20240813_create_stripe_payments_table.sql. */
+export interface StripePayment {
+  id: string;
+  stripe_payment_intent_id: string;
+  client_id?: string;
+  customer_email: string;
+  customer_name: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'requires_payment_method';
+  failure_reason?: string;
+  created_at: string;
+  updated_at: string;
+  last_reminder_sent_at?: string;
+}

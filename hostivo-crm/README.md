@@ -159,6 +159,64 @@ src/
   types.ts      modèle de données Client
 ```
 
+## Intégration Stripe
+
+L'app peut créer automatiquement des clients Hostivo via Stripe et notifier
+des paiements échoués.
+
+### Configuration
+
+1. **Ajouter les secrets Stripe** dans **Project Settings → Secrets** du
+   [dashboard Supabase](https://supabase.com/dashboard) du projet `ldmwnqbuwryqnoftbxfh` :
+
+   - `STRIPE_SECRET_KEY` : votre clé secrète Stripe (commence par `sk_live_` ou
+     `sk_test_`)
+   - `STRIPE_WEBHOOK_SECRET` : le secret du webhook Stripe (commence par
+     `whsec_`) — généré lors de la création du webhook ci-dessous
+   - `RESEND_API_KEY` : votre clé API Resend pour envoyer les mails de rappel
+     (optionnel, déjà dans les secrets)
+   - `ADMIN_EMAIL` : l'adresse email qui recevra les notifications de paiements
+     échoués (ex. `contact@hostivo.fr`)
+
+2. **Créer le webhook dans Stripe** :
+
+   - Allez sur [dashboard.stripe.com](https://dashboard.stripe.com) →
+     **Developers → Webhooks** → **Add endpoint**.
+   - **Endpoint URL** : `https://ldmwnqbuwryqnoftbxfh.supabase.co/functions/v1/stripe-webhook`
+   - **Events to send** : sélectionnez au minimum :
+     - `payment_intent.succeeded`
+     - `payment_intent.payment_failed`
+     - `payment_intent.requires_action`
+   - Cliquez sur **Reveal** pour voir le secret du webhook (`whsec_...`), et
+     copiez-le dans le secret `STRIPE_WEBHOOK_SECRET` (voir étape 1).
+
+3. **Déployer les Edge Functions** : Les deux fonctions
+   `stripe-webhook` et `send-payment-reminder` se trouvent dans
+   `supabase/functions/` et sont déployées automatiquement lors du
+   `supabase deploy` ou du redéploiement du projet.
+
+### Flux
+
+1. Un client passe une commande via votre plateforme Stripe avec ses
+   informations (nom, email, téléphone, secteur).
+2. **`payment_intent.succeeded`** : Stripe envoie le webhook → la fonction
+   `stripe-webhook` crée automatiquement une ligne dans `hostivo_clients` et
+   enregistre le paiement dans `stripe_payments`.
+3. **`payment_intent.payment_failed`** : Stripe envoie le webhook → la fonction
+   enregistre l'échec et son motif.
+4. Dans l'app, le bouton **Paiements** (en haut à droite) affiche les
+   paiements en attente, échoués ou nécessitant une action du client.
+5. Cliquez sur **Rappeler** pour envoyer un email de notification à
+   `ADMIN_EMAIL` via Resend, ou **Supprimer** pour nettoyer les vieux
+   enregistrements.
+
+### Tables
+
+- `public.stripe_payments` : un enregistrement par intent Stripe, avec le
+  statut du paiement (pending, succeeded, failed, requires_payment_method),
+  la raison de l'échec le cas échéant, et le timestamp du dernier rappel
+  envoyé.
+
 ## Base de données Supabase
 
 Le projet réutilise un projet Supabase existant (partagé avec l'app Maison
@@ -169,6 +227,7 @@ Zeyna), avec des tables dédiées préfixées `hostivo_` pour ne rien mélanger 
 - `public.hostivo_profiles` : un profil par compte utilisateur (`id` = même
   UUID que dans `auth.users`), avec le nom affiché et l'obligation ou non de
   changer son mot de passe.
+- `public.stripe_payments` : suivi des paiements Stripe.
 
-Les deux tables ont RLS activé, avec des règles réservées au rôle
+Les tables ont RLS activé, avec des règles réservées au rôle
 `authenticated` — aucun accès anonyme, contrairement à l'ancien Sheet public.

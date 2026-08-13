@@ -9,9 +9,10 @@ interface Props {
   session: Session | null;
   onChangePassword: () => void;
   onLogout: () => void;
+  onShowPayments?: () => void;
 }
 
-export function TopBar({ query, onQueryChange, source, loading, onRefresh, session, onChangePassword, onLogout }: Props) {
+export function TopBar({ query, onQueryChange, source, loading, onRefresh, session, onChangePassword, onLogout, onShowPayments }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
       <div className="flex items-center gap-2.5">
@@ -46,6 +47,19 @@ export function TopBar({ query, onQueryChange, source, loading, onRefresh, sessi
         <span className={`h-1.5 w-1.5 rounded-full ${source === 'supabase' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
         {loading ? 'Synchronisation…' : source === 'supabase' ? 'Connecté à Supabase' : 'Mode démo'}
       </button>
+
+      {onShowPayments && (
+        <button
+          onClick={onShowPayments}
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[11.5px] font-medium text-rose-600 hover:border-rose-300 hover:bg-rose-100"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4M12 16h.01" />
+          </svg>
+          Paiements
+        </button>
+      )}
 
       {session && (
         <div className="flex items-center gap-1.5 whitespace-nowrap">

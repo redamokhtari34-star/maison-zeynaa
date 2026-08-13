@@ -3,6 +3,7 @@ import { AddClientModal } from './components/AddClientModal';
 import { ChangePasswordScreen } from './components/ChangePasswordScreen';
 import { ClientDetail } from './components/ClientDetail';
 import { ClientTable, type SortKey } from './components/ClientTable';
+import { FailedPayments } from './components/FailedPayments';
 import { Filters } from './components/Filters';
 import { LoginScreen } from './components/LoginScreen';
 import { StatsBar } from './components/StatsBar';
@@ -123,6 +124,7 @@ function CrmApp({
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [selected, setSelected] = useState<Client | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPayments, setShowPayments] = useState(false);
 
   async function load() {
     if (!isSupabaseConfigured) return;
@@ -261,6 +263,7 @@ function CrmApp({
           session={session}
           onChangePassword={onChangePassword}
           onLogout={onLogout}
+          onShowPayments={() => setShowPayments(true)}
         />
       </div>
 
@@ -301,6 +304,7 @@ function CrmApp({
 
       <ClientDetail client={selected} onClose={() => setSelected(null)} canEdit={canEdit} onSave={handleSaveClient} />
       <AddClientModal open={showAddModal} onClose={() => setShowAddModal(false)} onCreate={handleCreateClient} secteurs={secteurs} />
+      <FailedPayments open={showPayments} onClose={() => setShowPayments(false)} />
     </div>
   );
 }
