@@ -28,6 +28,37 @@ import { mirrorToCloud } from '../lib/sync';
 const LOCAL_SYNC_FAIL = "Modification enregistrée sur cet appareil, "
   + "mais la synchronisation avec le cloud a échoué.";
 
+// A single withdrawal entry, shared between the sidebar preview (a handful of
+// rows) and the "Tout voir" modal (the full journal) so the two never drift.
+const EmptyLogCard: React.FC<{
+  emp: Transaction;
+  language: Language;
+  isRtl: boolean;
+  formatDa: (amount: number) => string;
+}> = ({ emp, language, isRtl, formatDa }) => {
+  return (
+    <div className="p-4 rounded-2xl border border-amber-100/60 bg-amber-50/10 space-y-2.5">
+      <div className={`flex justify-between items-baseline ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <span className="text-[10px] text-gray-400 font-mono">{emp.date} @ {emp.heure}</span>
+        <span className="text-sm font-black text-amber-600 font-mono">-{formatDa(emp.montant_da)}</span>
+      </div>
+      <p className={`text-xs text-gray-600 leading-relaxed font-medium ${isRtl ? 'text-right' : 'text-left'}`}>
+        {emp.beneficiaire ? (
+          language === 'fr'
+            ? `Retrait de ${formatDa(emp.montant_da)} par ${emp.beneficiaire}${emp.note ? ` - Note: ${emp.note}` : ''}`
+            : `سحب ${formatDa(emp.montant_da)} بواسطة ${emp.beneficiaire}${emp.note ? ` - ملاحظة: ${emp.note}` : ''}`
+        ) : (
+          emp.note || (language === 'fr' ? 'Retrait d’argent de la caisse pour dépôt bancaire ou coffre-fort.' : 'سحب أموال الصندوق للإيداع أو لتسليمها لرب العمل.')
+        )}
+      </p>
+      <div className={`flex justify-between text-[10px] text-gray-400 pt-1.5 border-t border-dashed border-amber-100/50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <span>👤 {emp.utilisateur}</span>
+        <span>✓ {language === 'fr' ? 'Opération validée' : 'عملية مؤكدة'}</span>
+      </div>
+    </div>
+  );
+};
+
 interface CaisseProps {
   transactions: Transaction[];
   onSaveTransactions: (transactions: Transaction[]) => void;
@@ -54,6 +85,7 @@ export default function Caisse({
   const [isExpenseOpen, setIsExpenseOpen] = useState(initialOpenExpense || false);
   const [isEmptyCaisseOpen, setIsEmptyCaisseOpen] = useState(false);
   const [isRecoverOpen, setIsRecoverOpen] = useState(false);
+  const [isEmptiesJournalOpen, setIsEmptiesJournalOpen] = useState(false);
 
   React.useEffect(() => {
     if (initialOpenExpense) {
@@ -506,10 +538,21 @@ export default function Caisse({
 
         {/* Right: Cash Empties Historical trace logs */}
         <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
-          <h3 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
-            <History size={16} className="text-amber-500" />
-            <span>{language === 'fr' ? 'Journal des vidages' : 'سجل تفريغ الصندوق'}</span>
-          </h3>
+          <div className={`flex items-center justify-between mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <History size={16} className="text-amber-500" />
+              <span>{language === 'fr' ? 'Journal des vidages' : 'سجل تفريغ الصندوق'}</span>
+            </h3>
+            {cashEmpties.length > 0 && (
+              <button
+                id="open-empties-journal-btn"
+                onClick={() => setIsEmptiesJournalOpen(true)}
+                className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
+              >
+                {language === 'fr' ? 'Tout voir' : 'عرض الكل'}
+              </button>
+            )}
+          </div>
 
           {cashEmpties.length === 0 ? (
             <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-neutral-200 flex-1 flex flex-col items-center justify-center">
@@ -518,32 +561,37 @@ export default function Caisse({
             </div>
           ) : (
             <div className="space-y-4 max-h-[450px] overflow-y-auto pr-1">
-              {cashEmpties.map(emp => (
-                <div key={emp.id} className="p-4 rounded-2xl border border-amber-100/60 bg-amber-50/10 space-y-2.5">
-                  <div className={`flex justify-between items-baseline ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <span className="text-[10px] text-gray-400 font-mono">{emp.date} @ {emp.heure}</span>
-                    <span className="text-sm font-black text-amber-600 font-mono">-{formatDa(emp.montant_da)}</span>
-                  </div>
-                  <p className={`text-xs text-gray-600 leading-relaxed font-medium ${isRtl ? 'text-right' : 'text-left'}`}>
-                    {emp.beneficiaire ? (
-                      language === 'fr' 
-                        ? `Retrait de ${formatDa(emp.montant_da)} par ${emp.beneficiaire}${emp.note ? ` - Note: ${emp.note}` : ''}`
-                        : `سحب ${formatDa(emp.montant_da)} بواسطة ${emp.beneficiaire}${emp.note ? ` - ملاحظة: ${emp.note}` : ''}`
-                    ) : (
-                      emp.note || (language === 'fr' ? 'Retrait d’argent de la caisse pour dépôt bancaire ou coffre-fort.' : 'سحب أموال الصندوق للإيداع أو لتسليمها لرب العمل.')
-                    )}
-                  </p>
-                  <div className={`flex justify-between text-[10px] text-gray-400 pt-1.5 border-t border-dashed border-amber-100/50 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <span>👤 {emp.utilisateur}</span>
-                    <span>✓ {language === 'fr' ? 'Opération validée' : 'عملية مؤكدة'}</span>
-                  </div>
-                </div>
+              {cashEmpties.slice(0, 5).map(emp => (
+                <EmptyLogCard key={emp.id} emp={emp} language={language} isRtl={isRtl} formatDa={formatDa} />
               ))}
             </div>
           )}
         </div>
 
       </div>
+
+      {/* Full Cash Empties Journal Modal ("Tout voir") */}
+      {isEmptiesJournalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setIsEmptiesJournalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up flex flex-col max-h-[85vh]">
+            <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <History size={16} className="text-amber-500" />
+                <span>{language === 'fr' ? 'Journal des vidages' : 'سجل تفريغ الصندوق'}</span>
+              </h3>
+              <button onClick={() => setIsEmptiesJournalOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {cashEmpties.map(emp => (
+                <EmptyLogCard key={emp.id} emp={emp} language={language} isRtl={isRtl} formatDa={formatDa} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Expense Modal Form */}
       {isExpenseOpen && (
