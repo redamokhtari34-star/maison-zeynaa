@@ -170,15 +170,20 @@ export default function Reservations({
     const res = reservations.find(r => r.id === id);
     if (!res) return;
 
-    const hasDeposit = res.montant_paye_da > 0;
+    // The initial deposit — taken when the booking was first made — stays
+    // counted as revenue even on cancellation; only money collected afterward
+    // (a correction, the balance) is treated as a refund.
+    const initialDeposit = Math.min(res.acompte_initial_da ?? res.montant_paye_da, res.montant_paye_da);
+    const refundAmount = res.montant_paye_da - initialDeposit;
+    const hasRefund = refundAmount > 0;
 
-    // A cancelled booking whose client already paid something is a refund,
-    // not just a deletion — say so up front, since it changes what happens
-    // to the till.
-    const msg = hasDeposit
+    // A cancelled booking whose client paid beyond the initial deposit is a
+    // partial refund, not just a deletion — say so up front, since it changes
+    // what happens to the till.
+    const msg = hasRefund
       ? (language === 'fr'
-          ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?\n\n${formatDa(res.montant_paye_da)} avaient été versés par la cliente. Ce montant sera retiré du chiffre d'affaires, comme un remboursement.`
-          : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟\n\nتم دفع ${formatDa(res.montant_paye_da)} من طرف الزبونة. سيتم خصم هذا المبلغ من رقم الأعمال كاسترجاع.`)
+          ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?\n\n${formatDa(refundAmount)} versés en plus de l'acompte initial seront retirés du chiffre d'affaires, comme un remboursement. L'acompte initial de ${formatDa(initialDeposit)} reste comptabilisé.`
+          : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟\n\nسيتم خصم ${formatDa(refundAmount)} المدفوعة زيادة عن العربون الأولي من رقم الأعمال كاسترجاع. يبقى العربون الأولي البالغ ${formatDa(initialDeposit)} محتسباً.`)
       : (language === 'fr'
           ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
           : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`);
@@ -187,7 +192,7 @@ export default function Reservations({
       title: language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز',
       message: msg,
       danger: true,
-      confirmLabel: hasDeposit
+      confirmLabel: hasRefund
         ? (language === 'fr' ? 'Supprimer et rembourser' : 'حذف واسترجاع المبلغ')
         : (language === 'fr' ? 'Supprimer' : 'حذف'),
       cancelLabel: language === 'fr' ? 'Annuler' : 'إلغاء'
@@ -200,14 +205,15 @@ export default function Reservations({
       const updated = reservations.filter(r => r.id !== id);
       onSaveReservations(updated);
 
-      // The deposit leaves the till the same way it came in — a signed
-      // 'entree' entry — so revenue and cash-in-hand, which both sum that
-      // type directly, net back out exactly what was returned to the client.
-      if (hasDeposit) {
+      // Only the part paid beyond the initial deposit leaves the till — a
+      // signed 'entree' entry, the same way it came in — so revenue and
+      // cash-in-hand, which both sum that type directly, net back out exactly
+      // what was returned to the client. The initial deposit stays counted.
+      if (hasRefund) {
         const refundTr: Transaction = {
           id: crypto.randomUUID(),
           type: 'entree',
-          montant_da: -res.montant_paye_da,
+          montant_da: -refundAmount,
           description: `Remboursement ${itemsLabel(res)} - ${getClientName(res.cliente_id)}`,
           categorie: 'Réservation',
           date: todayStr,
@@ -223,8 +229,8 @@ export default function Reservations({
 
       addHistoryEntry(
         language === 'fr' ? 'Annulation de réservation' : 'إلغاء حجز',
-        hasDeposit
-          ? `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée. Acompte de ${formatDa(res.montant_paye_da)} remboursé.`
+        hasRefund
+          ? `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée. ${formatDa(refundAmount)} remboursés, acompte initial de ${formatDa(initialDeposit)} conservé.`
           : `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée.`
       );
     }
@@ -495,6 +501,9 @@ export default function Reservations({
       montant_total_da: totalCost,
       caution_da: totalCaution,
       montant_paye_da: montantPaye,
+      // Corrections change what's owed and what's been paid, never the
+      // original deposit — it was fixed at creation and stays that way.
+      acompte_initial_da: existing.acompte_initial_da ?? existing.montant_paye_da,
       reste_a_payer_da: remainingCost,
       statut,
       notes,
@@ -694,6 +703,9 @@ export default function Reservations({
       montant_total_da: totalCost,
       caution_da: totalCaution,
       montant_paye_da: montantPaye,
+      // Recorded once, at creation, as the non-refundable initial deposit —
+      // any amount paid later stays distinct from it.
+      acompte_initial_da: montantPaye,
       reste_a_payer_da: remainingCost,
       statut: dateSortie > todayStr ? 'future' : 'en_cours',
       notes,
@@ -783,6 +795,7 @@ export default function Reservations({
       statut_reservation: localReservation.statut,
       prix_total: Number(totalCost) || 0,
       acompte: Number(montantPaye) || 0,
+      acompte_initial: Number(montantPaye) || 0,
       reste_a_payer: Number(remainingCost) || 0,
       // The deposit is money owed back to the client — it must not stay local.
       caution_totale: Number(totalCaution) || 0,

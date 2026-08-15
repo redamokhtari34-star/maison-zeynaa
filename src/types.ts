@@ -63,6 +63,10 @@ export interface Reservation {
   montant_total_da: number;
   caution_da: number;
   montant_paye_da: number;
+  // The deposit taken when the booking was first made, kept separate from any
+  // amount added afterward (a correction, the balance) — cancelling a booking
+  // refunds only what came after this, never this initial deposit itself.
+  acompte_initial_da?: number;
   reste_a_payer_da: number;
   statut: ReservationStatus;
   notes?: string;
