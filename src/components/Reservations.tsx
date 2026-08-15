@@ -88,6 +88,11 @@ export default function Reservations({
   // existing one; editingId tells the two apart and is the booking being
   // corrected.
   const [isWizardOpen, setIsWizardOpen] = useState(initialOpenForm || false);
+  // Guards the submit button against a double-click/double-tap creating the
+  // same booking (and its deposit transaction) twice — the local write is
+  // synchronous and fast enough that a second tap lands before any UI
+  // feedback appears.
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -315,6 +320,7 @@ export default function Reservations({
     setMontantPaye(0);
     setNotes('');
     setWizardStep(1);
+    setIsSubmitting(false);
     setIsWizardOpen(true);
   };
 
@@ -353,6 +359,7 @@ export default function Reservations({
     setMontantPaye(res.montant_paye_da);
     setNotes(res.notes || '');
     setWizardStep(1);
+    setIsSubmitting(false);
     setIsWizardOpen(true);
   };
 
@@ -461,6 +468,7 @@ export default function Reservations({
   // changed; what it does not collect — the identifier, the creation date, the
   // history already attached to the booking — is carried over untouched.
   const handleUpdateReservation = async () => {
+    if (isSubmitting) return;
     const existing = reservations.find(r => r.id === editingId);
     if (!existing) return;
 
@@ -474,6 +482,8 @@ export default function Reservations({
       notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const clientPhone = clientPhoneInput.trim();
     const { localClientId, localMatch } = resolveClient(clientName, clientPhone);
@@ -665,6 +675,7 @@ export default function Reservations({
   // Save Booking Wizard
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (selectedDresses.length === 0 && selectedBijoux.length === 0) {
       notifyError(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
       return;
@@ -675,6 +686,8 @@ export default function Reservations({
       notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const clientPhone = clientPhoneInput.trim();
 
@@ -1563,8 +1576,9 @@ export default function Reservations({
                 <button
                   type="button"
                   id="wizard-submit-btn"
+                  disabled={isSubmitting}
                   onClick={editingId ? handleUpdateReservation : handleCreateReservation}
-                  className="py-3 px-6 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  className="py-3 px-6 bg-orange-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {editingId
                     ? (language === 'fr' ? 'Enregistrer les modifications' : 'حفظ التعديلات')
