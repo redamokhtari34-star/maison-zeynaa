@@ -481,6 +481,7 @@ export function mapReservationFromDb(row: any, robeRows: any[] = [], bijouRows: 
     montant_total_da: Number(row.prix_total || 0),
     caution_da: Number(row.caution_totale || 0),
     montant_paye_da: Number(row.acompte || 0),
+    acompte_initial_da: Number(row.acompte_initial ?? row.acompte ?? 0),
     reste_a_payer_da: Number(row.reste_a_payer || 0),
     statut: (row.statut_reservation || 'future') as ReservationStatus,
     notes: row.notes || '',
@@ -501,6 +502,7 @@ export function mapReservationToDb(res: Reservation) {
     statut_reservation: res.statut || 'future',
     prix_total: Number(res.montant_total_da) || 0,
     acompte: Number(res.montant_paye_da) || 0,
+    acompte_initial: Number(res.acompte_initial_da ?? res.montant_paye_da) || 0,
     reste_a_payer: Number(res.reste_a_payer_da) || 0
   };
   if (isUuid(res.id)) {
