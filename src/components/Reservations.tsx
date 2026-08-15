@@ -179,14 +179,22 @@ export default function Reservations({
 
     // A cancelled booking whose client paid beyond the initial deposit is a
     // partial refund, not just a deletion — say so up front, since it changes
-    // what happens to the till.
+    // what happens to the till. Even when there's nothing to refund, a
+    // deposit that stays fully counted still needs to be said out loud —
+    // otherwise the dialog goes silent about real money for reservations
+    // whose initial deposit covers everything paid so far (e.g. ones from
+    // before this distinction existed).
     const msg = hasRefund
       ? (language === 'fr'
           ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?\n\n${formatDa(refundAmount)} versés en plus de l'acompte initial seront retirés du chiffre d'affaires, comme un remboursement. L'acompte initial de ${formatDa(initialDeposit)} reste comptabilisé.`
           : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟\n\nسيتم خصم ${formatDa(refundAmount)} المدفوعة زيادة عن العربون الأولي من رقم الأعمال كاسترجاع. يبقى العربون الأولي البالغ ${formatDa(initialDeposit)} محتسباً.`)
-      : (language === 'fr'
-          ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
-          : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`);
+      : initialDeposit > 0
+        ? (language === 'fr'
+            ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?\n\nL'acompte initial de ${formatDa(initialDeposit)} déjà versé reste comptabilisé dans le chiffre d'affaires, aucun remboursement ne sera effectué.`
+            : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟\n\nالعربون الأولي البالغ ${formatDa(initialDeposit)} المدفوع مسبقاً يبقى محتسباً في رقم الأعمال، لن يتم أي استرجاع.`)
+        : (language === 'fr'
+            ? `Êtes-vous sûr d'annuler et de supprimer définitivement la réservation #${id.toUpperCase()} ?`
+            : `هل أنت متأكد من إلغاء وحذف الحجز رقم #${id.toUpperCase()} نهائياً؟`);
 
     if (await askConfirm({
       title: language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز',
@@ -231,7 +239,9 @@ export default function Reservations({
         language === 'fr' ? 'Annulation de réservation' : 'إلغاء حجز',
         hasRefund
           ? `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée. ${formatDa(refundAmount)} remboursés, acompte initial de ${formatDa(initialDeposit)} conservé.`
-          : `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée.`
+          : initialDeposit > 0
+            ? `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée. Acompte initial de ${formatDa(initialDeposit)} conservé, aucun remboursement.`
+            : `La réservation #${id.toUpperCase()} de la cliente ${getClientName(res.cliente_id)} a été annulée.`
       );
     }
   };
