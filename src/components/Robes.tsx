@@ -476,7 +476,7 @@ export default function Robes({
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
+      <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search bar */}
           <div className="relative flex-1">
@@ -489,7 +489,7 @@ export default function Robes({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-neutral-200 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-3 pr-4 pl-11 bg-slate-50 border border-neutral-200 rounded-2xl text-sm focus:outline-none focus:border-violet-500 focus:bg-neutral-100 transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -613,7 +613,7 @@ export default function Robes({
 
       {/* Dresses Grid */}
       {sortedDresses.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
+        <div className="bg-neutral-100 py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <Search size={28} />
           </div>
@@ -627,7 +627,7 @@ export default function Robes({
           {sortedDresses.map(dress => (
             <div
               key={dress.id}
-              className="bg-white rounded-2xl overflow-hidden border border-neutral-200 transition-all duration-350 group flex flex-col justify-between"
+              className="bg-neutral-100 rounded-2xl overflow-hidden border border-neutral-200 transition-all duration-350 group flex flex-col justify-between"
             >
               {/* Image Header with status badges */}
               <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden shrink-0">
@@ -731,11 +731,11 @@ export default function Robes({
           {/* Overlay background */}
           <div 
             onClick={() => setIsFormOpen(false)}
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           />
 
           {/* Sliding panel */}
-          <div className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
+          <div className="relative w-full max-w-lg h-full bg-neutral-100 shadow-2xl flex flex-col z-10 animate-slide-in">
             {/* Header */}
             <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
@@ -783,7 +783,7 @@ export default function Robes({
                     id="form-dress-cat"
                     value={categorie}
                     onChange={(e) => setCategorie(e.target.value as DressCategory)}
-                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-neutral-100"
                   >
                     {categoriesList.map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -830,7 +830,7 @@ export default function Robes({
                     id="form-dress-status"
                     value={statut}
                     onChange={(e) => setStatut(e.target.value as DressStatus)}
-                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-neutral-100"
                   >
                     <option value="disponible">{t.statut_disponible}</option>
                     <option value="en_entretien">{t.statut_en_entretien}</option>

@@ -188,7 +188,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     return (
       <Tag
         onClick={onClick}
-        className={`rounded-2xl border border-neutral-200 bg-white p-5 ${isRtl ? 'text-right' : 'text-left'} ${
+        className={`rounded-2xl border border-neutral-200 bg-neutral-100 p-5 ${isRtl ? 'text-right' : 'text-left'} ${
           onClick ? 'w-full cursor-pointer transition-colors hover:border-orange-300 hover:bg-orange-50/30' : ''
         }`}
       >
@@ -230,7 +230,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
               onClick={() => setPeriod(p.id)}
               className={`rounded-lg px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
                 period === p.id
-                  ? 'bg-white text-neutral-900 shadow-sm'
+                  ? 'bg-neutral-100 text-neutral-900 shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-800'
               }`}
             >
@@ -266,7 +266,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
         />
 
         {/* The one feature surface: cash in hand, with the single orange action */}
-        <div className="rounded-2xl bg-neutral-950 p-5 text-white">
+        <div className="rounded-2xl bg-violet-600 p-5 text-white">
           <div className={`flex items-start justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="eyebrow leading-tight !text-neutral-400">
               {language === 'fr' ? 'Argent en caisse' : 'النقد في الصندوق'}
@@ -310,7 +310,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
               : <span className="text-[15px] italic text-neutral-400">{language === 'fr' ? 'Aucune réservation' : 'لا توجد حجوزات'}</span>
           },
         ].map(item => (
-          <div key={item.label} className="rounded-2xl border border-neutral-200 bg-white px-5 py-4">
+          <div key={item.label} className="rounded-2xl border border-neutral-200 bg-neutral-100 px-5 py-4">
             <p className="eyebrow">{item.label}</p>
             <p className="mt-2 flex items-baseline gap-1.5">{item.body}</p>
           </div>
@@ -326,7 +326,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           <button
             key={m.label}
             onClick={() => setCurrentTab(m.tab)}
-            className={`flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-left transition-colors hover:border-neutral-300 ${isRtl ? 'flex-row-reverse text-right' : ''}`}
+            className={`flex items-center gap-4 rounded-2xl border border-neutral-200 bg-neutral-100 px-5 py-4 text-left transition-colors hover:border-neutral-300 ${isRtl ? 'flex-row-reverse text-right' : ''}`}
           >
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-neutral-200 text-neutral-600">
               {m.icon}
@@ -343,7 +343,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
       </div>
 
       {/* ── Quick actions ───────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+      <section className="rounded-2xl border border-neutral-200 bg-neutral-100 p-5 sm:p-6">
         <h3 className={`flex items-center gap-2 text-base text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <Sparkles size={15} className="text-neutral-400" />
           {t.quick_actions}
@@ -370,7 +370,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
       {/* ── Alerts & activity ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Daily alerts */}
-        <section className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+        <section className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-100 p-5 sm:p-6">
           <h3 className="text-base text-neutral-900">
             {language === 'fr' ? 'Alertes quotidiennes' : 'التنبيهات اليومية'}
           </h3>
@@ -418,7 +418,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
         </section>
 
         {/* Recent activity */}
-        <section className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+        <section className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-100 p-5 sm:p-6">
           <div className={`flex items-center justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <h3 className="text-base text-neutral-900">{t.recent_activity}</h3>
             <button
@@ -460,10 +460,10 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
               onClick={() => setIsRevenueModalOpen(false)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             />
             <div
-              className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-up"
+              className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-neutral-100 shadow-2xl animate-scale-up"
             >
               <div className={`flex items-center justify-between border-b border-neutral-200 bg-neutral-50 p-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div className={isRtl ? 'text-right' : 'text-left'}>

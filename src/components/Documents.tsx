@@ -65,7 +65,7 @@ export default function Documents({
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'} print-hide-all`} dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-neutral-200 print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-neutral-100 p-6 rounded-2xl border border-neutral-200 print:hidden">
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
             {language === 'fr' ? 'Reçus de Caisse & Contrats' : 'سندات القبض وعقود الكراء'}
@@ -93,7 +93,7 @@ export default function Documents({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:block">
         
         {/* Left: list of reservations to pick for print */}
-        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-neutral-200 flex flex-col h-[550px] print:hidden">
+        <div className="lg:col-span-1 bg-neutral-100 p-5 rounded-2xl border border-neutral-200 flex flex-col h-[550px] print:hidden">
           <h3 className="text-sm font-bold text-gray-900 mb-4">{language === 'fr' ? 'Sélectionner une réservation' : 'اختر الحجز لإصدار السند'}</h3>
           
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
@@ -137,7 +137,7 @@ export default function Documents({
         {/* Right: Printable Invoice Frame */}
         <div className="lg:col-span-2 print:w-full">
           {selectedRes && clientInfo ? (
-            <div className="bg-white p-8 rounded-2xl border border-neutral-200 max-w-2xl mx-auto printable-invoice-box print:border-0 print:p-0 print:shadow-none">
+            <div className="bg-neutral-100 p-8 rounded-2xl border border-neutral-200 max-w-2xl mx-auto printable-invoice-box print:border-0 print:p-0 print:shadow-none">
               
               {/* Receipt Header logo & salon info */}
               <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-6 border-b border-neutral-200 ${
@@ -259,7 +259,7 @@ export default function Documents({
 
             </div>
           ) : (
-            <div className="bg-white py-20 px-4 rounded-2xl border border-neutral-200 text-center print:hidden">
+            <div className="bg-neutral-100 py-20 px-4 rounded-2xl border border-neutral-200 text-center print:hidden">
               <Receipt size={36} className="text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Générez un reçu' : 'أصدار سند مالي'}</h3>
               <p className="text-sm text-gray-400 mt-1">

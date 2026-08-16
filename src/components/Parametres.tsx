@@ -115,7 +115,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Left: General Info Settings Form */}
-        <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-6">
+        <div className="bg-neutral-100 p-6 rounded-2xl border border-neutral-200 space-y-6">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
             <Store size={18} className="text-violet-600" />
             <span>{language === 'fr' ? 'Coordonnées de la boutique' : 'معلومات وتفاصيل المحل'}</span>
@@ -185,7 +185,7 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
         <div className="space-y-8">
 
           {/* Backup Database management */}
-          <div className="bg-white p-6 rounded-2xl border border-neutral-200 space-y-5">
+          <div className="bg-neutral-100 p-6 rounded-2xl border border-neutral-200 space-y-5">
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <FileJson size={18} className="text-violet-600" />
               <span>{language === 'fr' ? 'Sauvegarde & Sécurité' : 'حفظ واستيراد البيانات'}</span>
