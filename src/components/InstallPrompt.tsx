@@ -69,11 +69,11 @@ export default function InstallPrompt({ language }: InstallPromptProps) {
 
   return (
     <div
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg lg:left-auto lg:right-6 lg:mx-0"
+      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-neutral-200 bg-neutral-100 p-4 shadow-lg lg:left-auto lg:right-6 lg:mx-0"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-neutral-950 font-display text-sm text-white">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-600 font-display text-sm text-white">
           MZ
         </span>
 

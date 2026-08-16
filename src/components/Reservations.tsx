@@ -926,7 +926,7 @@ export default function Reservations({
       </div>
 
       {/* Toolbar filters */}
-      <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
+      <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 space-y-4">
         <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
           {/* Search */}
           <div className="relative flex-1">
@@ -939,7 +939,7 @@ export default function Reservations({
               placeholder={language === 'fr' ? 'Rechercher cliente...' : 'بحث عن زبونة...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
+              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-neutral-100 transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -998,7 +998,7 @@ export default function Reservations({
 
       {/* Booking cards list */}
       {filteredReservations.length === 0 ? (
-        <div className="bg-white py-16 px-4 rounded-2xl border border-neutral-200 text-center">
+        <div className="bg-neutral-100 py-16 px-4 rounded-2xl border border-neutral-200 text-center">
           <Calendar size={36} className="text-gray-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Aucune réservation trouvée' : 'لا توجد حجوزات'}</h3>
           <p className="text-sm text-gray-400 mt-1">
@@ -1020,7 +1020,7 @@ export default function Reservations({
             return (
               <div
                 key={res.id}
-                className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
+                className="bg-neutral-100 p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -1157,10 +1157,10 @@ export default function Reservations({
       {isWizardOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Overlay */}
-          <div onClick={() => { setIsWizardOpen(false); setEditingId(null); }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div onClick={() => { setIsWizardOpen(false); setEditingId(null); }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
           {/* Dialog Panel */}
-          <div className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
+          <div className="relative w-full max-w-xl bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 animate-scale-up max-h-[90vh]">
             
             {/* Header */}
             <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -1209,7 +1209,7 @@ export default function Reservations({
                         placeholder={language === 'fr' ? 'Prénom et Nom de la cliente' : 'اسم ولقب الزبونة'}
                         value={clientNameInput}
                         onChange={(e) => handleClientNameChange(e.target.value)}
-                        className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white ${
+                        className={`w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-neutral-100 ${
                           isRtl ? 'text-right' : 'text-left'
                         }`}
                       />
@@ -1233,7 +1233,7 @@ export default function Reservations({
                         placeholder="05 55 12 34 56"
                         value={clientPhoneInput}
                         onChange={(e) => setClientPhoneInput(e.target.value)}
-                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-white text-left"
+                        className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-violet-500 bg-neutral-100 text-left"
                         dir="ltr"
                       />
                       {knownClient && (
@@ -1457,7 +1457,7 @@ export default function Reservations({
                             min="0"
                             value={priceFor(d)}
                             onChange={(e) => setPriceOverrides({ ...priceOverrides, [d.id]: Number(e.target.value) })}
-                            className="w-20 p-1 text-right bg-white border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
+                            className="w-20 p-1 text-right bg-neutral-100 border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
                           />
                         </div>
                       </div>
@@ -1475,7 +1475,7 @@ export default function Reservations({
                             min="0"
                             value={priceFor(b)}
                             onChange={(e) => setPriceOverrides({ ...priceOverrides, [b.id]: Number(e.target.value) })}
-                            className="w-20 p-1 text-right bg-white border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
+                            className="w-20 p-1 text-right bg-neutral-100 border border-neutral-200 rounded-lg font-bold font-mono focus:outline-none focus:border-violet-500"
                           />
                         </div>
                       </div>
@@ -1504,7 +1504,7 @@ export default function Reservations({
                       max={totalCost}
                       value={montantPaye}
                       onChange={(e) => setMontantPaye(Number(e.target.value))}
-                      className="w-full p-3 border border-emerald-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-mono font-bold"
+                      className="w-full p-3 border border-emerald-200 bg-neutral-100 rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-mono font-bold"
                     />
                     <div className="flex justify-between text-[11px] font-bold text-emerald-800 pt-1">
                       <span>{language === 'fr' ? 'Reste à payer' : 'الباقي مستحق'} :</span>
@@ -1543,7 +1543,7 @@ export default function Reservations({
                   setItemSearch('');
                   setWizardStep(wizardStep - 1);
                 }}
-                className="py-3 px-5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="py-3 px-5 bg-neutral-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 {language === 'fr' ? 'Précédent' : 'السابق'}
               </button>
