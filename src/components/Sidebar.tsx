@@ -70,11 +70,11 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
   };
 
   const panel = (
-    <div className={`flex h-full flex-col bg-neutral-100 ${isRtl ? 'border-l' : 'border-r'} border-neutral-200`}>
+    <div className={`flex h-full flex-col bg-white ${isRtl ? 'border-l' : 'border-r'} border-neutral-200`}>
       {/* Brand */}
       <div className="px-6 pt-6 pb-5">
         <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
-          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-violet-600 font-display text-base font-semibold text-white">
+          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-neutral-950 font-display text-base font-semibold text-white">
             MZ
           </div>
           <div className="min-w-0">
@@ -173,7 +173,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
         id="sidebar-toggle-btn"
         onClick={() => setIsOpen(!isOpen)}
         aria-label={language === 'fr' ? 'Ouvrir le menu' : 'فتح القائمة'}
-        className={`fixed top-3.5 z-50 grid h-10 w-10 place-items-center rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-700 lg:hidden ${
+        className={`fixed top-3.5 z-50 grid h-10 w-10 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 lg:hidden ${
           isRtl ? 'right-4' : 'left-4'
         }`}
       >
@@ -191,7 +191,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-neutral-950/40 lg:hidden"
         />
       )}
       <aside

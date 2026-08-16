@@ -395,7 +395,7 @@ export default function Caisse({
       {/* Grid: 4 Big KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Balance */}
-        <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-orange-600" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -412,7 +412,7 @@ export default function Caisse({
         </div>
 
         {/* Card 2: Inputs */}
-        <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-emerald-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -429,7 +429,7 @@ export default function Caisse({
         </div>
 
         {/* Card 3: Outputs (Expenses) */}
-        <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-rose-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -446,7 +446,7 @@ export default function Caisse({
         </div>
 
         {/* Card 4: Withdrawals (Retraits) */}
-        <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 relative overflow-hidden group">
           <div className="absolute top-0 right-0 left-0 h-1 bg-amber-500" />
           <div className={`flex justify-between items-start mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -467,7 +467,7 @@ export default function Caisse({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: General Ledger logs */}
-        <div className="lg:col-span-2 bg-neutral-100 p-6 rounded-2xl border border-neutral-200 flex flex-col">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <h3 className="text-base font-bold text-gray-900 mb-5">{t.latest_operations}</h3>
 
           <div className="overflow-x-auto">
@@ -537,7 +537,7 @@ export default function Caisse({
         </div>
 
         {/* Right: Cash Empties Historical trace logs */}
-        <div className="lg:col-span-1 bg-neutral-100 p-6 rounded-2xl border border-neutral-200 flex flex-col">
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col">
           <div className={`flex items-center justify-between mb-5 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <History size={16} className="text-amber-500" />
@@ -573,8 +573,8 @@ export default function Caisse({
       {/* Full Cash Empties Journal Modal ("Tout voir") */}
       {isEmptiesJournalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsEmptiesJournalOpen(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative w-full max-w-lg bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up flex flex-col max-h-[85vh]">
+          <div onClick={() => setIsEmptiesJournalOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up flex flex-col max-h-[85vh]">
             <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
                 <History size={16} className="text-amber-500" />
@@ -596,8 +596,8 @@ export default function Caisse({
       {/* Expense Modal Form */}
       {isExpenseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsExpenseOpen(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <form onSubmit={handleAddExpense} className="relative w-full max-w-md bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up">
+          <div onClick={() => setIsExpenseOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <form onSubmit={handleAddExpense} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up">
             <div className={`p-6 border-b border-neutral-200 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-base font-bold text-gray-900">{language === 'fr' ? 'Enregistrer une dépense' : 'تسجيل مصاريف جديدة'}</h3>
               <button type="button" onClick={() => setIsExpenseOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
@@ -625,7 +625,7 @@ export default function Caisse({
                     id="form-exp-cat"
                     value={expCategory}
                     onChange={(e) => setExpCategory(e.target.value)}
-                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-neutral-100 focus:outline-none"
+                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none"
                   >
                     <option value="Entretien des robes">{t.exp_entretien}</option>
                     <option value="Achat d'accessoires">{t.exp_achat}</option>
@@ -659,7 +659,7 @@ export default function Caisse({
                   id="form-exp-source"
                   value={sourceArgent}
                   onChange={(e) => setSourceArgent(e.target.value as 'caisse' | 'tresorerie')}
-                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-neutral-100 focus:outline-none font-medium"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none font-medium"
                 >
                   <option value="caisse">
                     {language === 'fr' ? "Caisse principale (Liquidités du jour)" : "الصندوق الرئيسي (سيولة اليوم)"}
@@ -684,7 +684,7 @@ export default function Caisse({
               </div>
             </div>
             <div className="p-6 border-t border-gray-50 flex gap-3 bg-slate-50">
-              <button type="button" onClick={() => setIsExpenseOpen(false)} className="flex-1 py-2.5 px-4 bg-neutral-100 border border-gray-200 text-xs font-bold text-gray-600 rounded-xl">
+              <button type="button" onClick={() => setIsExpenseOpen(false)} className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-xl">
                 {t.cancel}
               </button>
               <button type="submit" id="submit-exp-btn" className="flex-1 py-2.5 px-4 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700">
@@ -698,8 +698,8 @@ export default function Caisse({
       {/* Empty Cash / Retrait Secure Modal Dialog */}
       {isEmptyCaisseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsEmptyCaisseOpen(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <form onSubmit={handleEmptyCaisse} className="relative w-full max-w-md bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-amber-100">
+          <div onClick={() => setIsEmptyCaisseOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <form onSubmit={handleEmptyCaisse} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-amber-100">
             <div className={`p-5 border-b border-amber-100 bg-amber-50/80 flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div className={`flex items-center gap-2.5 text-amber-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div className="p-2 bg-amber-100 text-amber-700 rounded-xl">
@@ -843,7 +843,7 @@ export default function Caisse({
               <button
                 type="button"
                 onClick={() => setIsEmptyCaisseOpen(false)}
-                className="flex-1 py-2.5 px-4 bg-neutral-100 border border-gray-200 text-xs font-bold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 {t.cancel}
               </button>
@@ -867,8 +867,8 @@ export default function Caisse({
       {/* Categorized Recovery Modal ("Récupérer un montant") */}
       {isRecoverOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div onClick={() => setIsRecoverOpen(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <form onSubmit={handleRecoverAmount} className="relative w-full max-w-md bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-violet-100">
+          <div onClick={() => setIsRecoverOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <form onSubmit={handleRecoverAmount} className="relative w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up border border-violet-100">
             <div className={`p-5 border-b border-violet-100 bg-violet-50/80 flex justify-between items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div className={`flex items-center gap-2.5 text-violet-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <div className="p-2 bg-violet-100 text-violet-700 rounded-xl">
@@ -912,7 +912,7 @@ export default function Caisse({
                   id="form-recover-category"
                   value={recoverCategory}
                   onChange={(e) => setRecoverCategory(e.target.value)}
-                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-neutral-100 focus:outline-none focus:border-violet-500"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm bg-white focus:outline-none focus:border-violet-500"
                 >
                   {Object.keys(recoverCategoriesMap).map(key => (
                     <option key={key} value={key}>{recoverCategoriesMap[key]}</option>
@@ -974,7 +974,7 @@ export default function Caisse({
               <button
                 type="button"
                 onClick={() => setIsRecoverOpen(false)}
-                className="flex-1 py-2.5 px-4 bg-neutral-100 border border-gray-200 text-xs font-bold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 {t.cancel}
               </button>

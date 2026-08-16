@@ -57,16 +57,16 @@ export default function Equipe({ language, history }: EquipeProps) {
       {/* Team */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {members.length === 0 ? (
-          <div className="rounded-2xl border border-neutral-200 bg-neutral-100 px-5 py-4 sm:col-span-3">
+          <div className="rounded-2xl border border-neutral-200 bg-white px-5 py-4 sm:col-span-3">
             <p className="text-[15px] italic text-neutral-400">
               {language === 'fr' ? 'Aucune activité enregistrée pour le moment.' : 'لا يوجد نشاط مسجل حالياً.'}
             </p>
           </div>
         ) : (
           members.map(m => (
-            <div key={m.nom} className="rounded-2xl border border-neutral-200 bg-neutral-100 p-5">
+            <div key={m.nom} className="rounded-2xl border border-neutral-200 bg-white p-5">
               <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-violet-600 font-display text-sm text-white">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-neutral-950 font-display text-sm text-white">
                   {m.nom.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
@@ -89,7 +89,7 @@ export default function Equipe({ language, history }: EquipeProps) {
       </section>
 
       {/* Log */}
-      <section className="rounded-2xl border border-neutral-200 bg-neutral-100">
+      <section className="rounded-2xl border border-neutral-200 bg-white">
         <div className={`flex flex-col gap-3 border-b border-neutral-200 p-5 sm:flex-row sm:items-center sm:justify-between ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
           <h3 className={`flex items-center gap-2 text-base text-neutral-900 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <Activity size={16} className="text-neutral-400" />
@@ -104,13 +104,13 @@ export default function Equipe({ language, history }: EquipeProps) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={language === 'fr' ? 'Rechercher…' : 'بحث…'}
-                className={`w-48 rounded-xl border border-neutral-200 bg-neutral-50 py-2 text-sm outline-none focus:border-neutral-400 focus:bg-neutral-100 ${isRtl ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'}`}
+                className={`w-48 rounded-xl border border-neutral-200 bg-neutral-50 py-2 text-sm outline-none focus:border-neutral-400 focus:bg-white ${isRtl ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'}`}
               />
             </div>
             <select
               value={who}
               onChange={(e) => setWho(e.target.value)}
-              className="rounded-xl border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-400"
+              className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-neutral-400"
             >
               <option value="tous">{language === 'fr' ? 'Tout le monde' : 'الجميع'}</option>
               {members.map(m => (
