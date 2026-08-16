@@ -329,7 +329,7 @@ export default function Calendrier({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-100 p-6 rounded-[24px] border border-neutral-200 ${
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[24px] border border-neutral-200 ${
         isRtl ? 'md:flex-row-reverse text-right' : 'text-left'
       }`}>
         <div>
@@ -384,7 +384,7 @@ export default function Calendrier({
 
       {/* Stats Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-neutral-100 p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-400 font-bold uppercase">{language === 'fr' ? 'Réservations ce mois' : 'حجوزات هذا الشهر'}</p>
             <p className="text-2xl font-extrabold text-gray-900 mt-1">{monthReservations.length}</p>
@@ -394,7 +394,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-neutral-100 p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-red-500 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
             <p className="text-2xl font-extrabold text-red-600 mt-1">{activeRentalsCount}</p>
@@ -404,7 +404,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-neutral-100 p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-blue-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
             <p className="text-2xl font-extrabold text-blue-600 mt-1">{futureRentalsCount}</p>
@@ -414,7 +414,7 @@ export default function Calendrier({
           </div>
         </div>
 
-        <div className="bg-neutral-100 p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
             <p className="text-xs text-emerald-500 font-bold uppercase">{language === 'fr' ? 'Retours effectués' : 'مرتجعات مكتملة'}</p>
             <p className="text-2xl font-extrabold text-emerald-600 mt-1">{returnedCount}</p>
@@ -426,7 +426,7 @@ export default function Calendrier({
       </div>
 
       {/* Filters & Search Toolbar */}
-      <div className={`bg-neutral-100 p-4 rounded-2xl border border-neutral-200 flex flex-col md:flex-row items-center justify-between gap-4 ${
+      <div className={`bg-white p-4 rounded-2xl border border-neutral-200 flex flex-col md:flex-row items-center justify-between gap-4 ${
         isRtl ? 'md:flex-row-reverse' : ''
       }`}>
         {/* Search */}
@@ -450,7 +450,7 @@ export default function Calendrier({
             onClick={() => setStatusFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               statusFilter === 'all'
-                ? 'bg-violet-600 text-white'
+                ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
             }`}
           >
@@ -497,7 +497,7 @@ export default function Calendrier({
 
       {/* Calendar Grid — full width now that a day's detail opens as a popup
           instead of a panel sharing the row */}
-      <div className="bg-neutral-100 p-5 rounded-[24px] border border-neutral-200 overflow-hidden">
+      <div className="bg-white p-5 rounded-[24px] border border-neutral-200 overflow-hidden">
         {/* Days of Week Header */}
         <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {(language === 'fr' ? daysHeaderFr : daysHeaderAr).map((day, idx) => (
@@ -524,7 +524,7 @@ export default function Calendrier({
                   isSelected
                     ? 'border-orange-600 bg-orange-50/50 ring-2 ring-orange-500/20'
                     : cell.isCurrentMonth
-                      ? 'border-gray-100 bg-neutral-100 hover:border-orange-300 hover:bg-slate-50/80'
+                      ? 'border-gray-100 bg-white hover:border-orange-300 hover:bg-slate-50/80'
                       : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'
                 }`}
               >
@@ -602,14 +602,14 @@ export default function Calendrier({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsDayModalOpen(false)}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              className="relative w-full max-w-lg bg-neutral-100 rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 max-h-[85vh]"
+              className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 max-h-[85vh]"
             >
               {/* Header */}
               <div className={`p-5 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -700,7 +700,7 @@ export default function Calendrier({
                           </div>
 
                           {/* Client Info */}
-                          <div className={`p-2.5 bg-neutral-100 rounded-xl border border-gray-100 text-xs space-y-1 ${
+                          <div className={`p-2.5 bg-white rounded-xl border border-gray-100 text-xs space-y-1 ${
                             isRtl ? 'text-right' : 'text-left'
                           }`}>
                             <div className={`flex items-center gap-2 text-gray-800 font-bold ${isRtl ? 'flex-row-reverse' : ''}`}>

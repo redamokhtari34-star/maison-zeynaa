@@ -96,7 +96,7 @@ export default function TopBar({
 
   return (
     <header
-      className={`fixed top-0 z-20 flex h-16 items-center gap-3 border-b border-neutral-200 bg-neutral-100 px-4 lg:px-6 ${
+      className={`fixed top-0 z-20 flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 lg:px-6 ${
         isRtl ? 'right-0 left-0 lg:right-[272px]' : 'left-0 right-0 lg:left-[272px]'
       }`}
     >
@@ -123,7 +123,7 @@ export default function TopBar({
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder={language === 'fr' ? 'Rechercher une robe, une cliente, une réservation…' : 'ابحث عن فستان أو زبونة…'}
-          className={`w-full rounded-full border border-neutral-200 bg-neutral-50 py-2.5 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-neutral-100 ${
+          className={`w-full rounded-full border border-neutral-200 bg-neutral-50 py-2.5 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white ${
             isRtl ? 'pr-11 pl-10 text-right' : 'pl-11 pr-10'
           }`}
         />
@@ -138,7 +138,7 @@ export default function TopBar({
         )}
 
         {open && query.trim().length >= 2 && (
-          <div className={`absolute top-[calc(100%+8px)] z-30 w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-lg ${isRtl ? 'text-right' : ''}`}>
+          <div className={`absolute top-[calc(100%+8px)] z-30 w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg ${isRtl ? 'text-right' : ''}`}>
             {hits.length === 0 ? (
               <p className="px-4 py-3.5 text-sm text-neutral-500">
                 {language === 'fr' ? 'Aucun résultat.' : 'لا توجد نتائج.'}
@@ -166,7 +166,7 @@ export default function TopBar({
             syncing
               ? 'border-neutral-200 bg-neutral-50 text-neutral-600'
               : cloudConnected
-                ? 'border-neutral-200 bg-neutral-100 text-neutral-700'
+                ? 'border-neutral-200 bg-white text-neutral-700'
                 : 'border-amber-200 bg-amber-50 text-amber-700'
           }`}
         >
@@ -192,7 +192,7 @@ export default function TopBar({
           )}
         </button>
 
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-violet-600 font-display text-sm text-white">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-neutral-950 font-display text-sm text-white">
           Z
         </span>
       </div>

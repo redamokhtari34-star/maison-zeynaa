@@ -19,7 +19,7 @@ export default function Toaster() {
         const tone =
           toast.kind === 'error' ? 'border-red-200 bg-red-50' :
           toast.kind === 'success' ? 'border-green-200 bg-green-50' :
-          'border-neutral-200 bg-neutral-100';
+          'border-neutral-200 bg-white';
         const iconTone =
           toast.kind === 'error' ? 'text-red-600' :
           toast.kind === 'success' ? 'text-green-600' :

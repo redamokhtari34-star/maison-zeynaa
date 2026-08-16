@@ -26,12 +26,12 @@ export default function ConfirmDialog() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-title"
-      className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+      className="fixed inset-0 z-[95] flex items-end justify-center bg-neutral-950/40 p-4 sm:items-center"
       onClick={() => pending.resolve(false)}
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-neutral-200 bg-neutral-100 p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl"
       >
         <div className="flex items-start gap-3">
           {pending.danger && (

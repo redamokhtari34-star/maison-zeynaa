@@ -258,7 +258,7 @@ export default function Clientes({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left column: Clients search and list */}
-        <div className="lg:col-span-1 bg-neutral-100 p-5 rounded-2xl border border-neutral-200 flex flex-col h-[650px]">
+        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-neutral-200 flex flex-col h-[650px]">
           {/* Search bar */}
           <div className="relative mb-4">
             <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'left-3' : 'left-3'}`}>
@@ -270,7 +270,7 @@ export default function Clientes({
               placeholder={t.search}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-neutral-100 transition-all ${
+              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
                 isRtl ? 'text-right' : 'text-left'
               }`}
             />
@@ -338,7 +338,7 @@ export default function Clientes({
           {selectedClient ? (
             <>
               {/* Profile Card Header */}
-              <div className="bg-neutral-100 p-6 rounded-2xl border border-neutral-200">
+              <div className="bg-white p-6 rounded-2xl border border-neutral-200">
                 <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
                   isRtl ? 'sm:flex-row-reverse' : ''
                 }`}>
@@ -400,7 +400,7 @@ export default function Clientes({
 
               {/* Financial Quick Metrics */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">{language === 'fr' ? 'Volume Loué' : 'إجمالي المشتريات'}</span>
                   <p className="text-xl font-black text-gray-900 leading-none">{formatDa(totalInvoiced)}</p>
                   <span className="text-[10px] text-gray-400 block mt-2">
@@ -408,7 +408,7 @@ export default function Clientes({
                   </span>
                 </div>
 
-                <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">{t.payments_made}</span>
                   <p className="text-xl font-black text-emerald-600 leading-none">{formatDa(totalPaid)}</p>
                   <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden mt-3.5">
@@ -419,7 +419,7 @@ export default function Clientes({
                   </div>
                 </div>
 
-                <div className="bg-neutral-100 p-5 rounded-2xl border border-neutral-200">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200">
                   <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">{t.remaining_balance}</span>
                   <p className={`text-xl font-black leading-none ${totalOwed > 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {formatDa(totalOwed)}
@@ -435,7 +435,7 @@ export default function Clientes({
               </div>
 
               {/* Reservations History Sheet */}
-              <div className="bg-neutral-100 p-6 rounded-2xl border border-neutral-200">
+              <div className="bg-white p-6 rounded-2xl border border-neutral-200">
                 <h3 className="text-base font-bold text-gray-900 mb-5">{t.history_rentals}</h3>
 
                 {clientReservations.length === 0 ? (
@@ -490,7 +490,7 @@ export default function Clientes({
               </div>
             </>
           ) : (
-            <div className="bg-neutral-100 py-20 px-4 rounded-2xl border border-neutral-200 text-center">
+            <div className="bg-white py-20 px-4 rounded-2xl border border-neutral-200 text-center">
               <User size={36} className="text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-800">{language === 'fr' ? 'Sélectionnez une cliente' : 'اختر زبونة'}</h3>
               <p className="text-sm text-gray-400 mt-1">
@@ -504,8 +504,8 @@ export default function Clientes({
       {/* Slide-over Form Client */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div onClick={() => setIsFormOpen(false)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative w-full max-w-md h-full bg-neutral-100 shadow-2xl flex flex-col z-10 animate-slide-in">
+          <div onClick={() => setIsFormOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col z-10 animate-slide-in">
             <div className={`p-6 border-b border-neutral-200 flex justify-between items-center bg-slate-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">

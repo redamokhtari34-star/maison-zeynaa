@@ -110,7 +110,7 @@ export default function BlocNotes({ language }: BlocNotesProps) {
         <div className={`flex shrink-0 items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <button
             onClick={exportCsv}
-            className={`flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 ${isRtl ? 'flex-row-reverse' : ''}`}
+            className={`flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 ${isRtl ? 'flex-row-reverse' : ''}`}
           >
             {justSaved ? <Check size={15} className="text-green-600" /> : <Download size={15} />}
             {justSaved
@@ -134,7 +134,7 @@ export default function BlocNotes({ language }: BlocNotesProps) {
             key={s.id}
             className={`group flex items-center gap-1.5 rounded-xl border px-3 py-2 transition-colors ${
               s.id === active.id
-                ? 'border-neutral-300 bg-neutral-100'
+                ? 'border-neutral-300 bg-white'
                 : 'border-transparent bg-neutral-100 hover:bg-neutral-200/70'
             }`}
           >
@@ -159,7 +159,7 @@ export default function BlocNotes({ language }: BlocNotesProps) {
       </div>
 
       {/* Grid */}
-      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100">
+      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm" dir="ltr">
             <thead>
@@ -171,7 +171,7 @@ export default function BlocNotes({ language }: BlocNotesProps) {
                       <input
                         value={col}
                         onChange={(e) => setColumn(j, e.target.value)}
-                        className="w-full bg-transparent px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-600 outline-none focus:bg-neutral-100"
+                        className="w-full bg-transparent px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-600 outline-none focus:bg-white"
                       />
                       {active.colonnes.length > 1 && (
                         <button
@@ -221,14 +221,14 @@ export default function BlocNotes({ language }: BlocNotesProps) {
         <div className="flex items-center gap-2 border-t border-neutral-200 bg-neutral-50 p-3">
           <button
             onClick={addRow}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-neutral-300"
+            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-neutral-300"
           >
             <Rows3 size={13} />
             {language === 'fr' ? 'Ajouter une ligne' : 'إضافة سطر'}
           </button>
           <button
             onClick={addColumn}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-neutral-300"
+            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-neutral-300"
           >
             <Columns3 size={13} />
             {language === 'fr' ? 'Ajouter une colonne' : 'إضافة عمود'}
