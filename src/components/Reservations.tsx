@@ -89,9 +89,15 @@ export default function Reservations({
   // corrected.
   const [isWizardOpen, setIsWizardOpen] = useState(initialOpenForm || false);
   // Guards the submit button against a double-click/double-tap creating the
-  // same booking (and its deposit transaction) twice — the local write is
-  // synchronous and fast enough that a second tap lands before any UI
-  // feedback appears.
+  // same booking (and its deposit transaction) twice. isSubmitting alone is
+  // not enough: setState is asynchronous, so two clicks fired in the same
+  // tick (a real double-tap on a tablet) both read the same stale `false`
+  // before React re-renders with the disabled button — this happened in
+  // production more than once. submittingRef is a plain ref, updated
+  // synchronously, so the second invocation sees the lock immediately no
+  // matter how close together the clicks land. isSubmitting stays only to
+  // drive the button's visual disabled state.
+  const submittingRef = React.useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -320,6 +326,7 @@ export default function Reservations({
     setMontantPaye(0);
     setNotes('');
     setWizardStep(1);
+    submittingRef.current = false;
     setIsSubmitting(false);
     setIsWizardOpen(true);
   };
@@ -359,6 +366,7 @@ export default function Reservations({
     setMontantPaye(res.montant_paye_da);
     setNotes(res.notes || '');
     setWizardStep(1);
+    submittingRef.current = false;
     setIsSubmitting(false);
     setIsWizardOpen(true);
   };
@@ -468,7 +476,7 @@ export default function Reservations({
   // changed; what it does not collect — the identifier, the creation date, the
   // history already attached to the booking — is carried over untouched.
   const handleUpdateReservation = async () => {
-    if (isSubmitting) return;
+    if (submittingRef.current) return;
     const existing = reservations.find(r => r.id === editingId);
     if (!existing) return;
 
@@ -483,6 +491,7 @@ export default function Reservations({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     const clientPhone = clientPhoneInput.trim();
@@ -675,7 +684,7 @@ export default function Reservations({
   // Save Booking Wizard
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (submittingRef.current) return;
     if (selectedDresses.length === 0 && selectedBijoux.length === 0) {
       notifyError(language === 'fr' ? 'Sélectionnez au moins une robe ou un bijou.' : 'يرجى اختيار فستان واحد أو حلي واحد على الأقل.');
       return;
@@ -687,6 +696,7 @@ export default function Reservations({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     const clientPhone = clientPhoneInput.trim();
