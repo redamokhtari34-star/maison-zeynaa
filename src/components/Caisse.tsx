@@ -81,6 +81,13 @@ export default function Caisse({
 
   const todayStr = todayIso();
 
+  // Synchronous double-submit lock shared by every money-affecting form on
+  // this screen — a useState guard isn't enough (setState isn't synchronous,
+  // so two clicks close enough together both read the stale value); a ref
+  // updates immediately, so the second click is blocked no matter how fast
+  // it lands. Same fix as the reservation wizard's duplicate-transaction bug.
+  const submittingRef = React.useRef(false);
+
   // Forms states
   const [isExpenseOpen, setIsExpenseOpen] = useState(initialOpenExpense || false);
   const [isEmptyCaisseOpen, setIsEmptyCaisseOpen] = useState(false);
@@ -89,6 +96,7 @@ export default function Caisse({
 
   React.useEffect(() => {
     if (initialOpenExpense) {
+      submittingRef.current = false;
       setIsExpenseOpen(true);
       onFormOpenHandled?.();
     }
@@ -139,10 +147,12 @@ export default function Caisse({
   // Log Expense
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (montant <= 0 || !desc) {
       notifyError(language === 'fr' ? 'Saisissez un montant et une description valides.' : 'يرجى إدخال مبلغ ووصف صحيحين.');
       return;
     }
+    submittingRef.current = true;
 
     const newTr: Transaction = {
       id: crypto.randomUUID(),
@@ -187,6 +197,7 @@ export default function Caisse({
   // Handle Cash Emptying / Withdrawal
   const openRetraitModal = () => {
     if (currentBalance <= 0) return;
+    submittingRef.current = false;
     setRetraitMontant(currentBalance);
     setNote('Vidage total');
     setBeneficiaire('');
@@ -195,6 +206,7 @@ export default function Caisse({
 
   const handleEmptyCaisse = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     const amountToWithdraw = Number(retraitMontant);
 
     if (isNaN(amountToWithdraw) || amountToWithdraw <= 0) {
@@ -206,6 +218,8 @@ export default function Caisse({
       notifyError(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
       return;
     }
+
+    submittingRef.current = true;
 
     const isFullWithdrawal = amountToWithdraw === currentBalance;
     const defaultNote = isFullWithdrawal ? 'Vidage total' : 'Retrait partiel';
@@ -256,6 +270,7 @@ export default function Caisse({
   // Handle Categorized Recovery Withdrawal ("Récupérer un montant")
   const openRecoverModal = () => {
     if (currentBalance <= 0) return;
+    submittingRef.current = false;
     setRecoverMontant('');
     setRecoverCategory('Salaire / Rémunération');
     setRecoverNote('');
@@ -273,6 +288,7 @@ export default function Caisse({
 
   const handleRecoverAmount = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     const amountToRecover = Number(recoverMontant);
 
     if (isNaN(amountToRecover) || amountToRecover <= 0) {
@@ -284,6 +300,8 @@ export default function Caisse({
       notifyError(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
       return;
     }
+
+    submittingRef.current = true;
 
     const categoryLabel = recoverCategoriesMap[recoverCategory] || recoverCategory;
     const finalNote = recoverNote.trim();
@@ -361,7 +379,7 @@ export default function Caisse({
         <div className={`flex flex-wrap gap-2.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <button
             id="open-expense-btn"
-            onClick={() => setIsExpenseOpen(true)}
+            onClick={() => { submittingRef.current = false; setIsExpenseOpen(true); }}
             className="flex items-center gap-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs border border-rose-100"
           >
             <Plus size={14} />
