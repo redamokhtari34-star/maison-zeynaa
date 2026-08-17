@@ -63,6 +63,11 @@ export default function Retours({
   const [motifPenalite, setMotifPenalite] = useState('');
   const [conditionItems, setConditionItems] = useState<{ [key: string]: 'excellent' | 'degrade' }>({});
   const [maintenanceItems, setMaintenanceItems] = useState<{ [key: string]: 'disponible' | 'en_entretien' }>({});
+  // Synchronous double-submit lock — a useState guard isn't reliable here
+  // (setState isn't synchronous, so two clicks close together can both read
+  // the stale value); a ref updates immediately. Same fix as the reservation
+  // wizard's duplicate-transaction bug.
+  const submittingRef = React.useRef(false);
 
   const getClientName = (id: string) => {
     return clientes.find(c => c.id === id)?.nom_complet || 'Inconnue';
@@ -88,6 +93,7 @@ export default function Retours({
 
   // Open return handler
   const openReturnModal = (res: Reservation) => {
+    submittingRef.current = false;
     setSelectedRes(res);
     setPenalite(0);
     setMotifPenalite('');
@@ -109,7 +115,9 @@ export default function Retours({
   // Submit return
   const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!selectedRes) return;
+    submittingRef.current = true;
 
     const supabase = getSupabaseClient();
 
