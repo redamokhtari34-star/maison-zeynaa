@@ -548,18 +548,23 @@ export default function Reservations({
     // directly, so a negative entry here is what actually pulls the
     // correction out of the till, not just an expense line next to it.
     const paidDelta = montantPaye - existing.montant_paye_da;
-    if (paidDelta !== 0) {
-      onAddTransaction({
-        id: crypto.randomUUID(),
-        type: 'entree',
-        montant_da: paidDelta,
-        description: `Correction acompte ${itemsLabel(updated)} - ${clientName}`,
-        categorie: 'Réservation',
-        date: todayStr,
-        heure: nowTime(),
-        utilisateur: 'Zeyna',
-        source_argent: 'caisse'
-      } as Transaction);
+    // Kept on the closure so the cloud mirror below inserts this exact same
+    // row (same id) instead of a freshly built one — two inserts of the same
+    // id collide harmlessly, two inserts of different ids for the same
+    // correction created a real duplicate in production.
+    const correctionTr: Transaction | null = paidDelta !== 0 ? {
+      id: crypto.randomUUID(),
+      type: 'entree',
+      montant_da: paidDelta,
+      description: `Correction acompte ${itemsLabel(updated)} - ${clientName}`,
+      categorie: 'Réservation',
+      date: todayStr,
+      heure: nowTime(),
+      utilisateur: 'Zeyna',
+      source_argent: 'caisse'
+    } : null;
+    if (correctionTr) {
+      onAddTransaction(correctionTr);
     }
 
     addHistoryEntry(
@@ -661,14 +666,8 @@ export default function Reservations({
         if (error) console.warn('Could not link jewellery to reservation:', error.message);
       }
 
-      if (paidDelta !== 0) {
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([{
-          type: 'entree',
-          montant: paidDelta,
-          source: 'caisse',
-          beneficiaire: null,
-          motif: `Correction acompte ${itemsLabel(updated)} - ${clientName}`
-        }]);
+      if (correctionTr) {
+        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(correctionTr)]);
         if (trError) throw new Error(trError.message);
       }
 
@@ -747,18 +746,23 @@ export default function Reservations({
     };
     onSaveReservations([localReservation, ...reservations]);
 
-    if (montantPaye > 0) {
-      onAddTransaction({
-        id: crypto.randomUUID(),
-        type: 'entree',
-        montant_da: montantPaye,
-        description: `Acompte ${itemsLabel(localReservation)} - ${clientName}`,
-        categorie: 'Réservation',
-        date: todayStr,
-        heure: nowTime(),
-        utilisateur: 'Zeyna',
-        source_argent: 'caisse'
-      } as Transaction);
+    // Kept on the closure so the cloud mirror below inserts this exact same
+    // row (same id) instead of a freshly built one — two inserts of the same
+    // id collide harmlessly, two inserts of different ids for the same
+    // deposit created a real duplicate in production every time this ran.
+    const depositTr: Transaction | null = montantPaye > 0 ? {
+      id: crypto.randomUUID(),
+      type: 'entree',
+      montant_da: montantPaye,
+      description: `Acompte ${itemsLabel(localReservation)} - ${clientName}`,
+      categorie: 'Réservation',
+      date: todayStr,
+      heure: nowTime(),
+      utilisateur: 'Zeyna',
+      source_argent: 'caisse'
+    } : null;
+    if (depositTr) {
+      onAddTransaction(depositTr);
     }
 
     addHistoryEntry(
@@ -867,16 +871,8 @@ export default function Reservations({
         if (error) console.warn('Could not link jewellery to reservation:', error.message);
       }
 
-      if (montantPaye > 0) {
-        const trRowToInsert = {
-          type: 'entree',
-          montant: montantPaye,
-          source: 'caisse',
-          beneficiaire: null,
-          motif: `Acompte ${itemsLabel(localReservation)} - ${clientName}`
-        };
-
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([trRowToInsert]);
+      if (depositTr) {
+        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(depositTr)]);
         if (trError) throw new Error(trError.message);
       }
 
