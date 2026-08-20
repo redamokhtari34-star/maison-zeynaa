@@ -267,9 +267,11 @@ export default function Caisse({
     setBeneficiaire('');
   };
 
-  // Handle Categorized Recovery Withdrawal ("Récupérer un montant")
+  // Record money coming back into the till ("Récupérer un montant") — e.g.
+  // the owner putting personal money back in, or reclaiming an amount
+  // previously taken out. Adds to the balance and to revenue, the opposite
+  // of a withdrawal, so it is never gated on the current balance.
   const openRecoverModal = () => {
-    if (currentBalance <= 0) return;
     submittingRef.current = false;
     setRecoverMontant('');
     setRecoverCategory('Salaire / Rémunération');
@@ -296,11 +298,6 @@ export default function Caisse({
       return;
     }
 
-    if (amountToRecover > currentBalance) {
-      notifyError(language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible en caisse.' : 'لا يمكن أن يتجاوز المبلغ الرصيد المتوفر في الصندوق.');
-      return;
-    }
-
     submittingRef.current = true;
 
     const categoryLabel = recoverCategoriesMap[recoverCategory] || recoverCategory;
@@ -308,7 +305,7 @@ export default function Caisse({
 
     const newTr: Transaction = {
       id: crypto.randomUUID(),
-      type: 'vidage_caisse',
+      type: 'entree',
       montant_da: amountToRecover,
       description: language === 'fr'
         ? `Montant récupéré - ${categoryLabel}`
@@ -400,9 +397,7 @@ export default function Caisse({
           <button
             id="open-recover-amount-btn"
             onClick={openRecoverModal}
-            disabled={currentBalance <= 0}
-            title={currentBalance <= 0 ? (language === 'fr' ? 'La caisse est vide (0 DA)' : 'الصندوق فارغ (0 دج)') : undefined}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-slate-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-violet-600/10 transition-all"
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-violet-600/10 transition-all"
           >
             <Tag size={14} />
             <span>{language === 'fr' ? 'Récupérer un montant' : 'استرجاع مبلغ'}</span>
@@ -907,21 +902,6 @@ export default function Caisse({
             </div>
 
             <div className="p-6 space-y-4">
-              {/* Card showing current available balance */}
-              <div className="p-4 bg-violet-600 text-white rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] uppercase font-bold text-violet-100 block">
-                    {language === 'fr' ? 'Solde disponible en caisse' : 'الرصيد المتوفر في الصندوق'}
-                  </span>
-                  <span className="text-xl font-black font-mono tracking-tight text-white block mt-0.5">
-                    {formatDa(currentBalance)}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Wallet size={20} className="text-white" />
-                </div>
-              </div>
-
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 block">
                   {language === 'fr' ? 'Catégorie *' : 'الفئة *'}
@@ -948,27 +928,15 @@ export default function Caisse({
                     type="number"
                     required
                     min={1}
-                    max={currentBalance}
                     value={recoverMontant}
                     onChange={(e) => setRecoverMontant(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="0"
-                    className={`w-full p-3.5 pr-14 border rounded-xl text-base font-extrabold font-mono focus:outline-none transition-colors ${
-                      typeof recoverMontant === 'number' && recoverMontant > currentBalance
-                        ? 'border-rose-400 bg-rose-50/30 text-rose-700'
-                        : 'border-neutral-200 focus:border-violet-500'
-                    } ${isRtl ? 'text-right' : 'text-left'}`}
+                    className={`w-full p-3.5 pr-14 border border-neutral-200 focus:border-violet-500 rounded-xl text-base font-extrabold font-mono focus:outline-none transition-colors ${isRtl ? 'text-right' : 'text-left'}`}
                   />
                   <span className="absolute right-3.5 top-3.5 text-xs font-bold text-gray-400 font-mono pointer-events-none">
                     DA
                   </span>
                 </div>
-
-                {typeof recoverMontant === 'number' && recoverMontant > currentBalance && (
-                  <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 mt-1">
-                    <AlertTriangle size={12} />
-                    <span>{language === 'fr' ? 'Le montant ne peut pas dépasser le solde disponible.' : 'المبلغ لا يمكن أن يتجاوز الرصيد المتوفر.'}</span>
-                  </p>
-                )}
               </div>
 
               <div className="space-y-1.5">
@@ -999,11 +967,7 @@ export default function Caisse({
               <button
                 type="submit"
                 id="confirm-recover-btn"
-                disabled={
-                  recoverMontant === '' ||
-                  Number(recoverMontant) <= 0 ||
-                  Number(recoverMontant) > currentBalance
-                }
+                disabled={recoverMontant === '' || Number(recoverMontant) <= 0}
                 className="flex-1 py-2.5 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
               >
                 {language === 'fr' ? 'Valider la récupération' : 'تأكيد الاسترجاع'}
