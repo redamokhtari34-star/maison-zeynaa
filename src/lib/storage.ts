@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Dress, Bijou, Cliente, Reservation, Transaction, HistoriqueAction, SupabaseConfig, StoreProfile, NotebookSheet } from '../types';
+import { Dress, Bijou, Cliente, Reservation, Transaction, HistoriqueAction, SupabaseConfig, StoreProfile } from '../types';
 import { sampleDresses, sampleBijoux, sampleClientes, sampleReservations, sampleTransactions, sampleHistory, defaultStoreProfile } from '../data/sampleData';
 
 // LocalStorage keys — the device-side mirror of the shop's records
@@ -12,8 +12,7 @@ const KEYS = {
   TRANSACTIONS: 'zeyna_transactions_v1',
   HISTORY: 'zeyna_history_v1',
   SUPABASE_CONFIG: 'zeyna_supabase_config_v1',
-  STORE_PROFILE: 'zeyna_store_profile_v1',
-  NOTEBOOK: 'zeyna_notebook_v1'
+  STORE_PROFILE: 'zeyna_store_profile_v1'
 };
 
 // Records are mirrored to the device so that anything entered while the
@@ -937,34 +936,6 @@ export function saveHistory(history: HistoriqueAction[]) {
   memoryState.history = history;
   persist(KEYS.HISTORY, history);
   historyListeners.forEach(l => l());
-}
-
-// The notebook is the one thing the shop authors by hand, so it is persisted
-// to localStorage rather than living only in memory: a page reload must not
-// throw away notes that were never part of the Supabase schema.
-export function getNotebook(): NotebookSheet[] {
-  try {
-    const raw = localStorage.getItem(KEYS.NOTEBOOK);
-    if (raw) return JSON.parse(raw) as NotebookSheet[];
-  } catch (err) {
-    console.warn('Could not read notebook from storage:', err);
-  }
-  return [
-    {
-      id: 'sheet-1',
-      nom: 'Feuille 1',
-      colonnes: ['Désignation', 'Quantité', 'Montant (DA)', 'Remarque'],
-      lignes: Array.from({ length: 6 }, () => ['', '', '', ''])
-    }
-  ];
-}
-
-export function saveNotebook(sheets: NotebookSheet[]) {
-  try {
-    localStorage.setItem(KEYS.NOTEBOOK, JSON.stringify(sheets));
-  } catch (err) {
-    console.warn('Could not save notebook:', err);
-  }
 }
 
 export function getStoreProfile(): StoreProfile {

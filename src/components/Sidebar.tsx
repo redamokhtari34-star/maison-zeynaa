@@ -15,7 +15,7 @@ import {
   X,
   Download,
   Sparkles,
-  ClipboardList,
+  Search,
   ShieldCheck
 } from 'lucide-react';
 import { Language, Transaction } from '../types';
@@ -45,7 +45,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
     { id: 'robes', label: fr ? 'Catalogue Robes' : 'كتالوج الفساتين', icon: FolderHeart },
     { id: 'caisse', label: fr ? 'Finances & Caisse' : 'المالية والصندوق', icon: Wallet },
     { id: 'documents', label: fr ? 'Documents' : 'الوثائق', icon: Archive },
-    { id: 'notes', label: fr ? 'Bloc-notes Excel' : 'دفتر الملاحظات', icon: ClipboardList },
+    { id: 'disponibilite', label: fr ? 'Disponibilité d’un article' : 'توفر قطعة', icon: Search },
     { id: 'equipe', label: fr ? 'Équipe & Logs' : 'الفريق والسجلات', icon: ShieldCheck },
   ];
 
