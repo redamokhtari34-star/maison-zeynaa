@@ -18,7 +18,7 @@ const Statistiques = lazy(() => import('./components/Statistiques'));
 const Retours = lazy(() => import('./components/Retours'));
 const Documents = lazy(() => import('./components/Documents'));
 const Parametres = lazy(() => import('./components/Parametres'));
-const BlocNotes = lazy(() => import('./components/BlocNotes'));
+const Disponibilite = lazy(() => import('./components/Disponibilite'));
 const Equipe = lazy(() => import('./components/Equipe'));
 
 import { 
@@ -336,8 +336,14 @@ export default function App() {
             setInvoiceReservationId={setInvoiceReservationId}
           />
         );
-      case 'notes':
-        return <BlocNotes language={language} />;
+      case 'disponibilite':
+        return (
+          <Disponibilite
+            reservations={db.reservations}
+            clientes={db.clientes}
+            language={language}
+          />
+        );
       case 'equipe':
         return <Equipe language={language} history={db.history} />;
       case 'parametres':
