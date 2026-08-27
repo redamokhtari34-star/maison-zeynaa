@@ -113,7 +113,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
         </div>
 
         <p className="eyebrow mt-6 mb-2 px-3.5">{fr ? 'Plus' : 'المزيد'}</p>
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {secondaryItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -122,13 +122,13 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
                 key={item.id}
                 id={`menu-item-${item.id}`}
                 onClick={() => go(item.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-[13px] transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-colors ${
                   isActive
                     ? 'border border-neutral-200 bg-neutral-100 font-semibold text-neutral-900'
-                    : 'border border-transparent text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
+                    : 'border border-transparent font-normal text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
                 } ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}
               >
-                <Icon size={16} strokeWidth={1.6} className="flex-shrink-0 text-neutral-400" />
+                <Icon size={19} strokeWidth={1.6} className="flex-shrink-0 text-neutral-500" />
                 <span className="truncate">{item.label}</span>
               </button>
             );
