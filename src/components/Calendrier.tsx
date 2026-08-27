@@ -14,7 +14,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Reservation, Dress, Cliente, Bijou, Language } from '../types';
 import { translations } from '../translations';
-import { getSupabaseClient } from '../lib/storage';
 import { todayIso } from '../lib/dates';
 
 interface CalendrierProps {
@@ -58,72 +57,16 @@ export default function Calendrier({
   const [statusFilter, setStatusFilter] = useState<'all' | 'en_cours' | 'future' | 'retourne'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [liveReservations, setLiveReservations] = useState<Reservation[]>(reservations);
-  const [loadingSupabase, setLoadingSupabase] = useState(false);
 
-  // Sync with props or fetch live from Supabase
+  // Sync with props — the correctly-joined multi-item reservations already
+  // computed in App.tsx (with every robe/bijou from reservation_robes and
+  // reservation_bijoux). A second, separate fetch used to run here straight
+  // against the bare `reservations` table, which only carries the legacy
+  // single robe_id/bijou_id columns — it overwrote a two-dress booking with
+  // a one-dress reconstruction every time this screen opened.
   useEffect(() => {
     setLiveReservations(reservations);
   }, [reservations]);
-
-  const fetchLiveFromSupabase = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-    setLoadingSupabase(true);
-    try {
-      const { data, error } = await supabase.from('reservations').select('*');
-      if (!error && data) {
-        // Map data to Reservation format if needed
-        const mapped: Reservation[] = data.map((row: any) => {
-          const items = [];
-          if (row.robe_id) {
-            items.push({
-              id: `item-${row.id}-robe`,
-              reservation_id: String(row.id),
-              type_article: 'robe' as const,
-              article_id: String(row.robe_id),
-              prix_da: Number(row.prix_total || 0),
-              nom_article: 'Robe'
-            });
-          }
-          if (row.bijou_id) {
-            items.push({
-              id: `item-${row.id}-bijou`,
-              reservation_id: String(row.id),
-              type_article: 'bijou' as const,
-              article_id: String(row.bijou_id),
-              prix_da: 0,
-              nom_article: 'Bijou'
-            });
-          }
-          return {
-            id: String(row.id),
-            cliente_id: String(row.client_id || row.nom_cliente || row.client_nom || ''),
-            date_sortie: row.date_debut || '',
-            date_retour: row.date_fin || '',
-            montant_total_da: Number(row.prix_total || 0),
-            caution_da: 0,
-            montant_paye_da: Number(row.acompte || 0),
-            reste_a_payer_da: Number(row.reste_a_payer || 0),
-            statut: (row.statut_reservation || 'future') as any,
-            notes: '',
-            date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            items
-          };
-        });
-        if (mapped.length > 0) {
-          setLiveReservations(mapped);
-        }
-      }
-    } catch (err) {
-      console.warn('Calendar Supabase fetch error:', err);
-    } finally {
-      setLoadingSupabase(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLiveFromSupabase();
-  }, []);
 
   // Helpers for resolving names and photos
   const getClientName = (res: Reservation) => {
@@ -150,14 +93,18 @@ export default function Calendrier({
     return undefined;
   };
 
+  // Every article on the booking, not just the first — a two-dress
+  // reservation used to show only one, hiding the second robe entirely.
   const getDressName = (res: Reservation) => {
-    const dress = getDressForReservation(res);
-    if (dress) return dress.nom;
-    const robeItem = res.items.find(i => i.type_article === 'robe');
-    if (robeItem && robeItem.nom_article !== 'Robe') return robeItem.nom_article;
-    const bijouItem = res.items.find(i => i.type_article === 'bijou');
-    if (bijouItem) return `Accessoire (${bijouItem.nom_article})`;
-    return 'Robe de Soirée';
+    const names = res.items.map(item => {
+      const dress = item.type_article === 'robe'
+        ? dresses.find(d => d.id === item.article_id || d.nom.toLowerCase() === item.nom_article.toLowerCase())
+        : bijoux.find(b => b.id === item.article_id || b.nom.toLowerCase() === item.nom_article.toLowerCase());
+      const label = dress?.nom || (item.nom_article !== 'Robe' && item.nom_article !== 'Bijou' ? item.nom_article : null);
+      if (item.type_article === 'bijou') return label ? `Accessoire (${label})` : 'Accessoire';
+      return label || 'Robe';
+    });
+    return names.length ? names.join(', ') : 'Robe de Soirée';
   };
 
   const getDressPhoto = (res: Reservation) => {
