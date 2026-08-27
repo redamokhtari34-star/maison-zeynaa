@@ -41,19 +41,19 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
   const menuItems = [
     { id: 'accueil', label: fr ? 'Tableau de bord' : 'لوحة القيادة', icon: LayoutGrid },
     { id: 'reservations', label: fr ? 'Réservations' : 'الحجوزات', icon: ShoppingBag },
+    { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: CalendarDays },
+    { id: 'retours', label: t.retours, icon: RotateCcw },
+    { id: 'caisse', label: fr ? 'Finances & Caisse' : 'المالية والصندوق', icon: Wallet },
+    { id: 'disponibilite', label: fr ? 'Disponibilité d’un article' : 'توفر قطعة', icon: Search },
     { id: 'clientes', label: fr ? 'Base Clientes' : 'قاعدة الزبونات', icon: Users },
     { id: 'robes', label: fr ? 'Catalogue Robes' : 'كتالوج الفساتين', icon: FolderHeart },
-    { id: 'caisse', label: fr ? 'Finances & Caisse' : 'المالية والصندوق', icon: Wallet },
     { id: 'documents', label: fr ? 'Documents' : 'الوثائق', icon: Archive },
-    { id: 'disponibilite', label: fr ? 'Disponibilité d’un article' : 'توفر قطعة', icon: Search },
     { id: 'equipe', label: fr ? 'Équipe & Logs' : 'الفريق والسجلات', icon: ShieldCheck },
   ];
 
   // Kept reachable below the main menu so no feature becomes orphaned.
   const secondaryItems = [
     { id: 'bijoux', label: t.bijoux, icon: Gem },
-    { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: CalendarDays },
-    { id: 'retours', label: t.retours, icon: RotateCcw },
     { id: 'statistiques', label: t.statistiques, icon: BarChart3 },
     { id: 'parametres', label: t.parametres, icon: Settings },
   ];
