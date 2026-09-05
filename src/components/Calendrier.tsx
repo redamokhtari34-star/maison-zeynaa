@@ -110,6 +110,14 @@ export default function Calendrier({
   const getDressPhoto = (res: Reservation) => {
     const dress = getDressForReservation(res);
     if (dress && dress.photo_principale) return dress.photo_principale;
+    // No robe on the booking (or its photo is missing) — a bijou-only
+    // reservation used to fall straight to the generic stock photo below,
+    // never showing the actual piece of jewellery.
+    const bijouItem = res.items.find(i => i.type_article === 'bijou');
+    if (bijouItem) {
+      const bijou = bijoux.find(b => b.id === bijouItem.article_id || b.nom.toLowerCase() === bijouItem.nom_article.toLowerCase());
+      if (bijou?.photo) return bijou.photo;
+    }
     return 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&q=80&w=300';
   };
 
