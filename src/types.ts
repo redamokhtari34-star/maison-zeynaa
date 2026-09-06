@@ -112,3 +112,14 @@ export interface StoreProfile {
   instagram: string;
   facebook: string;
 }
+
+export type AccountRole = 'admin' | 'employe';
+
+// A profile picked at app start, on a shared device — not a login, just
+// "who is using it right now". Admins see everything; an employé is kept
+// away from money (Caisse, Statistiques, and every DA figure on a booking).
+export interface Account {
+  id: string;
+  prenom: string;
+  role: AccountRole;
+}

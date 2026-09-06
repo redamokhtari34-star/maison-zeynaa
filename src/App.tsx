@@ -6,6 +6,7 @@ import Toaster from './components/Toaster';
 import SplashScreen from './components/SplashScreen';
 import InstallPrompt from './components/InstallPrompt';
 import ConfirmDialog from './components/ConfirmDialog';
+import AccountPicker from './components/AccountPicker';
 
 // Loaded on demand — the dashboard should not wait for screens nobody opened.
 const Robes = lazy(() => import('./components/Robes'));
@@ -21,15 +22,17 @@ const Parametres = lazy(() => import('./components/Parametres'));
 const Disponibilite = lazy(() => import('./components/Disponibilite'));
 const Equipe = lazy(() => import('./components/Equipe'));
 
-import { 
-  Language, 
-  Dress, 
-  Bijou, 
-  Cliente, 
-  Reservation, 
-  Transaction, 
-  HistoriqueAction 
+import {
+  Language,
+  Dress,
+  Bijou,
+  Cliente,
+  Reservation,
+  Transaction,
+  HistoriqueAction,
+  Account
 } from './types';
+import { getAccounts, getActiveAccountId, setActiveAccountId, clearActiveAccount } from './lib/accounts';
 
 import { 
   getFullDatabaseState, 
@@ -98,9 +101,39 @@ export default function App() {
     []
   );
 
+  // Which profile is using this device right now — not a login, just a
+  // picker so a shared tablet knows whether to hide money from an employé.
+  const [accounts, setAccounts] = useState<Account[]>(() => getAccounts());
+  const [activeAccount, setActiveAccount] = useState<Account | null>(() => {
+    const id = getActiveAccountId();
+    return getAccounts().find(a => a.id === id) || null;
+  });
+  const isEmployee = activeAccount?.role === 'employe';
+
+  const handleSelectAccount = (account: Account) => {
+    setActiveAccountId(account.id);
+    setActiveAccount(account);
+    setCurrentTab(account.role === 'employe' ? 'reservations' : 'accueil');
+  };
+
+  const handleSwitchAccount = () => {
+    clearActiveAccount();
+    setActiveAccount(null);
+  };
+
   // App shell state
   const [currentTab, setCurrentTab] = useState<string>('accueil');
   const [language, setLanguage] = useState<Language>('fr');
+
+  // Defense in depth: whatever path set the tab (sidebar, search, a quick
+  // action), an employé is never left on a screen that shows money.
+  const RESTRICTED_FOR_EMPLOYEE = ['accueil', 'caisse', 'statistiques', 'documents', 'equipe', 'parametres'];
+  useEffect(() => {
+    if (isEmployee && RESTRICTED_FOR_EMPLOYEE.includes(currentTab)) {
+      setCurrentTab('reservations');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmployee, currentTab]);
 
   // Trigger from invoices
   const [invoiceReservationId, setInvoiceReservationId] = useState<string | null>(null);
@@ -275,11 +308,12 @@ export default function App() {
             onSearchTermHandled={handleSearchTermHandled}
             initialEditReservationId={pendingReservationId}
             onEditReservationHandled={handleEditReservationHandled}
+            canSeeAmounts={!isEmployee}
           />
         );
       case 'calendrier':
         return (
-          <Calendrier 
+          <Calendrier
             reservations={db.reservations}
             dresses={db.dresses}
             clientes={db.clientes}
@@ -287,6 +321,7 @@ export default function App() {
             language={language}
             setCurrentTab={setCurrentTab}
             onRefreshData={refreshFromSupabase}
+            canSeeAmounts={!isEmployee}
           />
         );
       case 'caisse':
@@ -324,6 +359,7 @@ export default function App() {
             clientes={db.clientes}
             language={language}
             onRefreshData={refreshFromSupabase}
+            canSeeAmounts={!isEmployee}
           />
         );
       case 'documents':
@@ -360,6 +396,17 @@ export default function App() {
     }
   };
 
+  if (!activeAccount) {
+    return (
+      <AccountPicker
+        accounts={accounts}
+        language={language}
+        onSelect={handleSelectAccount}
+        onAccountsChange={setAccounts}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-neutral-50 ${isRtl ? 'flex flex-row-reverse' : 'flex flex-row'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Sidebar Shell */}
@@ -369,6 +416,8 @@ export default function App() {
         language={language}
         setLanguage={setLanguage}
         transactions={db.transactions}
+        account={activeAccount}
+        onSwitchAccount={handleSwitchAccount}
       />
 
       {booting && <SplashScreen onDone={() => setBooting(false)} />}

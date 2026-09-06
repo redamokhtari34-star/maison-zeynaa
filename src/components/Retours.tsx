@@ -33,6 +33,7 @@ interface RetoursProps {
   clientes: any[];
   language: Language;
   onRefreshData?: () => void;
+  canSeeAmounts?: boolean;
 }
 
 export default function Retours({
@@ -45,7 +46,8 @@ export default function Retours({
   onAddTransaction,
   clientes,
   language,
-  onRefreshData
+  onRefreshData,
+  canSeeAmounts = true
 }: RetoursProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -400,38 +402,43 @@ export default function Retours({
                 ))}
               </div>
 
-              {/* Penalty Section */}
-              <div className="p-4 bg-red-50/50 border border-red-100 rounded-2xl space-y-3.5">
-                <div className={`flex justify-between items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                  <span className="text-xs font-bold text-red-800">{language === 'fr' ? 'Pénalité de dégradation (Retenue)' : 'خصم من كفالة الضرر'}</span>
-                  <span className="text-sm font-extrabold text-red-600 font-mono">{formatDa(penalite)}</span>
-                </div>
+              {/* Penalty Section — applying a damage charge is a cash
+                  decision, kept to admins the same as the rest of the
+                  money screens; an employé's return goes through with no
+                  penalty and an admin can adjust it afterward. */}
+              {canSeeAmounts && (
+                <div className="p-4 bg-red-50/50 border border-red-100 rounded-2xl space-y-3.5">
+                  <div className={`flex justify-between items-center ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                    <span className="text-xs font-bold text-red-800">{language === 'fr' ? 'Pénalité de dégradation (Retenue)' : 'خصم من كفالة الضرر'}</span>
+                    <span className="text-sm font-extrabold text-red-600 font-mono">{formatDa(penalite)}</span>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-red-700 font-bold block">{language === 'fr' ? 'Frais déduits (DA)' : 'القيمة المخصومة (دج)'}</span>
-                    <input
-                      id="return-penalty-amount"
-                      type="number"
-                      min="0"
-                      value={penalite}
-                      onChange={(e) => setPenalite(Number(e.target.value))}
-                      className="w-full p-2 bg-white border border-red-200 rounded-xl text-xs font-mono font-bold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-red-700 font-bold block">{language === 'fr' ? 'Motif de dégradation' : 'سبب الخصم والتلف'}</span>
-                    <input
-                      id="return-penalty-motif"
-                      type="text"
-                      value={motifPenalite}
-                      onChange={(e) => setMotifPenalite(e.target.value)}
-                      placeholder="Ex: Tache de henné, fil d'or décousu..."
-                      className="w-full p-2 bg-white border border-red-200 rounded-xl text-xs"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-red-700 font-bold block">{language === 'fr' ? 'Frais déduits (DA)' : 'القيمة المخصومة (دج)'}</span>
+                      <input
+                        id="return-penalty-amount"
+                        type="number"
+                        min="0"
+                        value={penalite}
+                        onChange={(e) => setPenalite(Number(e.target.value))}
+                        className="w-full p-2 bg-white border border-red-200 rounded-xl text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-red-700 font-bold block">{language === 'fr' ? 'Motif de dégradation' : 'سبب الخصم والتلف'}</span>
+                      <input
+                        id="return-penalty-motif"
+                        type="text"
+                        value={motifPenalite}
+                        onChange={(e) => setMotifPenalite(e.target.value)}
+                        placeholder="Ex: Tache de henné, fil d'or décousu..."
+                        className="w-full p-2 bg-white border border-red-200 rounded-xl text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-gray-50 flex gap-3 bg-slate-50">

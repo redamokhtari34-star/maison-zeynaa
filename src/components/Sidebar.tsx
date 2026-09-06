@@ -16,9 +16,11 @@ import {
   Download,
   Sparkles,
   Search,
-  ShieldCheck
+  ShieldCheck,
+  LogOut,
+  User
 } from 'lucide-react';
-import { Language, Transaction } from '../types';
+import { Language, Transaction, Account } from '../types';
 import { translations } from '../translations';
 import { exportDatabaseToFile } from '../lib/storage';
 
@@ -28,17 +30,20 @@ interface SidebarProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   transactions?: Transaction[];
+  account?: Account;
+  onSwitchAccount?: () => void;
 }
 
-export default function Sidebar({ currentTab, setCurrentTab, language }: SidebarProps) {
+export default function Sidebar({ currentTab, setCurrentTab, language, account, onSwitchAccount }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [exported, setExported] = useState(false);
   const t = translations[language];
   const isRtl = language === 'ar';
+  const isEmployee = account?.role === 'employe';
 
   const fr = language === 'fr';
 
-  const menuItems = [
+  const menuItemsAll = [
     { id: 'accueil', label: fr ? 'Tableau de bord' : 'لوحة القيادة', icon: LayoutGrid },
     { id: 'reservations', label: fr ? 'Réservations' : 'الحجوزات', icon: ShoppingBag },
     { id: 'calendrier', label: (t as any).calendrier || 'Calendrier', icon: CalendarDays },
@@ -52,11 +57,18 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
   ];
 
   // Kept reachable below the main menu so no feature becomes orphaned.
-  const secondaryItems = [
+  const secondaryItemsAll = [
     { id: 'bijoux', label: t.bijoux, icon: Gem },
     { id: 'statistiques', label: t.statistiques, icon: BarChart3 },
     { id: 'parametres', label: t.parametres, icon: Settings },
   ];
+
+  // An employé handles bookings, the catalogue and returns — never the
+  // money screens, and never the activity log or export (both leak figures
+  // an employé shouldn't see).
+  const EMPLOYEE_HIDDEN_IDS = ['accueil', 'caisse', 'documents', 'equipe', 'statistiques', 'parametres'];
+  const menuItems = isEmployee ? menuItemsAll.filter(i => !EMPLOYEE_HIDDEN_IDS.includes(i.id)) : menuItemsAll;
+  const secondaryItems = isEmployee ? secondaryItemsAll.filter(i => !EMPLOYEE_HIDDEN_IDS.includes(i.id)) : secondaryItemsAll;
 
   const go = (id: string) => {
     setCurrentTab(id);
@@ -136,32 +148,60 @@ export default function Sidebar({ currentTab, setCurrentTab, language }: Sidebar
         </div>
       </nav>
 
-      {/* Footer: quick help + the one orange action */}
+      {/* Footer: account switcher, quick help, and (admin only) the export action */}
       <div className="space-y-3 px-4 pb-5">
-        <div className={`rounded-2xl border border-neutral-200 bg-neutral-50 p-4 ${isRtl ? 'text-right' : ''}`}>
-          <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <Sparkles size={13} className="text-neutral-500" />
-            <span className="eyebrow">{language === 'fr' ? "Mode d'emploi rapide" : 'دليل سريع'}</span>
+        {account && (
+          <div className={`flex items-center gap-2.5 rounded-2xl border border-neutral-200 p-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              isEmployee ? 'bg-violet-50 text-violet-600' : 'bg-orange-50 text-orange-600'
+            }`}>
+              <User size={16} />
+            </div>
+            <div className={`min-w-0 flex-1 ${isRtl ? 'text-right' : ''}`}>
+              <p className="text-xs font-bold text-neutral-900 truncate">{account.prenom}</p>
+              <p className="text-[10px] text-neutral-400">
+                {isEmployee ? (fr ? 'Accès employé' : 'وصول الموظف') : (fr ? 'Accès complet' : 'وصول كامل')}
+              </p>
+            </div>
+            <button
+              id="switch-account-btn"
+              onClick={onSwitchAccount}
+              title={fr ? 'Changer de compte' : 'تغيير الحساب'}
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg cursor-pointer shrink-0"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-neutral-600">
-            {language === 'fr'
-              ? 'Utilisez la recherche en haut pour retrouver une robe, une cliente ou une réservation.'
-              : 'استخدم البحث في الأعلى للعثور على فستان أو زبونة أو حجز.'}
-          </p>
-        </div>
+        )}
 
-        <button
-          id="export-data-btn"
-          onClick={handleExport}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-700 ${
-            isRtl ? 'flex-row-reverse' : ''
-          }`}
-        >
-          <Download size={16} />
-          {exported
-            ? (language === 'fr' ? 'Sauvegarde téléchargée' : 'تم تنزيل النسخة')
-            : (language === 'fr' ? 'Exporter les données' : 'تصدير البيانات')}
-        </button>
+        {!isEmployee && (
+          <>
+            <div className={`rounded-2xl border border-neutral-200 bg-neutral-50 p-4 ${isRtl ? 'text-right' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <Sparkles size={13} className="text-neutral-500" />
+                <span className="eyebrow">{language === 'fr' ? "Mode d'emploi rapide" : 'دليل سريع'}</span>
+              </div>
+              <p className="mt-2 text-[13px] leading-relaxed text-neutral-600">
+                {language === 'fr'
+                  ? 'Utilisez la recherche en haut pour retrouver une robe, une cliente ou une réservation.'
+                  : 'استخدم البحث في الأعلى للعثور على فستان أو زبونة أو حجز.'}
+              </p>
+            </div>
+
+            <button
+              id="export-data-btn"
+              onClick={handleExport}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-700 ${
+                isRtl ? 'flex-row-reverse' : ''
+              }`}
+            >
+              <Download size={16} />
+              {exported
+                ? (language === 'fr' ? 'Sauvegarde téléchargée' : 'تم تنزيل النسخة')
+                : (language === 'fr' ? 'Exporter les données' : 'تصدير البيانات')}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
