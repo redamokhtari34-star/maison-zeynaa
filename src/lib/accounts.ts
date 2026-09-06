@@ -4,8 +4,8 @@ const ACCOUNTS_KEY = 'zeyna_accounts_v1';
 const ACTIVE_ACCOUNT_KEY = 'zeyna_active_account_v1';
 
 const DEFAULT_ACCOUNTS: Account[] = [
-  { id: 'admin-1', prenom: 'Zeyna', role: 'admin' },
-  { id: 'admin-2', prenom: 'Gérante', role: 'admin' },
+  { id: 'admin-1', prenom: 'Ouided', role: 'admin' },
+  { id: 'admin-2', prenom: 'Marwa', role: 'admin' },
   { id: 'employe-1', prenom: 'Employé 1', role: 'employe' },
   { id: 'employe-2', prenom: 'Employé 2', role: 'employe' }
 ];
