@@ -153,7 +153,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language, account, 
         {account && (
           <div className={`flex items-center gap-2.5 rounded-2xl border border-neutral-200 p-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              isEmployee ? 'bg-violet-50 text-violet-600' : 'bg-orange-50 text-orange-600'
+              isEmployee ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
             }`}>
               <User size={16} />
             </div>
