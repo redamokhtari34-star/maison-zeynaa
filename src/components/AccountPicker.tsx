@@ -72,6 +72,7 @@ export default function AccountPicker({ accounts, language, onSelect, onAccounts
                           value={draftName}
                           onChange={(e) => setDraftName(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') confirmEdit(e as any, account.id); }}
+                          onBlur={(e) => confirmEdit(e, account.id)}
                           className="w-full p-1.5 border border-violet-300 rounded-lg text-sm font-bold focus:outline-none"
                         />
                         <button
