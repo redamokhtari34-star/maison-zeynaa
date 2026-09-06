@@ -44,6 +44,9 @@ interface ReservationsProps {
   onSearchTermHandled?: () => void;
   initialEditReservationId?: string | null;
   onEditReservationHandled?: () => void;
+  // Defaults true so existing callers (tests, storybook-style usage) keep
+  // showing amounts unless an employé account explicitly says otherwise.
+  canSeeAmounts?: boolean;
 }
 
 export default function Reservations({
@@ -63,7 +66,8 @@ export default function Reservations({
   initialSearchTerm,
   onSearchTermHandled,
   initialEditReservationId,
-  onEditReservationHandled
+  onEditReservationHandled,
+  canSeeAmounts = true
 }: ReservationsProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -1113,46 +1117,50 @@ export default function Reservations({
                   </div>
                 </div>
 
-                {/* Pricing summary */}
-                <div className="pt-4 border-t border-dashed border-neutral-200">
-                  <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
-                    <div className="p-2">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.total_price}</span>
-                      <span className="font-extrabold text-violet-600 font-mono">{formatDa(res.montant_total_da)}</span>
+                {/* Pricing summary — a money screen by nature, so an
+                    employé account never sees it or the encaissement
+                    button, even for a single booking's own figures. */}
+                {canSeeAmounts && (
+                  <div className="pt-4 border-t border-dashed border-neutral-200">
+                    <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
+                      <div className="p-2">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.total_price}</span>
+                        <span className="font-extrabold text-violet-600 font-mono">{formatDa(res.montant_total_da)}</span>
+                      </div>
+                      <div className="p-2 border-x border-neutral-200">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.amount_paid}</span>
+                        <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
+                      </div>
+                      <div className="p-2">
+                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{language === 'fr' ? 'Reste à payer' : 'الباقي'}</span>
+                        <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${remainingClass}`}>
+                          {formatDa(res.reste_a_payer_da)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="p-2 border-x border-neutral-200">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.amount_paid}</span>
-                      <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
-                    </div>
-                    <div className="p-2">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{language === 'fr' ? 'Reste à payer' : 'الباقي'}</span>
-                      <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${remainingClass}`}>
-                        {formatDa(res.reste_a_payer_da)}
-                      </span>
-                    </div>
+
+                    {res.reste_a_payer_da > 0 && (
+                      <button
+                        id={`pay-balance-btn-${res.id}`}
+                        onClick={() => handlePayBalance(res)}
+                        className="mt-4 w-full py-2.5 px-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                      >
+                        <DollarSign size={13} />
+                        <span>
+                          {language === 'fr'
+                            ? `Encaisser le solde de ${formatDa(res.reste_a_payer_da)}`
+                            : `تحصيل الباقي ${formatDa(res.reste_a_payer_da)}`}
+                        </span>
+                      </button>
+                    )}
                   </div>
+                )}
 
-                  {res.notes && (
-                    <div className={`mt-3 p-3 bg-amber-50/30 rounded-xl text-[11px] text-amber-800 ${isRtl ? 'text-right' : 'text-left'}`}>
-                      💬 <strong>{language === 'fr' ? 'Notes:' : 'ملاحظات:'}</strong> {res.notes}
-                    </div>
-                  )}
-
-                  {res.reste_a_payer_da > 0 && (
-                    <button
-                      id={`pay-balance-btn-${res.id}`}
-                      onClick={() => handlePayBalance(res)}
-                      className="mt-4 w-full py-2.5 px-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
-                    >
-                      <DollarSign size={13} />
-                      <span>
-                        {language === 'fr' 
-                          ? `Encaisser le solde de ${formatDa(res.reste_a_payer_da)}` 
-                          : `تحصيل الباقي ${formatDa(res.reste_a_payer_da)}`}
-                      </span>
-                    </button>
-                  )}
-                </div>
+                {res.notes && (
+                  <div className={`mt-3 p-3 bg-amber-50/30 rounded-xl text-[11px] text-amber-800 ${isRtl ? 'text-right' : 'text-left'}`}>
+                    💬 <strong>{language === 'fr' ? 'Notes:' : 'ملاحظات:'}</strong> {res.notes}
+                  </div>
+                )}
               </div>
             );
           })}

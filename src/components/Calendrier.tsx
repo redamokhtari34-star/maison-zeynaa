@@ -24,6 +24,7 @@ interface CalendrierProps {
   language: Language;
   setCurrentTab?: (tab: string) => void;
   onRefreshData?: () => Promise<void>;
+  canSeeAmounts?: boolean;
 }
 
 // Which of the three dates that matter on a booking this particular calendar
@@ -38,7 +39,8 @@ export default function Calendrier({
   bijoux = [],
   language,
   setCurrentTab,
-  onRefreshData
+  onRefreshData,
+  canSeeAmounts = true
 }: CalendrierProps) {
   const t = translations[language];
   const isRtl = language === 'ar';
@@ -692,31 +694,34 @@ export default function Calendrier({
                           </div>
 
                           {/* Financial details — what remains to be paid is
-                              always shown, not folded away behind a status. */}
-                          <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1 border-t border-gray-200/60">
-                            <div>
-                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
-                                {language === 'fr' ? 'Total' : 'المجموع'}
-                              </span>
-                              <span className="font-extrabold text-gray-900 font-mono">{formatDa(res.montant_total_da)}</span>
+                              always shown to an admin, not folded away
+                              behind a status. An employé never sees it. */}
+                          {canSeeAmounts && (
+                            <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1 border-t border-gray-200/60">
+                              <div>
+                                <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                  {language === 'fr' ? 'Total' : 'المجموع'}
+                                </span>
+                                <span className="font-extrabold text-gray-900 font-mono">{formatDa(res.montant_total_da)}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                  {language === 'fr' ? 'Payé' : 'مدفوع'}
+                                </span>
+                                <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
+                                  {language === 'fr' ? 'Reste à payer' : 'الباقي'}
+                                </span>
+                                <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${
+                                  res.reste_a_payer_da > 0 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'
+                                }`}>
+                                  {formatDa(res.reste_a_payer_da)}
+                                </span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
-                                {language === 'fr' ? 'Payé' : 'مدفوع'}
-                              </span>
-                              <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">
-                                {language === 'fr' ? 'Reste à payer' : 'الباقي'}
-                              </span>
-                              <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${
-                                res.reste_a_payer_da > 0 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'
-                              }`}>
-                                {formatDa(res.reste_a_payer_da)}
-                              </span>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}
