@@ -86,9 +86,7 @@ export default function Sidebar({ currentTab, setCurrentTab, language, account, 
       {/* Brand */}
       <div className="px-6 pt-6 pb-5">
         <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
-          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-neutral-950 font-display text-base font-semibold text-white">
-            MZ
-          </div>
+          <img src="/logo.svg" alt="Maison Zeyna" className="h-11 w-11 flex-shrink-0 rounded-full" />
           <div className="min-w-0">
             <h1 className="font-display text-lg font-semibold leading-none text-neutral-900">Maison Zeyna</h1>
             <p className="eyebrow mt-1.5 leading-tight">
