@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D8B47A"/>
+      <stop offset="50%" stop-color="#B4894F"/>
+      <stop offset="100%" stop-color="#9C7440"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="100" cy="100" r="98" fill="#12192A"/>
+
+  <circle cx="100" cy="100" r="91" fill="none" stroke="url(#gold)" stroke-width="1.6"/>
+  <circle cx="100" cy="100" r="86.5" fill="none" stroke="url(#gold)" stroke-width="1.6"/>
+
+  <text x="100" y="76" text-anchor="middle" font-family="Playfair Display, Georgia, 'Times New Roman', serif" font-size="16" letter-spacing="6" fill="url(#gold)">MAISON</text>
+
+  <text x="100" y="120" text-anchor="middle" font-family="Playfair Display, Georgia, 'Times New Roman', serif" font-size="42" font-weight="700" letter-spacing="2" fill="url(#gold)">ZEYNA</text>
+
+  <g transform="translate(100,150)" fill="none" stroke="url(#gold)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0,-8 C4,0 4,10 0,20 C-4,10 -4,0 0,-8 Z"/>
+    <path d="M0,10 C-3,2 -12,-2 -19,4 C-22,9 -18,15 -12,14 C-7,13 -3,9 0,14"/>
+    <path d="M0,10 C3,2 12,-2 19,4 C22,9 18,15 12,14 C7,13 3,9 0,14"/>
+    <path d="M0,20 L0,30 M-4,30 L4,30"/>
+  </g>
+</svg>

@@ -37,9 +37,7 @@ export default function AccountPicker({ accounts, language, onSelect, onAccounts
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-10">
-          <div className="grid h-14 w-14 mx-auto mb-4 place-items-center rounded-2xl bg-neutral-950 font-display text-lg font-semibold text-white">
-            MZ
-          </div>
+          <img src="/logo.svg" alt="Maison Zeyna" className="h-16 w-16 mx-auto mb-4 rounded-full" />
           <h1 className="font-display text-2xl font-semibold text-neutral-900">Maison Zeyna</h1>
           <p className="mt-1.5 text-sm text-neutral-500">
             {language === 'fr' ? 'Qui utilise l’application ?' : 'من يستخدم التطبيق؟'}
