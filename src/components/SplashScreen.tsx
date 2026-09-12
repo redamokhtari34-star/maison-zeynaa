@@ -38,9 +38,7 @@ export default function SplashScreen({ onDone }: SplashScreenProps) {
         fading ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="grid h-20 w-20 place-items-center rounded-3xl bg-neutral-950 font-display text-2xl font-semibold text-white">
-        MZ
-      </div>
+      <img src="/logo.svg" alt="Maison Zeyna" className="h-20 w-20 rounded-full" />
 
       <div className="text-center">
         <p className="font-display text-2xl text-neutral-900">Maison Zeyna</p>
