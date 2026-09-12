@@ -73,9 +73,7 @@ export default function InstallPrompt({ language }: InstallPromptProps) {
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       <div className={`flex items-start gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-neutral-950 font-display text-sm text-white">
-          MZ
-        </span>
+        <img src="/logo.svg" alt="Maison Zeyna" className="h-10 w-10 shrink-0 rounded-full" />
 
         <div className="min-w-0 flex-1">
           <p className="text-[15px] font-semibold text-neutral-900">
