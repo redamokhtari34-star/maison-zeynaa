@@ -535,8 +535,14 @@ export default function Reservations({
       caution_da: totalCaution,
       montant_paye_da: montantPaye,
       // Corrections change what's owed and what's been paid, never the
-      // original deposit — it was fixed at creation and stays that way.
-      acompte_initial_da: existing.acompte_initial_da ?? existing.montant_paye_da,
+      // protected initial deposit — once real money has been recorded for
+      // this booking, it's fixed and stays that way. But a booking created
+      // with nothing paid up front (0 DA) has no deposit to protect yet: the
+      // first payment ever recorded for it, even if entered later through a
+      // correction rather than at creation, IS that first deposit — without
+      // this, an initial 0 DA meant the client's actual first payment always
+      // counted as "beyond the deposit" and was wiped out on cancellation.
+      acompte_initial_da: (existing.acompte_initial_da ?? 0) > 0 ? existing.acompte_initial_da : montantPaye,
       reste_a_payer_da: remainingCost,
       statut,
       notes,
@@ -629,6 +635,7 @@ export default function Reservations({
           statut_reservation: statut,
           prix_total: Number(totalCost) || 0,
           acompte: Number(montantPaye) || 0,
+          acompte_initial: Number(updated.acompte_initial_da) || 0,
           reste_a_payer: Number(remainingCost) || 0,
           caution_totale: Number(totalCaution) || 0,
           notes: notes || null
