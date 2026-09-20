@@ -142,6 +142,12 @@ export default function Statistiques({
 
   const maxVal = Math.max(...monthlyRevenueData.map(d => d.value), 300000);
 
+  // Point spacing scales to however many months have elapsed, so the line
+  // always fits between x=50 and x=548 — hardcoding 83px assumed exactly 7
+  // months and pushed later points off the chart once more months passed.
+  const chartPointSpacing = 498 / Math.max(monthlyRevenueData.length - 1, 1);
+  const chartLastX = 50 + (monthlyRevenueData.length - 1) * chartPointSpacing;
+
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       {/* Header */}
@@ -224,13 +230,13 @@ export default function Statistiques({
               {/* SVG Area polygon filled with purple gradient */}
               <path
                 d={`
-                  M 40,170 
+                  M 40,170
                   ${monthlyRevenueData.map((d, index) => {
-                    const x = 50 + index * 83;
+                    const x = 50 + index * chartPointSpacing;
                     const y = 170 - (d.value / maxVal) * 130;
                     return `L ${x},${y}`;
-                  }).join(' ')} 
-                  L 548,170 Z
+                  }).join(' ')}
+                  L ${chartLastX},170 Z
                 `}
                 fill="url(#areaGrad)"
               />
@@ -239,7 +245,7 @@ export default function Statistiques({
               <path
                 d={`
                   ${monthlyRevenueData.map((d, index) => {
-                    const x = 50 + index * 83;
+                    const x = 50 + index * chartPointSpacing;
                     const y = 170 - (d.value / maxVal) * 130;
                     return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
                   }).join(' ')}
@@ -253,7 +259,7 @@ export default function Statistiques({
 
               {/* Points & Text Values */}
               {monthlyRevenueData.map((d, index) => {
-                const x = 50 + index * 83;
+                const x = 50 + index * chartPointSpacing;
                 const y = 170 - (d.value / maxVal) * 130;
                 return (
                   <g key={index} className="group/dot cursor-pointer">
