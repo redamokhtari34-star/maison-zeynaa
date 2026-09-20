@@ -133,8 +133,11 @@ export default function Caisse({
 
   const currentBalance = totalEntries - totalCaisseExpenses - totalEmptied;
 
-  // History of Empties
-  const cashEmpties = transactions.filter(tr => tr.type === 'vidage_caisse');
+  // History of Empties — most recent first, since nothing upstream guarantees
+  // transactions arrive in date order (edits and corrections can reshuffle it).
+  const cashEmpties = transactions
+    .filter(tr => tr.type === 'vidage_caisse')
+    .sort((a, b) => `${b.date} ${b.heure}`.localeCompare(`${a.date} ${a.heure}`));
 
   // Format DZD
   const formatDa = (amount: number) => {
