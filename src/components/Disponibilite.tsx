@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Layers, Gem, User, Calendar } from 'lucide-react';
+import { Search, Layers, Gem, Calendar, ArrowRight } from 'lucide-react';
 import { Reservation, Cliente, Language } from '../types';
 import { translations } from '../translations';
-import { todayIso } from '../lib/dates';
+import { todayIso, formatDay, shortRef } from '../lib/dates';
 
 interface DisponibiliteProps {
   reservations: Reservation[];
@@ -29,7 +29,7 @@ export default function Disponibilite({ reservations, clientes, language }: Disp
     new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
 
   const query = searchTerm.trim().toLowerCase();
 
@@ -125,36 +125,37 @@ export default function Disponibilite({ reservations, clientes, language }: Disp
               className="bg-white p-6 rounded-2xl border border-neutral-200 flex flex-col justify-between"
             >
               <div>
-                <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-xs font-black text-violet-600 font-mono">#{res.id.toUpperCase()}</span>
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${statusClass(res.statut)}`}>
+                <div className={`flex justify-between items-center gap-3 mb-4 pb-4 border-b border-neutral-100 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <span title={res.id.toUpperCase()} className="text-[11px] font-medium text-neutral-400 tabular-nums">{shortRef(res.id)}</span>
+                  <span className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${statusClass(res.statut)}`}>
                     {statusLabel(res.statut)}
                   </span>
                 </div>
 
                 <div className={`flex items-center gap-3.5 mb-5 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
-                    <User size={18} />
+                  <div className="w-11 h-11 rounded-full bg-orange-50 text-orange-700 flex items-center justify-center shrink-0 font-display text-base">
+                    {(getClientName(res.cliente_id).trim()[0] || '?').toUpperCase()}
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-900">{getClientName(res.cliente_id)}</h4>
-                    <p className="text-xs text-gray-400 font-mono">📞 {getClientPhone(res.cliente_id)}</p>
+                  <div className="min-w-0">
+                    <h4 className="text-[15px] font-semibold text-gray-900 truncate">{getClientName(res.cliente_id)}</h4>
+                    <p className="text-xs text-gray-500 tabular-nums" dir="ltr">{getClientPhone(res.cliente_id)}</p>
                   </div>
                 </div>
 
-                <div className={`grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-2xl text-xs border border-slate-100 mb-5 ${
-                  isRtl ? 'text-right' : 'text-left'
+                <div className={`flex items-center gap-3 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-100 mb-5 ${
+                  isRtl ? 'flex-row-reverse text-right' : 'text-left'
                 }`}>
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">{t.start_date}</span>
-                    <span className={`font-semibold font-mono ${res.date_sortie === todayStr ? 'text-amber-600' : 'text-gray-800'}`}>
-                      📅 {res.date_sortie}
+                  <div className="min-w-0 flex-1">
+                    <span className="eyebrow block">{t.start_date}</span>
+                    <span className={`mt-1 block text-sm font-semibold ${res.date_sortie === todayStr ? 'text-amber-600' : 'text-gray-900'}`}>
+                      {formatDay(res.date_sortie, language)}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">{t.end_date}</span>
-                    <span className={`font-semibold font-mono ${res.date_retour === todayStr ? 'text-amber-600' : 'text-gray-800'}`}>
-                      📅 {res.date_retour}
+                  <ArrowRight size={16} className={`shrink-0 text-neutral-300 ${isRtl ? 'rotate-180' : ''}`} />
+                  <div className="min-w-0 flex-1">
+                    <span className="eyebrow block">{t.end_date}</span>
+                    <span className={`mt-1 block text-sm font-semibold ${res.date_retour === todayStr ? 'text-amber-600' : 'text-gray-900'}`}>
+                      {formatDay(res.date_retour, language)}
                     </span>
                   </div>
                 </div>

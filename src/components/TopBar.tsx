@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Bell, ShieldCheck, RefreshCw, CloudOff, X } from 'lucide-react';
-import { Language, Dress, Bijou, Cliente, Reservation } from '../types';
+import { Language, Dress, Bijou, Cliente, Reservation, Account } from '../types';
+import { formatDay, formatTodayLong } from '../lib/dates';
 
 interface TopBarProps {
   language: Language;
@@ -12,6 +13,7 @@ interface TopBarProps {
   syncing: boolean;
   cloudConnected: boolean;
   setCurrentTab: (tab: string) => void;
+  account?: Account;
 }
 
 type Hit = { id: string; tab: string; title: string; kind: string };
@@ -25,7 +27,8 @@ export default function TopBar({
   alertCount,
   syncing,
   cloudConnected,
-  setCurrentTab
+  setCurrentTab,
+  account
 }: TopBarProps) {
   const isRtl = language === 'ar';
   const [query, setQuery] = useState('');
@@ -80,7 +83,7 @@ export default function TopBar({
         out.push({
           id: `r-${r.id}`,
           tab: 'reservations',
-          title: `${client?.nom_complet ?? 'Cliente'} · ${r.date_sortie} → ${r.date_retour}`,
+          title: `${client?.nom_complet ?? 'Cliente'} · ${formatDay(r.date_sortie, language, false)} → ${formatDay(r.date_retour, language, false)}`,
           kind: labels.reservation
         });
       }
@@ -104,12 +107,17 @@ export default function TopBar({
           search field. Flex order follows the writing direction on its own. */}
       <div className="w-10 shrink-0 lg:hidden" aria-hidden="true" />
 
-      <div className={`hidden shrink-0 sm:block ${isRtl ? 'text-right' : ''}`}>
+      {/* The sidebar already carries the brand on desktop; there, this slot
+          gives the day instead — what the counter actually needs at a glance. */}
+      <div className={`hidden shrink-0 sm:block lg:hidden ${isRtl ? 'text-right' : ''}`}>
         <p className="font-display text-[15px] font-semibold leading-none text-neutral-900">Maison Zeyna</p>
         <p className="eyebrow mt-1 leading-none">
           {language === 'fr' ? 'Gestion haute couture' : 'إدارة الأزياء الراقية'}
         </p>
       </div>
+      <p className={`hidden shrink-0 text-sm font-medium text-neutral-600 first-letter:uppercase lg:block ${isRtl ? 'text-right' : ''}`}>
+        {formatTodayLong(language)}
+      </p>
 
       {/* Global search */}
       <div ref={boxRef} className="relative mx-auto w-full max-w-xl">
@@ -186,14 +194,17 @@ export default function TopBar({
         >
           <Bell size={16} />
           {alertCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white">
+            <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
               {alertCount}
             </span>
           )}
         </button>
 
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-neutral-950 font-display text-sm text-white">
-          Z
+        <span
+          title={account?.prenom}
+          className="grid h-9 w-9 place-items-center rounded-full bg-orange-900 font-display text-sm text-white"
+        >
+          {(account?.prenom?.trim()?.[0] || 'Z').toUpperCase()}
         </span>
       </div>
     </header>

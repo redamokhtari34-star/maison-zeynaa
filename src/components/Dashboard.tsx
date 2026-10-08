@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../translations';
-import { todayIso, isoInDays } from '../lib/dates';
+import { todayIso, isoInDays, formatDay } from '../lib/dates';
 
 interface DashboardProps {
   db: ReturnType<typeof import('../lib/storage').getFullDatabaseState>;
@@ -104,8 +104,8 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
         id: `alert-late-${r.id}`,
         type: 'error',
         text: language === 'fr'
-          ? `Retour en retard: ${client?.nom_complet || 'Inconnu'} pour "${dressNames}" (Prévu le ${r.date_retour})`
-          : `إرجاع متأخر: ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}" (كان مقرراً في ${r.date_retour})`,
+          ? `Retour en retard : ${client?.nom_complet || 'Inconnu'} pour "${dressNames}" (prévu le ${formatDay(r.date_retour, language, false)})`
+          : `إرجاع متأخر: ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}" (كان مقرراً في ${formatDay(r.date_retour, language, false)})`,
         phone: client?.telephone
       });
     }
@@ -119,7 +119,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
         id: `alert-today-${r.id}`,
         type: 'warning',
         text: language === 'fr'
-          ? `Retour prévu aujourd'hui: ${client?.nom_complet || 'Inconnu'} pour "${dressNames}"`
+          ? `Retour prévu aujourd'hui : ${client?.nom_complet || 'Inconnu'} pour "${dressNames}"`
           : `إرجاع مستحق اليوم: ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}"`,
         phone: client?.telephone
       });
@@ -135,8 +135,8 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
         id: `alert-soon-${r.id}`,
         type: 'info',
         text: language === 'fr'
-          ? `Réservation proche (${r.date_sortie}): ${client?.nom_complet || 'Inconnu'} pour "${dressNames}"`
-          : `حجز قريب (${r.date_sortie}): ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}"`,
+          ? `Sortie le ${formatDay(r.date_sortie, language, false)} : ${client?.nom_complet || 'Inconnu'} pour "${dressNames}"`
+          : `حجز قريب (${formatDay(r.date_sortie, language, false)}): ${client?.nom_complet || 'مجهول'} بخصوص "${dressNames}"`,
         phone: client?.telephone
       });
     }
@@ -146,7 +146,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
     new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount);
+    }).format(amount).replace(/\u202F/g, '\u00A0');
 
   const getHistoryIcon = (action: string) => {
     const act = action.toLowerCase();
@@ -349,7 +349,7 @@ export default function Dashboard({ db, setCurrentTab, language, onOpenQuickActi
           {t.quick_actions}
         </h3>
 
-        <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-3">
           {actions.map(a => {
             const Icon = a.icon;
             return (

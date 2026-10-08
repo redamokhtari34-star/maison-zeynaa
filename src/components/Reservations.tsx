@@ -4,7 +4,6 @@ import {
   Search, 
   Calendar, 
   CheckCircle, 
-  User, 
   Layers, 
   Gem, 
   DollarSign, 
@@ -13,12 +12,15 @@ import {
   ChevronRight, 
   AlertTriangle,
   Receipt,
-  Pencil
+  Pencil,
+  Phone,
+  StickyNote,
+  ArrowRight
 } from 'lucide-react';
 import { Reservation, Cliente, Dress, Bijou, Language, ReservationItem, Transaction } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, checkItemAvailability, saveTransactions, getTransactions, getSupabaseClient, mapReservationToDb, mapTransactionToDb, isUuid } from '../lib/storage';
-import { todayIso, isoInDays, nowTime } from '../lib/dates';
+import { todayIso, isoInDays, nowTime, formatDay, shortRef } from '../lib/dates';
 import { notify, notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
 import { askConfirm } from '../lib/confirm';
@@ -164,7 +166,7 @@ export default function Reservations({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // The price charged for an article in this booking: the price agreed with
@@ -904,17 +906,37 @@ export default function Reservations({
   // Filter reservations, soonest departure first — a reservation made last
   // week for a client leaving tomorrow belongs above one just booked for
   // next month.
+  // What needs handling comes first: overdue returns, then rentals out (the
+  // soonest back first), then upcoming outings (the soonest first), and only
+  // then finished rentals, most recent on top. A plain date sort used to bury
+  // today's work under months of returned bookings.
+  const STATUS_RANK: Record<string, number> = { en_retard: 0, en_cours: 1, future: 2, retourne: 3 };
+  const byUrgency = (a: Reservation, b: Reservation) => {
+    const rank = (STATUS_RANK[a.statut] ?? 4) - (STATUS_RANK[b.statut] ?? 4);
+    if (rank !== 0) return rank;
+    if (a.statut === 'retourne') return b.date_sortie.localeCompare(a.date_sortie);
+    if (a.statut === 'future') return a.date_sortie.localeCompare(b.date_sortie);
+    return a.date_retour.localeCompare(b.date_retour);
+  };
+
   const filteredReservations = reservations
     .filter(res => {
+      const query = searchTerm.trim().toLowerCase();
       const clientName = getClientName(res.cliente_id).toLowerCase();
       const clientPhone = getClientPhone(res.cliente_id);
-      const matchesSearch = clientName.includes(searchTerm.toLowerCase()) || clientPhone.includes(searchTerm);
+      const matchesSearch = !query
+        || clientName.includes(query)
+        || clientPhone.includes(query)
+        || res.id.toLowerCase().startsWith(query.replace(/^#/, ''))
+        || res.items.some(item => item.nom_article.toLowerCase().includes(query));
 
       const matchesStatus = statusFilter === 'all' || res.statut === statusFilter;
 
       return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => a.date_sortie.localeCompare(b.date_sortie));
+    .sort(byUrgency);
+
+  const countByStatus = (statut: string) => reservations.filter(r => r.statut === statut).length;
 
   return (
     <div className={`space-y-8 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
@@ -924,18 +946,18 @@ export default function Reservations({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Gestion des Réservations & Locations' : 'إدارة الحجوزات والتأجير'}
+            {language === 'fr' ? 'Réservations' : 'الحجوزات'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
-              ? `Planifiez les sorties de robes, suivez les acomptes et évitez les conflits de calendrier.`
+              ? `Les retards et les locations en cours d’abord, puis les prochaines sorties.`
               : `خططي لخرجات الفساتين، تابعي الدفعات المسبقة وتجنبي تداخل المواعيد.`}
           </p>
         </div>
         <button
           id="open-wizard-btn"
           onClick={openNewWizard}
-          className="flex items-center gap-2 bg-orange-600 text-white font-bold px-5 py-3 rounded-2xl cursor-pointer transition-all text-sm"
+          className="flex shrink-0 items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-5 py-3 rounded-xl cursor-pointer transition-colors text-sm"
         >
           <Plus size={16} />
           <span>{language === 'fr' ? 'Nouvelle réservation' : 'حجز جديد'}</span>
@@ -944,71 +966,51 @@ export default function Reservations({
 
       {/* Toolbar filters */}
       <div className="bg-white p-5 rounded-2xl border border-neutral-200 space-y-4">
-        <div className={`flex flex-col md:flex-row gap-4 ${isRtl ? 'md:flex-row-reverse' : ''}`}>
+        <div className="flex flex-col gap-4">
           {/* Search */}
           <div className="relative flex-1">
-            <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'left-3' : 'left-3'}`}>
+            <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'right-3.5' : 'left-3.5'}`}>
               <Search size={18} />
             </span>
             <input
               id="res-search-input"
               type="text"
-              placeholder={language === 'fr' ? 'Rechercher cliente...' : 'بحث عن زبونة...'}
+              placeholder={language === 'fr' ? 'Cliente, téléphone ou robe…' : 'زبونة، هاتف، فستان أو رقم الحجز…'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
-                isRtl ? 'text-right' : 'text-left'
+              className={`w-full py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-colors ${
+                isRtl ? 'pr-11 pl-3 text-right' : 'pl-11 pr-3 text-left'
               }`}
             />
           </div>
 
-          {/* Status buttons */}
+          {/* Status filters — each shows how many bookings it holds */}
           <div className="flex gap-2 items-center flex-wrap">
-            <button
-              id="res-filter-all"
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-gray-600 hover:bg-slate-100'
-              }`}
-            >
-              {t.all}
-            </button>
-            <button
-              id="res-filter-fut"
-              onClick={() => setStatusFilter('future')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'future' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-amber-600 hover:bg-amber-50'
-              }`}
-            >
-              {t.statut_future}
-            </button>
-            <button
-              id="res-filter-loc"
-              onClick={() => setStatusFilter('en_cours')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_cours' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              {t.statut_en_cours}
-            </button>
-            <button
-              id="res-filter-ret"
-              onClick={() => setStatusFilter('retourne')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'retourne' ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-emerald-600 hover:bg-emerald-50'
-              }`}
-            >
-              {t.statut_retourne}
-            </button>
-            <button
-              id="res-filter-lat"
-              onClick={() => setStatusFilter('en_retard')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                statusFilter === 'en_retard' ? 'bg-red-600 text-white' : 'bg-slate-50 text-red-600 hover:bg-red-50'
-              }`}
-            >
-              {t.statut_en_retard}
-            </button>
+            {([
+              { id: 'all', label: t.all, dot: 'bg-neutral-400', active: 'bg-orange-600 border-orange-600 text-white', count: reservations.length },
+              { id: 'en_retard', label: t.statut_en_retard, dot: 'bg-red-500', active: 'bg-red-600 border-red-600 text-white', count: countByStatus('en_retard') },
+              { id: 'en_cours', label: t.statut_en_cours, dot: 'bg-blue-500', active: 'bg-blue-600 border-blue-600 text-white', count: countByStatus('en_cours') },
+              { id: 'future', label: t.statut_future, dot: 'bg-amber-500', active: 'bg-amber-500 border-amber-500 text-white', count: countByStatus('future') },
+              { id: 'retourne', label: t.statut_retourne, dot: 'bg-emerald-500', active: 'bg-emerald-600 border-emerald-600 text-white', count: countByStatus('retourne') }
+            ] as const).map(f => {
+              const isActive = statusFilter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  id={`res-filter-${f.id === 'all' ? 'all' : f.id === 'future' ? 'fut' : f.id === 'en_cours' ? 'loc' : f.id === 'retourne' ? 'ret' : 'lat'}`}
+                  onClick={() => setStatusFilter(f.id)}
+                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                    isActive ? f.active : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                  } ${isRtl ? 'flex-row-reverse' : ''}`}
+                >
+                  {f.id !== 'all' && <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-white/90' : f.dot}`} />}
+                  <span>{f.label}</span>
+                  <span className={`min-w-5 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums ${isActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'}`}>
+                    {f.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1037,15 +1039,17 @@ export default function Reservations({
             return (
               <div
                 key={res.id}
-                className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
+                className={`bg-white p-6 rounded-2xl border transition-colors flex flex-col justify-between ${
+                  res.statut === 'en_retard' ? 'border-red-200' : 'border-neutral-200 hover:border-neutral-300'
+                }`}
               >
                 <div>
                   <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-xs font-black text-violet-600 font-mono">#{res.id.toUpperCase()}</span>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${statusClass}`}>
+                      <span className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${statusClass}`}>
                         {res.statut === 'future' ? t.statut_future : res.statut === 'en_cours' ? t.statut_en_cours : res.statut === 'en_retard' ? t.statut_en_retard : t.statut_retourne}
                       </span>
+                      <span title={res.id.toUpperCase()} className="text-[11px] font-medium text-neutral-400 tabular-nums">{shortRef(res.id)}</span>
                     </div>
 
                     <div className="flex gap-1">
@@ -1056,10 +1060,11 @@ export default function Reservations({
                           setInvoiceReservationId(res.id);
                           setCurrentTab('documents');
                         }}
-                        title="Créer Reçu"
-                        className="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg border border-violet-100 cursor-pointer"
+                        title={language === 'fr' ? 'Créer un reçu' : 'إنشاء وصل'}
+                        aria-label={language === 'fr' ? 'Créer un reçu' : 'إنشاء وصل'}
+                        className="p-2 text-neutral-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg border border-neutral-200 hover:border-orange-200 cursor-pointer transition-colors"
                       >
-                        <Receipt size={14} />
+                        <Receipt size={15} />
                       </button>
 
                       {/* Correct the booking — dates, articles, amounts, notes */}
@@ -1067,57 +1072,72 @@ export default function Reservations({
                         id={`edit-res-btn-${res.id}`}
                         onClick={() => openEditWizard(res)}
                         title={language === 'fr' ? 'Modifier la réservation' : 'تعديل الحجز'}
-                        className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg border border-neutral-200 hover:border-orange-200 cursor-pointer transition-all duration-200"
+                        aria-label={language === 'fr' ? 'Modifier la réservation' : 'تعديل الحجز'}
+                        className="p-2 text-neutral-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg border border-neutral-200 hover:border-orange-200 cursor-pointer transition-colors"
                       >
-                        <Pencil size={14} />
+                        <Pencil size={15} />
                       </button>
 
                       <button
                         id={`delete-res-btn-${res.id}`}
                         onClick={(e) => handleDeleteBooking(res.id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200/80 rounded-lg cursor-pointer transition-all duration-200"
+                        title={language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز'}
+                        aria-label={language === 'fr' ? 'Annuler la réservation' : 'إلغاء الحجز'}
+                        className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 border border-neutral-200 hover:border-red-200 rounded-lg cursor-pointer transition-colors"
                       >
-                        <X size={14} />
+                        <X size={15} />
                       </button>
                     </div>
                   </div>
 
                   {/* Client Info */}
                   <div className={`flex items-center gap-3.5 mb-5 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                    <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
-                      <User size={18} />
+                    <div className="w-11 h-11 rounded-full bg-orange-50 text-orange-700 flex items-center justify-center shrink-0 font-display text-base">
+                      {(getClientName(res.cliente_id).trim()[0] || '?').toUpperCase()}
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-gray-900">{getClientName(res.cliente_id)}</h4>
-                      <p className="text-xs text-gray-400 font-mono">📞 {getClientPhone(res.cliente_id)}</p>
+                    <div className="min-w-0">
+                      <h4 className="text-[15px] font-semibold text-neutral-900 truncate">{getClientName(res.cliente_id)}</h4>
+                      {getClientPhone(res.cliente_id) && (
+                        <a
+                          href={`tel:${getClientPhone(res.cliente_id)}`}
+                          className={`mt-0.5 inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-orange-700 tabular-nums ${isRtl ? 'flex-row-reverse' : ''}`}
+                          dir="ltr"
+                        >
+                          <Phone size={12} />
+                          {getClientPhone(res.cliente_id)}
+                        </a>
+                      )}
                     </div>
                   </div>
 
                   {/* Dates sorting */}
-                  <div className={`grid grid-cols-2 gap-4 p-3 bg-slate-50/50 rounded-2xl text-xs border border-slate-100 mb-5 ${
-                    isRtl ? 'text-right' : 'text-left'
+                  <div className={`flex items-center gap-3 px-4 py-3 bg-neutral-50 rounded-xl border border-neutral-100 mb-5 ${
+                    isRtl ? 'flex-row-reverse text-right' : 'text-left'
                   }`}>
-                    <div>
-                      <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">{t.start_date}</span>
-                      <span className="font-semibold text-gray-800 font-mono">📅 {res.date_sortie}</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="eyebrow block">{t.start_date}</span>
+                      <span className="mt-1 block text-sm font-semibold text-neutral-900">{formatDay(res.date_sortie, language)}</span>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wide">{t.end_date}</span>
-                      <span className="font-semibold text-gray-800 font-mono">📅 {res.date_retour}</span>
+                    <ArrowRight size={16} className={`shrink-0 text-neutral-300 ${isRtl ? 'rotate-180' : ''}`} />
+                    <div className="min-w-0 flex-1">
+                      <span className="eyebrow block">{t.end_date}</span>
+                      <span className={`mt-1 block text-sm font-semibold ${res.statut === 'en_retard' ? 'text-red-600' : 'text-neutral-900'}`}>
+                        {formatDay(res.date_retour, language)}
+                      </span>
                     </div>
                   </div>
 
                   {/* Items List */}
                   <div className="space-y-1.5 mb-5">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">{language === 'fr' ? 'Détail Articles' : 'تفاصيل المواد'} :</span>
+                    <span className="eyebrow block">{language === 'fr' ? 'Articles' : 'المواد'}</span>
                     <div className="space-y-1">
                       {res.items.map(item => (
-                        <div key={item.id} className={`flex justify-between text-xs py-1 px-2.5 bg-slate-50 border border-slate-50 rounded-lg ${isRtl ? 'flex-row-reverse' : ''}`}>
-                          <span className="font-medium text-gray-700 flex items-center gap-1.5">
-                            {item.type_article === 'robe' ? <Layers size={10} className="text-purple-500" /> : <Gem size={10} className="text-blue-500" />}
-                            {item.nom_article}
+                        <div key={item.id} className={`flex items-center justify-between gap-3 text-[13px] py-2 px-3 bg-white border border-neutral-100 rounded-lg ${isRtl ? 'flex-row-reverse' : ''}`}>
+                          <span className={`min-w-0 font-medium text-neutral-800 flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                            {item.type_article === 'robe' ? <Layers size={13} className="shrink-0 text-neutral-400" /> : <Gem size={13} className="shrink-0 text-neutral-400" />}
+                            <span className="truncate">{item.nom_article}</span>
                           </span>
-                          <span className="font-bold text-gray-900 font-mono">{formatDa(item.prix_da)}</span>
+                          {canSeeAmounts && <span className="shrink-0 font-semibold text-neutral-900 tabular-nums">{formatDa(item.prix_da)}</span>}
                         </div>
                       ))}
                     </div>
@@ -1131,16 +1151,16 @@ export default function Reservations({
                   <div className="pt-4 border-t border-dashed border-neutral-200">
                     <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
                       <div className="p-2">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.total_price}</span>
-                        <span className="font-extrabold text-violet-600 font-mono">{formatDa(res.montant_total_da)}</span>
+                        <span className="eyebrow block mb-1">{t.total_price}</span>
+                        <span className="whitespace-nowrap text-sm font-semibold text-neutral-900 tabular-nums">{formatDa(res.montant_total_da)}</span>
                       </div>
                       <div className="p-2 border-x border-neutral-200">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{t.amount_paid}</span>
-                        <span className="font-bold text-emerald-600 font-mono">{formatDa(res.montant_paye_da)}</span>
+                        <span className="eyebrow block mb-1">{t.amount_paid}</span>
+                        <span className="whitespace-nowrap text-sm font-semibold text-emerald-700 tabular-nums">{formatDa(res.montant_paye_da)}</span>
                       </div>
                       <div className="p-2">
-                        <span className="text-[9px] text-gray-400 font-bold uppercase block mb-0.5">{language === 'fr' ? 'Reste à payer' : 'الباقي'}</span>
-                        <span className={`font-bold font-mono px-1.5 py-0.5 rounded ${remainingClass}`}>
+                        <span className="eyebrow block mb-1">{language === 'fr' ? 'Reste à payer' : 'الباقي'}</span>
+                        <span className={`whitespace-nowrap text-sm font-semibold tabular-nums px-1.5 py-0.5 rounded ${remainingClass}`}>
                           {formatDa(res.reste_a_payer_da)}
                         </span>
                       </div>
@@ -1150,7 +1170,7 @@ export default function Reservations({
                       <button
                         id={`pay-balance-btn-${res.id}`}
                         onClick={() => handlePayBalance(res)}
-                        className="mt-4 w-full py-2.5 px-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                        className="mt-4 w-full py-3 px-3 bg-emerald-600 text-white hover:bg-emerald-700 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                       >
                         <DollarSign size={13} />
                         <span>
@@ -1164,8 +1184,9 @@ export default function Reservations({
                 )}
 
                 {res.notes && (
-                  <div className={`mt-3 p-3 bg-amber-50/30 rounded-xl text-[11px] text-amber-800 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    💬 <strong>{language === 'fr' ? 'Notes:' : 'ملاحظات:'}</strong> {res.notes}
+                  <div className={`mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-900 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                    <StickyNote size={14} className="mt-0.5 shrink-0 text-amber-600" />
+                    <span>{res.notes}</span>
                   </div>
                 )}
               </div>

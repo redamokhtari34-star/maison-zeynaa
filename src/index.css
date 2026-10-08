@@ -11,6 +11,10 @@
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --font-display: "Playfair Display", ui-serif, Georgia, "Times New Roman", serif;
+  /* Figures, dates and references used to switch to a typewriter face that
+     looked like a terminal printout. They stay in the house sans, with lining
+     tabular digits so amounts still align in columns. */
+  --font-mono: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --radius-lg: 12px;
   --radius-xl: 14px;
   --radius-2xl: 16px;
@@ -269,6 +273,11 @@
 
 @layer utilities {
   .font-display { font-family: var(--font-display); }
+
+  .font-mono {
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0;
+  }
 
   /* Figures — amounts, counts — are set in the serif, lining and tabular so
      columns of numbers stay aligned. */

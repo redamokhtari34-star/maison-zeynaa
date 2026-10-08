@@ -21,7 +21,7 @@ import {
 import { Transaction, TransactionType, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapTransactionToDb, updateTresorerieInDb } from '../lib/storage';
-import { todayIso } from '../lib/dates';
+import { todayIso, formatDay } from '../lib/dates';
 import { notifyError } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
 
@@ -37,10 +37,10 @@ const EmptyLogCard: React.FC<{
   formatDa: (amount: number) => string;
 }> = ({ emp, language, isRtl, formatDa }) => {
   return (
-    <div className="p-4 rounded-2xl border border-amber-100/60 bg-amber-50/10 space-y-2.5">
-      <div className={`flex justify-between items-baseline ${isRtl ? 'flex-row-reverse' : ''}`}>
-        <span className="text-[10px] text-gray-400 font-mono">{emp.date} @ {emp.heure}</span>
-        <span className="text-sm font-black text-amber-600 font-mono">-{formatDa(emp.montant_da)}</span>
+    <div className="p-4 rounded-xl border border-neutral-200 bg-white space-y-2.5">
+      <div className={`flex justify-between items-baseline gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <span className="text-xs text-gray-500 tabular-nums">{formatDay(emp.date, language)} · {emp.heure}</span>
+        <span className="whitespace-nowrap text-sm font-semibold text-amber-700 tabular-nums">-{formatDa(emp.montant_da)}</span>
       </div>
       <p className={`text-xs text-gray-600 leading-relaxed font-medium ${isRtl ? 'text-right' : 'text-left'}`}>
         {emp.beneficiaire ? (
@@ -51,8 +51,8 @@ const EmptyLogCard: React.FC<{
           emp.note || (language === 'fr' ? 'Retrait d’argent de la caisse pour dépôt bancaire ou coffre-fort.' : 'سحب أموال الصندوق للإيداع أو لتسليمها لرب العمل.')
         )}
       </p>
-      <div className={`flex justify-between text-[10px] text-gray-400 pt-1.5 border-t border-dashed border-amber-100/50 ${isRtl ? 'flex-row-reverse' : ''}`}>
-        <span>👤 {emp.utilisateur}</span>
+      <div className={`flex justify-between text-[11px] text-gray-400 pt-2 border-t border-neutral-100 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <span>{emp.utilisateur}</span>
         <span>✓ {language === 'fr' ? 'Opération validée' : 'عملية مؤكدة'}</span>
       </div>
     </div>
@@ -135,16 +135,21 @@ export default function Caisse({
 
   // History of Empties — most recent first, since nothing upstream guarantees
   // transactions arrive in date order (edits and corrections can reshuffle it).
+  const newestFirst = (a: Transaction, b: Transaction) => `${b.date} ${b.heure}`.localeCompare(`${a.date} ${a.heure}`);
   const cashEmpties = transactions
     .filter(tr => tr.type === 'vidage_caisse')
-    .sort((a, b) => `${b.date} ${b.heure}`.localeCompare(`${a.date} ${a.heure}`));
+    .sort(newestFirst);
+
+  // "Dernières opérations" must mean the latest ones: the raw list arrives in
+  // insertion order from the cloud, so slicing it unsorted showed the oldest.
+  const latestOperations = [...transactions].sort(newestFirst).slice(0, 15);
 
   // Format DZD
   const formatDa = (amount: number) => {
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // Log Expense
@@ -366,11 +371,11 @@ export default function Caisse({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Suivi de la Caisse & Trésorerie' : 'دفتر الصندوق وحساب المال'}
+            {language === 'fr' ? 'Finances & caisse' : 'المالية والصندوق'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
-              ? `Suivez en temps réel les liquidités de la caisse du magasin.`
+              ? `L’argent en caisse, les entrées, les dépenses et les retraits.`
               : `تابعي حركة السيولة المالية بالتفصيل لضمان سلامة حسابات صالونك.`}
           </p>
         </div>
@@ -380,9 +385,9 @@ export default function Caisse({
           <button
             id="open-expense-btn"
             onClick={() => { submittingRef.current = false; setIsExpenseOpen(true); }}
-            className="flex items-center gap-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs border border-rose-100"
+            className="flex items-center gap-2 bg-white text-neutral-800 hover:bg-neutral-50 font-semibold px-4 py-2.5 rounded-xl cursor-pointer text-sm border border-neutral-200 transition-colors"
           >
-            <Plus size={14} />
+            <Plus size={15} className="text-rose-600" />
             <span>{language === 'fr' ? 'Ajouter une dépense' : 'مصاريف جديدة'}</span>
           </button>
 
@@ -391,18 +396,18 @@ export default function Caisse({
             onClick={openRetraitModal}
             disabled={currentBalance <= 0}
             title={currentBalance <= 0 ? (language === 'fr' ? 'La caisse est vide (0 DA)' : 'الصندوق فارغ (0 دج)') : undefined}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-amber-500/10 transition-all"
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-xl cursor-pointer text-sm transition-colors"
           >
-            <Wallet size={14} />
+            <Wallet size={15} />
             <span>{language === 'fr' ? 'Effectuer un retrait' : 'إجراء سحب'}</span>
           </button>
 
           <button
             id="open-recover-amount-btn"
             onClick={openRecoverModal}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-2xl cursor-pointer text-xs shadow-violet-600/10 transition-all"
+            className="flex items-center gap-2 bg-white text-neutral-800 hover:bg-neutral-50 font-semibold px-4 py-2.5 rounded-xl cursor-pointer text-sm border border-neutral-200 transition-colors"
           >
-            <Tag size={14} />
+            <Tag size={15} className="text-emerald-600" />
             <span>{language === 'fr' ? 'Récupérer un montant' : 'استرجاع مبلغ'}</span>
           </button>
         </div>
@@ -421,7 +426,7 @@ export default function Caisse({
               <Wallet size={16} />
             </div>
           </div>
-          <p className="text-2xl font-black text-gray-900 leading-tight font-mono">{formatDa(currentBalance)}</p>
+          <p className="whitespace-nowrap text-2xl font-semibold text-gray-900 leading-tight font-mono">{formatDa(currentBalance)}</p>
           <span className="text-[11px] text-gray-400 font-medium block mt-2">
             {language === 'fr' ? 'Liquidités physiques restantes' : 'السيولة المتبقية في الصندوق'}
           </span>
@@ -438,7 +443,7 @@ export default function Caisse({
               <ArrowUpRight size={16} />
             </div>
           </div>
-          <p className="text-2xl font-black text-emerald-600 leading-tight font-mono">{formatDa(totalEntries)}</p>
+          <p className="whitespace-nowrap text-2xl font-semibold text-emerald-600 leading-tight font-mono">{formatDa(totalEntries)}</p>
           <span className="text-[11px] text-gray-400 font-medium block mt-2">
             {language === 'fr' ? 'Acomptes & Paiements reçus' : 'الأقساط والدفعات المستلمة'}
           </span>
@@ -455,7 +460,7 @@ export default function Caisse({
               <ArrowDownRight size={16} />
             </div>
           </div>
-          <p className="text-2xl font-black text-rose-600 leading-tight font-mono">{formatDa(totalCaisseExpenses)}</p>
+          <p className="whitespace-nowrap text-2xl font-semibold text-rose-600 leading-tight font-mono">{formatDa(totalCaisseExpenses)}</p>
           <span className="text-[11px] text-gray-400 font-medium block mt-2">
             {language === 'fr' ? 'Achats & Frais payés depuis la caisse' : 'المصاريف المدفوعة من الصندوق'}
           </span>
@@ -472,7 +477,7 @@ export default function Caisse({
               <Banknote size={16} />
             </div>
           </div>
-          <p className="text-2xl font-black text-amber-600 leading-tight font-mono">{formatDa(totalEmptied)}</p>
+          <p className="whitespace-nowrap text-2xl font-semibold text-amber-600 leading-tight font-mono">{formatDa(totalEmptied)}</p>
           <span className="text-[11px] text-gray-400 font-medium block mt-2">
             {language === 'fr' ? 'Cumul des retraits / vidages' : 'مجموع الأموال المسحوبة من الصندوق'}
           </span>
@@ -489,17 +494,17 @@ export default function Caisse({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className={`text-gray-400 font-bold uppercase border-b border-gray-50 bg-slate-50/50 rounded-xl ${
+                <tr className={`eyebrow border-b border-neutral-100 bg-neutral-50 ${
                   isRtl ? 'text-right' : 'text-left'
                 }`}>
-                  <th className="py-3 px-4">{t.operation_type}</th>
-                  <th className="py-3 px-4">{t.source}</th>
-                  <th className="py-3 px-4">{language === 'fr' ? 'Date & Heure' : 'الوقت والتاريخ'}</th>
-                  <th className="py-3 px-4 text-right">{language === 'fr' ? 'Montant' : 'القيمة'}</th>
+                  <th className="py-3 px-4 font-semibold whitespace-nowrap">{t.operation_type}</th>
+                  <th className="py-3 px-4 font-semibold">{t.source}</th>
+                  <th className="py-3 px-4 font-semibold whitespace-nowrap">{language === 'fr' ? 'Date' : 'التاريخ'}</th>
+                  <th className={`py-3 px-4 font-semibold ${isRtl ? 'text-left' : 'text-right'}`}>{language === 'fr' ? 'Montant' : 'القيمة'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 font-medium">
-                {transactions.slice(0, 15).map(tr => {
+                {latestOperations.map(tr => {
                   // A refund is recorded as an 'entree' with a negative amount,
                   // so it nets directly out of revenue and cash-in-hand rather
                   // than sitting next to them as an unrelated expense line —
@@ -511,7 +516,7 @@ export default function Caisse({
                   return (
                     <tr key={tr.id} className="hover:bg-slate-50/30">
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-lg font-bold border flex items-center gap-1 w-fit ${
+                        <span className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-semibold border flex items-center gap-1 w-fit ${
                           isEntry
                             ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
                             : isExpense || isRefund
@@ -523,7 +528,7 @@ export default function Caisse({
                       </td>
                       <td className={`py-3.5 px-4 ${isRtl ? 'text-right' : 'text-left'}`}>
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-bold text-gray-950">{tr.description}</span>
+                          <span className="font-semibold text-gray-950">{tr.description}</span>
                           {isExpense && (
                             <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold border ${
                               tr.source_argent === 'tresorerie'
@@ -536,12 +541,12 @@ export default function Caisse({
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-violet-500 font-semibold mt-0.5">{categoriesMap[tr.categorie] || tr.categorie}</div>
+                        <div className="text-[11px] text-neutral-500 mt-0.5">{categoriesMap[tr.categorie] || tr.categorie}</div>
                       </td>
-                      <td className="py-3.5 px-4 text-gray-500 font-mono">
-                        {tr.date} <span className="text-gray-300">@</span> {tr.heure}
+                      <td className="py-3.5 px-4 text-gray-500 whitespace-nowrap tabular-nums">
+                        {formatDay(tr.date, language, false)} <span className="text-gray-300">·</span> {tr.heure}
                       </td>
-                      <td className={`py-3.5 px-4 text-right font-bold text-sm font-mono ${isEntry ? 'text-emerald-600' : 'text-red-500'}`}>
+                      <td className={`py-3.5 px-4 whitespace-nowrap font-semibold text-sm tabular-nums ${isRtl ? 'text-left' : 'text-right'} ${isEntry ? 'text-emerald-600' : 'text-red-500'}`}>
                         {isEntry ? '+' : '-'} {formatDa(Math.abs(tr.montant_da))}
                       </td>
                     </tr>

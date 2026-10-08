@@ -32,6 +32,32 @@ export function nowTime(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** A stored YYYY-MM-DD date as people read it: "8 sept. 2026". */
+export function formatDay(iso: string | undefined | null, language: 'fr' | 'ar' = 'fr', withYear = true): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-DZ' : 'fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' as const } : {})
+  }).format(new Date(y, m - 1, d));
+}
+
+/** Today spelled out for the header: "jeudi 8 octobre". */
+export function formatTodayLong(language: 'fr' | 'ar' = 'fr'): string {
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-DZ' : 'fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(new Date());
+}
+
+/** The first block of a UUID — enough to tell bookings apart on screen. */
+export function shortRef(id: string): string {
+  return `#${id.slice(0, 8).toUpperCase()}`;
+}
+
 /** The current month as YYYY-MM. */
 export function currentMonth(): string {
   return todayIso().slice(0, 7);

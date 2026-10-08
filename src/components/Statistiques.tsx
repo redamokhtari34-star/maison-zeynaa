@@ -120,7 +120,7 @@ export default function Statistiques({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // Monthly revenue for the year in progress, up to the current month
