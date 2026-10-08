@@ -10,12 +10,12 @@ import {
   Sparkles, 
   Wrench, 
   DollarSign, 
-  ArrowUpRight 
+  ArrowUpRight
 } from 'lucide-react';
 import { Reservation, Dress, Bijou, Language, Transaction } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapReservationToDb, mapTransactionToDb } from '../lib/storage';
-import { todayIso } from '../lib/dates';
+import { todayIso, formatDay, shortRef } from '../lib/dates';
 import { notifyError } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
 
@@ -79,7 +79,7 @@ export default function Retours({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // Only rentals in progress or late can be returned
@@ -87,11 +87,18 @@ export default function Retours({
     res.statut === 'en_cours' || res.statut === 'en_retard'
   );
 
-  const filteredRentals = activeRentals.filter(res => {
-    const name = getClientName(res.cliente_id).toLowerCase();
-    const matchesSearch = name.includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  // Overdue first, then by the date each piece is due back.
+  const filteredRentals = activeRentals
+    .filter(res => {
+      const query = searchTerm.trim().toLowerCase();
+      if (!query) return true;
+      return getClientName(res.cliente_id).toLowerCase().includes(query)
+        || res.items.some(item => item.nom_article.toLowerCase().includes(query));
+    })
+    .sort((a, b) =>
+      (a.statut === 'en_retard' ? 0 : 1) - (b.statut === 'en_retard' ? 0 : 1)
+      || a.date_retour.localeCompare(b.date_retour)
+    );
 
   // Open return handler
   const openReturnModal = (res: Reservation) => {
@@ -212,11 +219,11 @@ export default function Retours({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Gestion des Retours de Robes' : 'إدارة إرجاع الفساتين'}
+            {language === 'fr' ? 'Retours' : 'الإرجاع'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
-              ? `Enregistrez le retour des articles, appliquez des pénalités si nécessaire et libérez la caution.`
+              ? `Les pièces encore dehors, les retards en premier. Enregistrez chaque retour dès qu’il arrive.`
               : `سجلي إرجاع الملابس، افحصي حالتها، واخصمي من العربون أو الكفالة في حال حدوث أي تلف.`}
           </p>
         </div>
@@ -225,17 +232,17 @@ export default function Retours({
       {/* Search Input filter */}
       <div className="bg-white p-5 rounded-2xl border border-neutral-200">
         <div className="relative">
-          <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'left-3' : 'left-3'}`}>
+          <span className={`absolute inset-y-0 flex items-center text-gray-400 pointer-events-none ${isRtl ? 'right-3.5' : 'left-3.5'}`}>
             <Search size={18} />
           </span>
           <input
             id="retours-search"
             type="text"
-            placeholder={language === 'fr' ? 'Rechercher par nom de cliente...' : 'بحث باسم الزبونة...'}
+            placeholder={language === 'fr' ? 'Cliente ou robe…' : 'زبونة أو فستان…'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full py-2.5 pr-3 pl-10 bg-slate-50 border border-neutral-200 rounded-xl text-xs focus:outline-none focus:border-violet-500 focus:bg-white transition-all ${
-              isRtl ? 'text-right' : 'text-left'
+            className={`w-full py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-orange-500 focus:bg-white transition-colors ${
+              isRtl ? 'pr-11 pl-3 text-right' : 'pl-11 pr-3 text-left'
             }`}
           />
         </div>
@@ -255,12 +262,14 @@ export default function Retours({
           {filteredRentals.map(res => (
             <div
               key={res.id}
-              className="bg-white p-6 rounded-2xl border border-neutral-200 transition-all duration-300 flex flex-col justify-between"
+              className={`bg-white p-6 rounded-2xl border flex flex-col justify-between ${
+                res.statut === 'en_retard' ? 'border-red-200' : 'border-neutral-200'
+              }`}
             >
               <div>
-                <div className={`flex justify-between items-center mb-4 pb-4 border-b border-gray-50 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-xs font-black text-violet-600 font-mono">#{res.id.toUpperCase()}</span>
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                <div className={`flex justify-between items-center gap-3 mb-4 pb-4 border-b border-neutral-100 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <span title={res.id.toUpperCase()} className="text-[11px] font-medium text-neutral-400 tabular-nums">{shortRef(res.id)}</span>
+                  <span className={`whitespace-nowrap px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
                     res.statut === 'en_retard' 
                       ? 'bg-red-50 text-red-700 border border-red-100' 
                       : 'bg-blue-50 text-blue-700 border border-blue-100'
@@ -270,18 +279,20 @@ export default function Retours({
                 </div>
 
                 <div className={`mb-4 ${isRtl ? 'text-right' : 'text-left'}`}>
-                  <h4 className="text-sm font-extrabold text-gray-900">{getClientName(res.cliente_id)}</h4>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">
-                    📅 {language === 'fr' ? 'À retourner le' : 'تاريخ الإرجاع:'} <span className="font-mono font-bold text-gray-800">{res.date_retour}</span>
+                  <h4 className="text-[15px] font-semibold text-gray-900">{getClientName(res.cliente_id)}</h4>
+                  <p className={`mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                    <Calendar size={13} className={res.statut === 'en_retard' ? 'text-red-500' : 'text-gray-400'} />
+                    <span>{language === 'fr' ? 'À rendre le' : 'تاريخ الإرجاع:'}</span>
+                    <span className={`font-semibold ${res.statut === 'en_retard' ? 'text-red-600' : 'text-gray-800'}`}>{formatDay(res.date_retour, language)}</span>
                   </p>
                 </div>
 
                 {/* Articles details */}
                 <div className="space-y-1.5 mb-5">
                   {res.items.map(item => (
-                    <div key={item.id} className={`flex justify-between text-xs py-1.5 px-3 bg-slate-50 border border-slate-100 rounded-xl ${isRtl ? 'flex-row-reverse' : ''}`}>
-                      <span className="font-semibold text-gray-700 flex items-center gap-1.5">
-                        {item.type_article === 'robe' ? <Layers size={10} className="text-purple-500" /> : <Gem size={10} className="text-blue-500" />}
+                    <div key={item.id} className={`flex justify-between text-[13px] py-2 px-3 bg-white border border-neutral-100 rounded-lg ${isRtl ? 'flex-row-reverse' : ''}`}>
+                      <span className={`font-medium text-gray-800 flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                        {item.type_article === 'robe' ? <Layers size={13} className="text-neutral-400" /> : <Gem size={13} className="text-neutral-400" />}
                         {item.nom_article}
                       </span>
                     </div>
@@ -293,7 +304,7 @@ export default function Retours({
               <button
                 id={`return-action-btn-${res.id}`}
                 onClick={() => openReturnModal(res)}
-                className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-violet-500/10"
+                className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>{language === 'fr' ? 'Enregistrer le retour' : 'تسجيل الإرجاع وفحص الحالة'}</span>
               </button>
@@ -310,7 +321,7 @@ export default function Retours({
           <form onSubmit={handleSubmitReturn} className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden shadow-2xl z-10 animate-scale-up">
             <div className={`p-6 border-b border-neutral-200 flex justify-between bg-slate-50 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-base font-bold text-gray-900">
-                {language === 'fr' ? `Retour de la location #${selectedRes.id.toUpperCase()}` : `تسجيل إرجاع الحجز #${selectedRes.id.toUpperCase()}`}
+                {language === 'fr' ? `Retour — ${getClientName(selectedRes.cliente_id)}` : `تسجيل إرجاع — ${getClientName(selectedRes.cliente_id)}`}
               </h3>
               <button type="button" onClick={() => setIsReturnModalOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
                 <X size={18} />

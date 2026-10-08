@@ -363,7 +363,7 @@ export default function Bijoux({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   const renderStatusBadge = (status: typeof statut) => {
@@ -408,7 +408,7 @@ export default function Bijoux({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Gestion des Bijoux & Accessoires' : 'إدارة الحلي والإكسسوارات'}
+            {language === 'fr' ? 'Bijoux & accessoires' : 'إدارة الحلي والإكسسوارات'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 

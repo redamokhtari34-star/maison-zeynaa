@@ -51,7 +51,7 @@ export default function Documents({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   const clientInfo = selectedRes ? getClient(selectedRes.cliente_id) : null;

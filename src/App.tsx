@@ -435,15 +435,18 @@ export default function App() {
         syncing={supabaseSyncing}
         cloudConnected={cloudConnected}
         setCurrentTab={setCurrentTab}
+        account={activeAccount}
       />
 
       {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
-      <main className={`flex-1 px-4 pt-24 pb-12 sm:px-6 lg:px-8 ${
+      <main className={`min-w-0 flex-1 pt-24 pb-16 ${
         isRtl ? 'lg:pr-[272px]' : 'lg:pl-[272px]'
       }`}>
-        <Suspense fallback={<div className="py-24 text-center text-sm text-neutral-400">Chargement…</div>}>
-          {renderTabContent()}
-        </Suspense>
+        <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10">
+          <Suspense fallback={<div className="py-24 text-center text-sm text-neutral-400">Chargement…</div>}>
+            {renderTabContent()}
+          </Suspense>
+        </div>
       </main>
     </div>
   );

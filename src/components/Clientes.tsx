@@ -19,7 +19,7 @@ import {
 import { Cliente, Reservation, Language } from '../types';
 import { translations } from '../translations';
 import { addHistoryEntry, getSupabaseClient, mapClientToDb } from '../lib/storage';
-import { todayIso } from '../lib/dates';
+import { todayIso, formatDay, shortRef } from '../lib/dates';
 import { notifyError, notifySuccess } from '../lib/toast';
 import { mirrorToCloud } from '../lib/sync';
 import { askConfirm } from '../lib/confirm';
@@ -95,7 +95,7 @@ export default function Clientes({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // Open Form
@@ -233,7 +233,7 @@ export default function Clientes({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Annuaire des Clientes' : 'دليل الزبونات'}
+            {language === 'fr' ? 'Clientes' : 'دليل الزبونات'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr'
@@ -299,8 +299,8 @@ export default function Clientes({
                     <div className={`flex justify-between items-start ${isRtl ? 'flex-row-reverse' : ''}`}>
                       <div>
                         <h4 className="font-bold leading-tight">{client.nom_complet}</h4>
-                        <p className={`text-xs mt-1 font-mono flex items-center gap-1 ${isActive ? 'text-violet-100' : 'text-gray-500'}`}>
-                          📞 {client.telephone}
+                        <p className={`text-xs mt-1 tabular-nums ${isActive ? 'text-violet-100' : 'text-gray-500'}`} dir="ltr">
+                          {client.telephone}
                         </p>
                       </div>
 
@@ -426,7 +426,7 @@ export default function Clientes({
                   </p>
                   {totalOwed > 0 ? (
                     <span className="text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded mt-2 inline-block">
-                      ⚠️ {language === 'fr' ? 'Créance à recouvrer' : 'ديون مستحقة للدفع'}
+                      {language === 'fr' ? 'Créance à recouvrer' : 'ديون مستحقة للدفع'}
                     </span>
                   ) : (
                     <span className="text-[10px] text-emerald-600 font-semibold mt-2 block">✓ {language === 'fr' ? 'Solde à jour' : 'الحساب خالص'}</span>
@@ -457,10 +457,10 @@ export default function Clientes({
                         <div key={res.id} className="p-4 rounded-2xl border border-gray-50 bg-slate-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className={isRtl ? 'text-right' : 'text-left'}>
                             <div className={`flex items-center gap-2 mb-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                              <span className="text-xs font-bold text-violet-600 font-mono">#{res.id.toUpperCase()}</span>
-                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border ${statusBg}`}>
+                              <span className={`whitespace-nowrap px-2 py-0.5 text-[11px] font-semibold rounded-md border ${statusBg}`}>
                                 {res.statut === 'future' ? t.statut_future : res.statut === 'en_cours' ? t.statut_en_cours : res.statut === 'en_retard' ? t.statut_en_retard : t.statut_retourne}
                               </span>
+                              <span title={res.id.toUpperCase()} className="text-[11px] text-neutral-400 tabular-nums">{shortRef(res.id)}</span>
                             </div>
 
                             {/* List of articles */}
@@ -468,8 +468,8 @@ export default function Clientes({
                               {res.items.map(i => i.nom_article).join(' + ')}
                             </p>
 
-                            <p className="text-[11px] text-gray-400 mt-1">
-                              📅 {res.date_sortie} ➔ {res.date_retour}
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatDay(res.date_sortie, language)} → {formatDay(res.date_retour, language)}
                             </p>
                           </div>
 

@@ -397,7 +397,7 @@ export default function Robes({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // "Occupée" on the badge doesn't say when it frees up — worth a line on
@@ -454,7 +454,7 @@ export default function Robes({
       }`}>
         <div>
           <h2 className="font-display text-[2rem] leading-tight text-neutral-900">
-            {language === 'fr' ? 'Gestion des Robes' : 'إدارة الفساتين'}
+            {language === 'fr' ? 'Catalogue des robes' : 'إدارة الفساتين'}
           </h2>
           <p className="mt-1 text-[15px] text-neutral-500">
             {language === 'fr' 
@@ -623,7 +623,7 @@ export default function Robes({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedDresses.map(dress => (
             <div
               key={dress.id}

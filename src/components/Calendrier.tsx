@@ -127,7 +127,7 @@ export default function Calendrier({
     return new Intl.NumberFormat(language === 'fr' ? 'fr-DZ' : 'ar-DZ', {
       style: 'decimal',
       maximumFractionDigits: 0
-    }).format(amount) + ' DA';
+    }).format(amount).replace(/\u202F/g, '\u00A0') + '\u00A0DA';
   };
 
   // What this calendar date means for this particular booking: the dress
@@ -156,8 +156,8 @@ export default function Calendrier({
         };
       case 'evenement':
         return {
-          bg: 'bg-red-100 text-red-700 border-red-200',
-          dot: 'bg-red-500',
+          bg: 'bg-amber-100 text-amber-800 border-amber-200',
+          dot: 'bg-amber-500',
           label: language === 'fr' ? "Jour de l'évènement" : 'يوم المناسبة'
         };
     }
@@ -295,7 +295,7 @@ export default function Calendrier({
               <CalendarIcon size={22} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-              {language === 'fr' ? 'Calendrier des Réservations' : 'تقويم الحجوزات والتأجير'}
+              {language === 'fr' ? 'Calendrier' : 'تقويم الحجوزات والتأجير'}
             </h1>
           </div>
           <p className="text-xs text-gray-500 font-medium">
@@ -353,20 +353,20 @@ export default function Calendrier({
 
         <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
-            <p className="text-xs text-red-500 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
-            <p className="text-2xl font-extrabold text-red-600 mt-1">{activeRentalsCount}</p>
+            <p className="text-xs text-blue-600 font-bold uppercase">{language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}</p>
+            <p className="text-2xl font-extrabold text-blue-700 mt-1">{activeRentalsCount}</p>
           </div>
-          <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <Clock size={20} />
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex items-center justify-between">
           <div>
-            <p className="text-xs text-blue-500 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
-            <p className="text-2xl font-extrabold text-blue-600 mt-1">{futureRentalsCount}</p>
+            <p className="text-xs text-amber-600 font-bold uppercase">{language === 'fr' ? 'Réservations futures' : 'حجوزات قادمة'}</p>
+            <p className="text-2xl font-extrabold text-amber-600 mt-1">{futureRentalsCount}</p>
           </div>
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Sparkles size={20} />
           </div>
         </div>
@@ -418,11 +418,11 @@ export default function Calendrier({
             onClick={() => setStatusFilter('en_cours')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'en_cours'
-                ? 'bg-red-600 text-white'
-                : 'bg-red-50 text-red-700 hover:bg-red-100'
+                ? 'bg-blue-600 text-white'
+                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
             {language === 'fr' ? 'Locations en cours' : 'تأجير حالي'}
           </button>
 
@@ -430,11 +430,11 @@ export default function Calendrier({
             onClick={() => setStatusFilter('future')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'future'
-                ? 'bg-blue-600 text-white'
-                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                ? 'bg-amber-500 text-white'
+                : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
             {language === 'fr' ? 'Futures' : 'مستقبلية'}
           </button>
 
@@ -539,7 +539,7 @@ export default function Calendrier({
             <span className="text-gray-600 font-medium">{language === 'fr' ? 'Jour de sortie' : 'يوم الخروج'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
             <span className="text-gray-600 font-medium">{language === 'fr' ? "Jour de l'évènement" : 'يوم المناسبة'}</span>
           </div>
           <div className="flex items-center gap-1.5">
