@@ -1,12 +1,18 @@
+import { NICHES_PAR_CATEGORIE, PAYS } from '../lib/niches';
+
 interface Props {
   secteurs: string[];
   statuts: string[];
   secteur: string;
   statut: string;
   modification: string;
+  niche: string;
+  pays: string;
   onSecteurChange: (v: string) => void;
   onStatutChange: (v: string) => void;
   onModificationChange: (v: string) => void;
+  onNicheChange: (v: string) => void;
+  onPaysChange: (v: string) => void;
   onReset: () => void;
   count: number;
   total: number;
@@ -21,9 +27,13 @@ export function Filters({
   secteur,
   statut,
   modification,
+  niche,
+  pays,
   onSecteurChange,
   onStatutChange,
   onModificationChange,
+  onNicheChange,
+  onPaysChange,
   onReset,
   count,
   total,
@@ -52,6 +62,28 @@ export function Filters({
         <option value="">Toute modification</option>
         <option value="Modification à faire">Modification à faire</option>
         <option value="Modification faite">Modification faite</option>
+      </select>
+
+      <select className={selectCls} value={pays} onChange={(e) => onPaysChange(e.target.value)}>
+        <option value="">Tous pays</option>
+        {PAYS.map((p) => (
+          <option key={p.value} value={p.value}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+
+      <select className={selectCls} value={niche} onChange={(e) => onNicheChange(e.target.value)}>
+        <option value="">Toutes niches</option>
+        {Object.entries(NICHES_PAR_CATEGORIE).map(([category, niches]) => (
+          <optgroup key={category} label={category}>
+            {niches.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </optgroup>
+        ))}
       </select>
 
       <button

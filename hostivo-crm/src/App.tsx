@@ -6,6 +6,7 @@ import { ClientTable, type SortKey } from './components/ClientTable';
 import { FailedPayments } from './components/FailedPayments';
 import { Filters } from './components/Filters';
 import { LoginScreen } from './components/LoginScreen';
+import { NichesOverview } from './components/NichesOverview';
 import { StatsBar } from './components/StatsBar';
 import { TopBar } from './components/TopBar';
 import { sampleClients } from './data/sampleData';
@@ -13,6 +14,7 @@ import * as auth from './lib/auth';
 import { fetchClients, isSupabaseConfigured } from './lib/clients';
 import { createClient, isWriteConfigured, writeClientUpdates } from './lib/clientsWrite';
 import { parseLooseDate } from './lib/parse';
+import { getAllNiches } from './lib/niches';
 import type { Client, ClientUpdates, NewClientInput, Session, SourceMode } from './types';
 
 type AuthState = 'checking' | 'loggedOut' | 'mustChangePassword' | 'loggedIn' | 'changingPasswordVoluntary';
@@ -120,11 +122,14 @@ function CrmApp({
   const [secteur, setSecteur] = useState('');
   const [statut, setStatut] = useState('');
   const [modification, setModification] = useState('');
+  const [niche, setNiche] = useState('');
+  const [pays, setPays] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('numero');
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [selected, setSelected] = useState<Client | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPayments, setShowPayments] = useState(false);
+  const [showNiches, setShowNiches] = useState(false);
 
   async function load() {
     if (!isSupabaseConfigured) return;
@@ -164,6 +169,8 @@ function CrmApp({
         if (secteur && c.secteur !== secteur) return false;
         if (statut && c.statutSite !== statut) return false;
         if (modification && c.statutModification !== modification) return false;
+        if (niche && c.niche !== niche) return false;
+        if (pays && c.pays !== pays) return false;
         if (q) {
           const haystack = `${c.nomEntreprise} ${c.secteur} ${c.telephone}`.toLowerCase();
           if (!haystack.includes(q)) return false;
@@ -187,7 +194,7 @@ function CrmApp({
         if (av > bv) return 1 * sortDir;
         return 0;
       });
-  }, [clients, query, secteur, statut, modification, sortKey, sortDir]);
+  }, [clients, query, secteur, statut, modification, niche, pays, sortKey, sortDir]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1));
@@ -202,6 +209,8 @@ function CrmApp({
     setSecteur('');
     setStatut('');
     setModification('');
+    setNiche('');
+    setPays('');
   }
 
   const canEdit = isWriteConfigured && source === 'supabase';
@@ -279,9 +288,13 @@ function CrmApp({
             secteur={secteur}
             statut={statut}
             modification={modification}
+            niche={niche}
+            pays={pays}
             onSecteurChange={setSecteur}
             onStatutChange={setStatut}
             onModificationChange={setModification}
+            onNicheChange={setNiche}
+            onPaysChange={setPays}
             onReset={resetFilters}
             count={filtered.length}
             total={clients.length}
@@ -298,6 +311,15 @@ function CrmApp({
             Nouveau client
           </button>
         )}
+        <button
+          onClick={() => setShowNiches(true)}
+          className="flex flex-none items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          Niches ({getAllNiches().length})
+        </button>
       </div>
 
       <ClientTable clients={filtered} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} onSelect={setSelected} />
@@ -305,6 +327,7 @@ function CrmApp({
       <ClientDetail client={selected} onClose={() => setSelected(null)} canEdit={canEdit} onSave={handleSaveClient} />
       <AddClientModal open={showAddModal} onClose={() => setShowAddModal(false)} onCreate={handleCreateClient} secteurs={secteurs} />
       <FailedPayments open={showPayments} onClose={() => setShowPayments(false)} />
+      <NichesOverview clients={clients} open={showNiches} onClose={() => setShowNiches(false)} />
     </div>
   );
 }

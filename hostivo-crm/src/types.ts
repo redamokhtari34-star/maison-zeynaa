@@ -27,6 +27,8 @@ export interface Client {
   statutModification?: StatutModification;
   noteModification?: string;
   dateModification?: string;
+  niche?: string;
+  pays?: string;
 }
 
 export type SourceMode = 'supabase' | 'demo';
@@ -47,6 +49,8 @@ export interface ClientUpdates {
   statutModification?: string;
   noteModification?: string;
   dateModification?: string;
+  niche?: string;
+  pays?: string;
 }
 
 /** Champs saisis à la création d'un nouveau client — voir lib/clientsWrite.ts. */
@@ -64,6 +68,8 @@ export interface NewClientInput {
   statutModification?: string;
   noteModification?: string;
   dateModification?: string;
+  niche?: string;
+  pays?: string;
 }
 
 /** Session utilisateur — voir lib/auth.ts. */
