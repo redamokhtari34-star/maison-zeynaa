@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { RESEAUX_OPTIONS, STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
+import { PAYS, NICHES_PAR_CATEGORIE } from '../lib/niches';
 import type { NewClientInput } from '../types';
 
 interface Props {
@@ -26,6 +27,8 @@ const emptyForm = {
   statutModification: '',
   noteModification: '',
   dateModification: '',
+  niche: '',
+  pays: 'France',
 };
 
 export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
@@ -75,6 +78,8 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
         noteModification: form.noteModification.trim() || undefined,
         dateModification: form.dateModification.trim() || undefined,
         reseauxSouhaites: reseaux.length ? reseaux : undefined,
+        niche: form.niche.trim() || undefined,
+        pays: form.pays.trim() || undefined,
       });
       reset();
       onClose();
@@ -205,6 +210,40 @@ export function AddClientModal({ open, onClose, onCreate, secteurs }: Props) {
                 placeholder="Optionnel"
               />
             </FormField>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Pays">
+                <select
+                  value={form.pays}
+                  onChange={(e) => setForm({ ...form, pays: e.target.value })}
+                  className={inputCls}
+                >
+                  {PAYS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Niche">
+                <select
+                  value={form.niche}
+                  onChange={(e) => setForm({ ...form, niche: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="">Sélectionner une niche</option>
+                  {Object.entries(NICHES_PAR_CATEGORIE).map(([category, niches]) => (
+                    <optgroup key={category} label={category}>
+                      {niches.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </FormField>
+            </div>
 
             <FormField label="Réseaux souhaités">
               <div className="flex flex-wrap gap-1.5">
