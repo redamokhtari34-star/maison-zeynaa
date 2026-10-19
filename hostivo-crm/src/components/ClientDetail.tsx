@@ -3,6 +3,7 @@ import type { Client, ClientUpdates } from '../types';
 import { formatDate, toAbsoluteUrl } from '../lib/parse';
 import { telHref, whatsappHref, formatPhoneDisplay } from '../lib/phone';
 import { RESEAUX_OPTIONS, STATUT_MODIFICATION_OPTIONS, STATUT_SITE_OPTIONS } from '../lib/constants';
+import { PAYS, NICHES_PAR_CATEGORIE } from '../lib/niches';
 import { ModificationBadge, StatusBadge } from './StatusBadge';
 import { SocialIcon } from './SocialIcons';
 
@@ -27,6 +28,8 @@ interface FormState {
   notes: string;
   noteModification: string;
   dateModification: string;
+  niche: string;
+  pays: string;
 }
 
 function toForm(client: Client): FormState {
@@ -44,13 +47,15 @@ function toForm(client: Client): FormState {
     notes: client.notes ?? '',
     noteModification: client.noteModification ?? '',
     dateModification: client.dateModification ?? '',
+    niche: client.niche ?? '',
+    pays: client.pays ?? '',
   };
 }
 
 const TEXT_KEYS: (keyof FormState)[] = [
   'nomEntreprise', 'secteur', 'telephone', 'dateDemande', 'dateMiseEnLigne',
   'derniereMiseAJour', 'compteDemarche', 'statutSite', 'statutModification',
-  'notes', 'noteModification', 'dateModification',
+  'notes', 'noteModification', 'dateModification', 'niche', 'pays',
 ];
 
 export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
@@ -293,7 +298,48 @@ export function ClientDetail({ client, onClose, canEdit, onSave }: Props) {
               <div className="h-px bg-slate-100" />
 
               {canEdit ? (
-                <EditField label="Réseaux souhaités">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <EditField label="Pays">
+                    <select
+                      value={form.pays}
+                      onChange={(e) => setForm({ ...form, pays: e.target.value })}
+                      className={selectCls}
+                    >
+                      <option value="">Non renseigné</option>
+                      {PAYS.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </EditField>
+                  <EditField label="Niche">
+                    <select
+                      value={form.niche}
+                      onChange={(e) => setForm({ ...form, niche: e.target.value })}
+                      className={selectCls}
+                    >
+                      <option value="">Non renseignée</option>
+                      {Object.entries(NICHES_PAR_CATEGORIE).map(([category, niches]) => (
+                        <optgroup key={category} label={category}>
+                          {niches.map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </EditField>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3.5">
+                  <Field label="Pays" value={client.pays || <Empty text="Non renseigné" />} />
+                  <Field label="Niche" value={client.niche || <Empty text="Non renseignée" />} />
+                </div>
+              )}
+
+              <div className="h-px bg-slate-100" />
                   <div className="flex flex-wrap gap-1.5">
                     {RESEAUX_OPTIONS.map((network) => {
                       const active = form.reseauxSouhaites.includes(network);
