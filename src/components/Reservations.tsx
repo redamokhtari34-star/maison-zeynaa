@@ -1091,7 +1091,7 @@ export default function Reservations({
                   </div>
 
                   {/* Client Info */}
-                  <div className={`flex items-center gap-3.5 mb-5 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <div className={`flex flex-wrap items-center gap-x-3.5 gap-y-3 mb-5 ${isRtl ? 'flex-row-reverse text-right' : 'text-left'}`}>
                     <div className="w-11 h-11 rounded-full bg-orange-50 text-orange-700 flex items-center justify-center shrink-0 font-display text-base">
                       {(getClientName(res.cliente_id).trim()[0] || '?').toUpperCase()}
                     </div>
@@ -1108,6 +1108,13 @@ export default function Reservations({
                         </a>
                       )}
                     </div>
+
+                    {res.date_creation && (
+                      <div className="ml-auto shrink-0 text-right">
+                        <span className="eyebrow block">{language === 'fr' ? 'Réservation faite le' : 'تم الحجز بتاريخ'}</span>
+                        <span className="mt-1 block text-xs font-semibold text-neutral-700">{formatDay(res.date_creation, language)}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Dates sorting */}
