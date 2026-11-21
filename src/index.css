@@ -15,10 +15,25 @@
      looked like a terminal printout. They stay in the house sans, with lining
      tabular digits so amounts still align in columns. */
   --font-mono: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --radius-lg: 12px;
-  --radius-xl: 14px;
-  --radius-2xl: 16px;
-  --radius-3xl: 20px;
+  /* Tighter corners read as a tool rather than a toy. */
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 14px;
+
+  /* Screens lean on bold/extrabold everywhere; capping the scale at 600
+     keeps hierarchy while removing the shouty weight. */
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 700;
+
+  /* Soft, low-contrast elevation tinted with the warm neutral. */
+  --shadow-sm: 0 1px 2px rgb(31 30 27 / 0.04);
+  --shadow: 0 1px 3px rgb(31 30 27 / 0.06), 0 1px 2px rgb(31 30 27 / 0.03);
+  --shadow-md: 0 4px 10px -2px rgb(31 30 27 / 0.06), 0 2px 4px -2px rgb(31 30 27 / 0.04);
+  --shadow-lg: 0 10px 24px -6px rgb(31 30 27 / 0.08), 0 4px 8px -4px rgb(31 30 27 / 0.04);
+  --shadow-xl: 0 18px 36px -10px rgb(31 30 27 / 0.12), 0 6px 12px -6px rgb(31 30 27 / 0.05);
+  --shadow-2xl: 0 28px 56px -16px rgb(31 30 27 / 0.20);
 
   --color-violet-50: #F2F4F7;
   --color-violet-100: #E1E5EF;
@@ -265,10 +280,37 @@
 }
 
 @layer base {
-  body { background-color: var(--color-neutral-50); }
+  body {
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-800);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
   /* Page and section titles are the serif voice of the house. */
-  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.01em; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.015em; text-wrap: balance; }
+
+  ::selection { background: var(--color-violet-100); color: var(--color-violet-900); }
+
+  /* Keyboard focus is always visible, mouse clicks stay clean. */
+  :focus-visible { outline: 2px solid var(--color-violet-500); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
+
+  /* Discreet scrollbars in the warm neutral instead of the OS default. */
+  * { scrollbar-width: thin; scrollbar-color: var(--color-neutral-300) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Amounts in tables and cards line up. */
+  table { font-variant-numeric: tabular-nums; }
+
+  button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
 }
 
 @layer utilities {
