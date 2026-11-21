@@ -960,6 +960,24 @@ export function getFullDatabaseState() {
   // Run auto state updates
   const updated = autoUpdateStatuses(rawReservations, rawDresses, rawBijoux);
 
+  // Push any status changes back to Supabase so the cloud stays in sync even
+  // when no one manually edits a reservation that day.  Without this, a
+  // reservation whose return date passed overnight would remain "en_cours" in
+  // Supabase until someone touched it, making the next sync reload stale data.
+  const statusChanged = updated.reservations.filter(
+    (r, i) => rawReservations[i] && r.statut !== rawReservations[i].statut
+  );
+  if (statusChanged.length > 0) {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      Promise.all(
+        statusChanged.map(r =>
+          supabase.from('reservations').update({ statut_reservation: r.statut }).eq('id', r.id)
+        )
+      ).catch(err => console.error('Auto-status sync to Supabase failed:', err));
+    }
+  }
+
   memoryState.reservations = updated.reservations;
   memoryState.dresses = updated.dresses;
   memoryState.bijoux = updated.bijoux;
