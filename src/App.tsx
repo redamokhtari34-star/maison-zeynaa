@@ -101,6 +101,20 @@ export default function App() {
     []
   );
 
+  // Recalculate reservation statuses whenever the tab regains focus.
+  // Without this, an app left open overnight keeps showing yesterday's statuses
+  // (en_cours instead of en_retard, stale alert count, etc.) until the page
+  // is manually reloaded — the "frozen at a date" behaviour the shop reported.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setDb(getFullDatabaseState());
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   // Which profile is using this device right now — not a login, just a
   // picker so a shared tablet knows whether to hide money from an employé.
   const [accounts, setAccounts] = useState<Account[]>(() => getAccounts());
