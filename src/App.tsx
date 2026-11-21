@@ -101,18 +101,38 @@ export default function App() {
     []
   );
 
-  // Recalculate reservation statuses whenever the tab regains focus.
-  // Without this, an app left open overnight keeps showing yesterday's statuses
-  // (en_cours instead of en_retard, stale alert count, etc.) until the page
-  // is manually reloaded — the "frozen at a date" behaviour the shop reported.
+  // Recalculate reservation statuses whenever the tab regains focus OR the
+  // calendar date flips.  Two complementary mechanisms:
+  //
+  //   visibilitychange — fires immediately when the user switches back to the
+  //   tab after being away (phone lock screen, another browser tab, etc.).
+  //
+  //   hourly tick — catches the case where the app stays on-screen all night
+  //   (a shop tablet left on the counter).  We store the ISO date at the last
+  //   recalculation; if the tick sees a different date it means midnight passed
+  //   and statuses need refreshing.  Checking once an hour rather than once a
+  //   minute keeps the timer cheap.
   useEffect(() => {
+    let lastDate = todayIso();
+
+    const refresh = () => {
+      setDb(getFullDatabaseState());
+      lastDate = todayIso();
+    };
+
     const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        setDb(getFullDatabaseState());
-      }
+      if (document.visibilityState === 'visible') refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+
+    const timer = setInterval(() => {
+      if (todayIso() !== lastDate) refresh();
+    }, 60 * 60 * 1000); // check every hour
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(timer);
+    };
   }, []);
 
   // Which profile is using this device right now — not a login, just a
