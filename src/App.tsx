@@ -48,6 +48,7 @@ import {
   seedSupabaseWithSampleData,
   cleanFinancialsAndReservationsForProduction,
   getHistory,
+  getTransactions,
   subscribeToHistory,
   registerSyncWriteErrorCallback
 } from './lib/storage';
@@ -259,7 +260,9 @@ export default function App() {
 
   // Add transaction proxy (passed down to components to append transaction easily)
   const handleAddTransaction = (newTransaction: Transaction) => {
-    const updated = [newTransaction, ...db.transactions];
+    // From the store, not from this render's `db`: a return that records a
+    // penalty and a refund adds two in a row, and the second used to drop the first.
+    const updated = [newTransaction, ...getTransactions()];
     saveTransactions(updated);
     setDb(prev => ({ ...prev, transactions: updated }));
   };
