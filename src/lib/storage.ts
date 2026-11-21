@@ -970,6 +970,14 @@ export async function fetchFullDatabaseStateFromSupabase() {
     console.error('Error loading historique_actions from Supabase:', historyErr);
   }
 
+  // Surfacing the failure keeps the status pill honest: swallowing it here
+  // let the app show "synchronised" while nothing reached the cloud.
+  const readErr = dressesErr || bijouxErr || clientsErr || reservationsErr ||
+    reservationRobesErr || reservationBijouxErr || transactionsErr;
+  if (readErr) {
+    throw new Error(`Supabase read failed: ${readErr.message || readErr}`);
+  }
+
   // Adopt the cloud copy only when it actually carries something.
   //
   // A failed request yields null, and a table that is empty (or unreadable
