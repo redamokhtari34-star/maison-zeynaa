@@ -219,7 +219,12 @@ export default function Calendrier({
   for (let i = startingDayOfWeek - 1; i >= 0; i--) {
     const prevDay = prevMonthLastDay - i;
     const prevDate = new Date(year, month - 1, prevDay);
-    const dateStr = prevDate.toISOString().split('T')[0];
+    // Use local date components, not toISOString() which shifts to UTC and can
+    // return the wrong calendar day for timezones ahead of UTC (e.g. Algeria).
+    const pY = prevDate.getFullYear();
+    const pM = String(prevDate.getMonth() + 1).padStart(2, '0');
+    const pD = String(prevDate.getDate()).padStart(2, '0');
+    const dateStr = `${pY}-${pM}-${pD}`;
     calendarCells.push({ dateStr, dayNum: prevDay, isCurrentMonth: false });
   }
 

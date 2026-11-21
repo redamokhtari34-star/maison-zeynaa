@@ -206,8 +206,6 @@ function autoUpdateStatuses(
 
 import { DressCategory, DressStatus, ReservationStatus, ReservationItem, TransactionType } from '../types';
 import { todayIso, toIso } from './dates';
-import { notifyError } from './toast';
-
 // Helper to check if string is a valid UUID
 export function isUuid(val: any): boolean {
   if (!val || typeof val !== 'string') return false;
@@ -562,8 +560,10 @@ export async function syncTableToSupabase<TLocal, TDb>(
     // 1. Get current list of IDs in DB to handle deletions
     const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id');
     if (fetchError) {
+      // Background sync — the status pill already tells the user when the cloud
+      // is unreachable. Spamming one toast per table per save is too noisy, so
+      // errors are only written to the console.
       console.error(`Failed to fetch IDs from ${tableName} for sync:`, fetchError);
-      notifyError(`Erreur Supabase (${tableName} Sync): ${fetchError.message}`);
       return;
     }
 
@@ -576,7 +576,6 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: deleteError } = await supabase.from(tableName).delete().in('id', idsToDelete);
       if (deleteError) {
         console.error(`Failed to delete removed rows from ${tableName}:`, deleteError);
-        notifyError(`Erreur Supabase (${tableName} Delete): ${deleteError.message}`);
       }
     }
 
@@ -586,12 +585,10 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: upsertError } = await supabase.from(tableName).upsert(dbRows as any);
       if (upsertError) {
         console.error(`Failed to upsert to ${tableName}:`, upsertError);
-        notifyError(`Erreur Supabase (${tableName} Upsert): ${upsertError.message}`);
       }
     }
   } catch (err: any) {
     console.error(`Error in syncTableToSupabase for ${tableName}:`, err);
-    notifyError(`Erreur de connexion Supabase (${tableName}): ${err?.message || err}`);
   }
 }
 
