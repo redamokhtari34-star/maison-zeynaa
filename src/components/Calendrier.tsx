@@ -85,13 +85,15 @@ export default function Calendrier({
       if (found) return found.nom_complet;
     }
     // If stored directly as name
-    const matchesClient = clientes.find(c => c.nom_complet.toLowerCase() === res.cliente_id.toLowerCase());
+    const clientKey = (res.cliente_id || '').toLowerCase();
+    const matchesClient = clientes.find(c => (c.nom_complet || '').toLowerCase() === clientKey);
     if (matchesClient) return matchesClient.nom_complet;
     return res.cliente_id || 'Cliente inconnue';
   };
 
   const getClientPhone = (res: Reservation) => {
-    const found = clientes.find(c => c.id === res.cliente_id || c.nom_complet.toLowerCase() === res.cliente_id.toLowerCase());
+    const clientKey = (res.cliente_id || '').toLowerCase();
+    const found = clientes.find(c => c.id === res.cliente_id || (c.nom_complet || '').toLowerCase() === clientKey);
     return found?.telephone || '';
   };
 
@@ -279,7 +281,7 @@ export default function Calendrier({
   // Get reservations active on a specific date (date_sortie <= dateStr <= date_retour)
   const getReservationsForDate = (dateStr: string) => {
     return filteredReservations.filter(res => {
-      return res.date_sortie <= dateStr && dateStr <= res.date_retour;
+      return res.date_sortie <= dateStr && dateStr <= (res.date_retour || res.date_sortie);
     });
   };
 
@@ -287,9 +289,12 @@ export default function Calendrier({
   const selectedDayReservations = selectedDay ? getReservationsForDate(selectedDay) : [];
 
   // Monthly statistics
+  // Any booking overlapping the viewed month, including one that spans it entirely.
   const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthStart = `${currentMonthPrefix}-01`;
+  const monthEnd = `${currentMonthPrefix}-${String(totalDaysInMonth).padStart(2, '0')}`;
   const monthReservations = liveReservations.filter(r =>
-    r.date_sortie.startsWith(currentMonthPrefix) || r.date_retour.startsWith(currentMonthPrefix)
+    (r.date_sortie || '') <= monthEnd && (r.date_retour || r.date_sortie || '') >= monthStart
   );
 
   const activeRentalsCount = monthReservations.filter(r => r.statut === 'en_cours' || r.statut === 'en_location' || r.statut === 'en_retard').length;

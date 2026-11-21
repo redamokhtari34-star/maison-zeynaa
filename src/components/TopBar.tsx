@@ -56,17 +56,17 @@ export default function TopBar({
       : { robe: 'فستان', bijou: 'مجوهرات', cliente: 'زبونة', reservation: 'حجز' };
 
     for (const d of dresses) {
-      if (d.nom.toLowerCase().includes(q) || d.categorie.toLowerCase().includes(q) || d.taille.toLowerCase().includes(q)) {
+      if ((d.nom || "").toLowerCase().includes(q) || (d.categorie || "").toLowerCase().includes(q) || (d.taille || "").toLowerCase().includes(q)) {
         out.push({ id: `d-${d.id}`, tab: 'robes', title: d.nom, kind: labels.robe });
       }
     }
     for (const b of bijoux) {
-      if (b.nom.toLowerCase().includes(q) || b.categorie.toLowerCase().includes(q)) {
+      if ((b.nom || "").toLowerCase().includes(q) || (b.categorie || "").toLowerCase().includes(q)) {
         out.push({ id: `b-${b.id}`, tab: 'bijoux', title: b.nom, kind: labels.bijou });
       }
     }
     for (const c of clientes) {
-      if (c.nom_complet.toLowerCase().includes(q) || c.telephone.includes(q)) {
+      if ((c.nom_complet || "").toLowerCase().includes(q) || (c.telephone || "").includes(q)) {
         out.push({ id: `c-${c.id}`, tab: 'clientes', title: c.nom_complet, kind: labels.cliente });
       }
     }

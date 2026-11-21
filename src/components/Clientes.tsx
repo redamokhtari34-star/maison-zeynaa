@@ -207,7 +207,8 @@ export default function Clientes({
 
         const { data, error } = await supabase
           .from('clients')
-          .insert([{ nom, prenom, telephone, adresse: adresse || '' }])
+          // Same id as the local record, or the table sync adds a second copy.
+          .upsert([{ id: newCliente.id, nom, prenom, telephone, adresse: adresse || '' }])
           .select();
 
         if (error) {
