@@ -344,7 +344,9 @@ export default function Robes({
           ? 'Robe ajoutée sur cet appareil (cloud non configuré).'
           : 'تمت إضافة الفستان على هذا الجهاز (السحابة غير مهيأة).');
       } else {
+        // Same id as the local record, or the table sync adds a second copy.
         const rowToInsert = {
+          id: newDress.id,
           nom,
           categorie,
           taille,
@@ -355,7 +357,7 @@ export default function Robes({
           photo_url: finalPhoto
         };
 
-        const { error } = await supabase.from('robes').insert([rowToInsert]).select();
+        const { error } = await supabase.from('robes').upsert([rowToInsert]).select();
 
         if (error) {
           console.error('Supabase insert robe error:', error);

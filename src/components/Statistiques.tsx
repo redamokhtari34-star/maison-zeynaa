@@ -40,7 +40,7 @@ export default function Statistiques({
   // Math on revenues
   const totalRentalsCount = reservations.length;
 
-  const entriesOnly = transactions.filter(tr => tr.type === 'entree');
+  const entriesOnly = transactions.filter(tr => tr.type === 'entree' && typeof tr.date === 'string');
 
   const revenueToday = entriesOnly
     .filter(tr => tr.date === todayStr)
@@ -185,13 +185,13 @@ export default function Statistiques({
         <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus du Mois</span>
           <p className="text-xl font-black text-gray-900 font-mono">{formatDa(revenueMonth)}</p>
-          <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? 'Juillet 2026' : 'جويلية 2026'}</span>
+          <span className="text-[9px] text-gray-400 block mt-2">{new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'ar-DZ', { month: 'long', year: 'numeric' }).format(new Date())}</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-neutral-200">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Revenus Annuels (Cumul)</span>
           <p className="text-xl font-black text-gray-900 font-mono">{formatDa(revenueYear)}</p>
-          <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? 'Année civile 2026' : 'سنة 2026'}</span>
+          <span className="text-[9px] text-gray-400 block mt-2">{language === 'fr' ? `Année civile ${currentYearStr}` : `سنة ${currentYearStr}`}</span>
         </div>
       </div>
 
@@ -205,7 +205,7 @@ export default function Statistiques({
               <h3 className="text-base font-bold text-gray-900">{t.revenue_chart}</h3>
               <p className="text-xs text-gray-400 mt-0.5">{language === 'fr' ? 'Évolution mensuelle des encaissements (DA)' : 'نمو المداخيل بالدينار شهرياً'}</p>
             </div>
-            <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-xl">2026</span>
+            <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-xl">{currentYearStr}</span>
           </div>
 
           {/* Premium Custom Vector SVG Chart */}

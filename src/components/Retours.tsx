@@ -72,7 +72,8 @@ export default function Retours({
   const submittingRef = React.useRef(false);
 
   const getClientName = (id: string) => {
-    return clientes.find(c => c.id === id)?.nom_complet || 'Inconnue';
+    const key = (id || '').toLowerCase();
+    return clientes.find(c => c.id === id || (c.nom_complet || '').toLowerCase() === key)?.nom_complet || id || 'Inconnue';
   };
 
   const formatDa = (amount: number) => {
@@ -195,7 +196,7 @@ export default function Retours({
       };
 
       if (supabase) {
-        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(penTr)]), LOCAL_SYNC_FAIL);
+        mirrorToCloud(() => supabase.from('mouvements_caisse').upsert([mapTransactionToDb(penTr)]), LOCAL_SYNC_FAIL);
       }
       onAddTransaction(penTr);
     }

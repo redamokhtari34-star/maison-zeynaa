@@ -70,6 +70,14 @@ export default function Calendrier({
     setLiveReservations(reservations);
   }, [reservations]);
 
+  // Bring today's cell into view: late-month days sit below the fold.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      document.getElementById(`cal-day-${todayIso()}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [currentDate]);
+
   // Helpers for resolving names and photos
   const getClientName = (res: Reservation) => {
     if (res.cliente_id && res.cliente_id.length > 20) {
@@ -77,13 +85,15 @@ export default function Calendrier({
       if (found) return found.nom_complet;
     }
     // If stored directly as name
-    const matchesClient = clientes.find(c => c.nom_complet.toLowerCase() === res.cliente_id.toLowerCase());
+    const clientKey = (res.cliente_id || '').toLowerCase();
+    const matchesClient = clientes.find(c => (c.nom_complet || '').toLowerCase() === clientKey);
     if (matchesClient) return matchesClient.nom_complet;
     return res.cliente_id || 'Cliente inconnue';
   };
 
   const getClientPhone = (res: Reservation) => {
-    const found = clientes.find(c => c.id === res.cliente_id || c.nom_complet.toLowerCase() === res.cliente_id.toLowerCase());
+    const clientKey = (res.cliente_id || '').toLowerCase();
+    const found = clientes.find(c => c.id === res.cliente_id || (c.nom_complet || '').toLowerCase() === clientKey);
     return found?.telephone || '';
   };
 
@@ -271,7 +281,7 @@ export default function Calendrier({
   // Get reservations active on a specific date (date_sortie <= dateStr <= date_retour)
   const getReservationsForDate = (dateStr: string) => {
     return filteredReservations.filter(res => {
-      return res.date_sortie <= dateStr && dateStr <= res.date_retour;
+      return res.date_sortie <= dateStr && dateStr <= (res.date_retour || res.date_sortie);
     });
   };
 
@@ -279,9 +289,12 @@ export default function Calendrier({
   const selectedDayReservations = selectedDay ? getReservationsForDate(selectedDay) : [];
 
   // Monthly statistics
+  // Any booking overlapping the viewed month, including one that spans it entirely.
   const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthStart = `${currentMonthPrefix}-01`;
+  const monthEnd = `${currentMonthPrefix}-${String(totalDaysInMonth).padStart(2, '0')}`;
   const monthReservations = liveReservations.filter(r =>
-    r.date_sortie.startsWith(currentMonthPrefix) || r.date_retour.startsWith(currentMonthPrefix)
+    (r.date_sortie || '') <= monthEnd && (r.date_retour || r.date_sortie || '') >= monthStart
   );
 
   const activeRentalsCount = monthReservations.filter(r => r.statut === 'en_cours' || r.statut === 'en_location' || r.statut === 'en_retard').length;
@@ -483,8 +496,10 @@ export default function Calendrier({
                 id={`cal-day-${cell.dateStr}`}
                 onClick={() => openDayModal(cell.dateStr)}
                 className={`min-h-[85px] sm:min-h-[95px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
-                  isSelected
-                    ? 'border-orange-600 bg-orange-50/50 ring-2 ring-orange-500/20'
+                  isToday
+                    ? 'border-orange-600 bg-orange-50 ring-2 ring-orange-500/40'
+                    : isSelected
+                    ? 'border-orange-300 bg-orange-50/50'
                     : cell.isCurrentMonth
                       ? 'border-gray-100 bg-white hover:border-orange-300 hover:bg-slate-50/80'
                       : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'

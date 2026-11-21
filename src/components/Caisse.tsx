@@ -182,7 +182,7 @@ export default function Caisse({
     const supabase = getSupabaseClient();
     if (supabase) {
       mirrorToCloud(async () => {
-        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        const res = await supabase.from('mouvements_caisse').upsert([mapTransactionToDb(newTr)]);
         await updateTresorerieInDb();
         return res;
       }, LOCAL_SYNC_FAIL);
@@ -256,7 +256,7 @@ export default function Caisse({
     const supabase = getSupabaseClient();
     if (supabase) {
       mirrorToCloud(async () => {
-        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        const res = await supabase.from('mouvements_caisse').upsert([mapTransactionToDb(newTr)]);
         await updateTresorerieInDb();
         return res;
       }, LOCAL_SYNC_FAIL);
@@ -330,7 +330,7 @@ export default function Caisse({
     const supabase = getSupabaseClient();
     if (supabase) {
       mirrorToCloud(async () => {
-        const res = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]);
+        const res = await supabase.from('mouvements_caisse').upsert([mapTransactionToDb(newTr)]);
         await updateTresorerieInDb();
         return res;
       }, LOCAL_SYNC_FAIL);

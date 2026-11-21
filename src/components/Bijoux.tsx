@@ -317,7 +317,9 @@ export default function Bijoux({
           ? 'Accessoire ajouté sur cet appareil (cloud non configuré).'
           : 'تمت إضافة الإكسسوار على هذا الجهاز (السحابة غير مهيأة).');
       } else {
+        // Same id as the local record, or the table sync adds a second copy.
         const rowToInsert: any = {
+          id: newBijou.id,
           nom,
           type: categorie,
           prix_location: Number(prix),
@@ -327,10 +329,10 @@ export default function Bijoux({
           photos: cleanPhotosList
         };
 
-        let { error } = await supabase.from('bijoux').insert([rowToInsert]).select();
+        let { error } = await supabase.from('bijoux').upsert([rowToInsert]).select();
         if (error && (error.message?.includes('photos') || error.code === 'PGRST204')) {
           delete rowToInsert.photos;
-          const retry = await supabase.from('bijoux').insert([rowToInsert]).select();
+          const retry = await supabase.from('bijoux').upsert([rowToInsert]).select();
           error = retry.error;
         }
 

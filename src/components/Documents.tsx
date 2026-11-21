@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Printer, 
   Search, 
@@ -40,6 +40,11 @@ export default function Documents({
   const [selectedResId, setSelectedResId] = useState<string>(
     invoiceReservationId || (reservations.length > 0 ? reservations[0].id : '')
   );
+
+  useEffect(() => {
+    if (invoiceReservationId) setSelectedResId(invoiceReservationId);
+    else if (!selectedResId && reservations.length > 0) setSelectedResId(reservations[0].id);
+  }, [invoiceReservationId, reservations, selectedResId]);
 
   const selectedRes = reservations.find(r => r.id === selectedResId) || null;
 

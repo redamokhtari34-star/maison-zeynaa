@@ -134,12 +134,23 @@ export default function Reservations({
   const [itemSearch, setItemSearch] = useState('');
 
   // Helpers
-  const getClientName = (id: string) => {
-    return clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.nom_complet || id || 'Inconnue';
+  const findClient = (id: string) => {
+    const key = (id || '').toLowerCase();
+    return clientes.find(c => c.id === id || (c.nom_complet || '').toLowerCase() === key);
   };
 
-  const getClientPhone = (id: string) => {
-    return clientes.find(c => c.id === id || c.nom_complet.toLowerCase() === id.toLowerCase())?.telephone || '';
+  const getClientName = (id: string) => findClient(id)?.nom_complet || id || 'Inconnue';
+
+  const getClientPhone = (id: string) => findClient(id)?.telephone || '';
+
+  // Dates can be changed after articles were picked (going back to step 1),
+  // so availability is checked again right before saving.
+  const findUnavailableItem = () => {
+    const excl = editingId ?? undefined;
+    const robe = selectedDresses.find(d => !checkItemAvailability('robe', d.id, dateSortie, dateRetour, excl).available);
+    if (robe) return robe.nom;
+    const bijou = selectedBijoux.find(b => !checkItemAvailability('bijou', b.id, dateSortie, dateRetour, excl).available);
+    return bijou?.nom;
   };
 
   // What actually shows up in a caisse transaction's description — the
@@ -254,7 +265,7 @@ export default function Reservations({
         };
         onAddTransaction(refundTr);
         if (supabase) {
-          mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(refundTr)]), LOCAL_SYNC_FAIL);
+          mirrorToCloud(() => supabase.from('mouvements_caisse').upsert([mapTransactionToDb(refundTr)]), LOCAL_SYNC_FAIL);
         }
       }
 
@@ -312,7 +323,7 @@ export default function Reservations({
       };
 
       if (supabase) {
-        mirrorToCloud(() => supabase.from('mouvements_caisse').insert([mapTransactionToDb(newTr)]), LOCAL_SYNC_FAIL);
+        mirrorToCloud(() => supabase.from('mouvements_caisse').upsert([mapTransactionToDb(newTr)]), LOCAL_SYNC_FAIL);
       }
 
       onAddTransaction(newTr);
@@ -459,7 +470,8 @@ export default function Reservations({
   // Shared by creation and correction so a booking never ends up pointing at a
   // client who exists on one path and not the other.
   const resolveClient = (clientName: string, clientPhone: string) => {
-    const localMatch = findClientByName(clientName);
+    const localMatch = findClientByName(clientName)
+      ?? (clientPhone ? clientes.find(c => c.telephone && c.telephone.trim() === clientPhone) : undefined);
     const localClientId = localMatch?.id ?? crypto.randomUUID();
 
     if (!localMatch) {
@@ -500,6 +512,12 @@ export default function Reservations({
     const clientName = clientNameInput.trim();
     if (!clientName) {
       notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
+      return;
+    }
+
+    const takenItem = findUnavailableItem();
+    if (takenItem) {
+      notifyError(language === 'fr' ? `"${takenItem}" n'est pas disponible sur ces dates.` : `"${takenItem}" غير متوفر في هذه التواريخ.`);
       return;
     }
 
@@ -605,7 +623,7 @@ export default function Reservations({
     try {
       let validUuidClientId = isUuid(localClientId) ? localClientId : null;
 
-      if (clientPhone) {
+      if (clientPhone && !validUuidClientId) {
         const { data: foundClients } = await supabase
           .from('clients')
           .select('id')
@@ -686,7 +704,7 @@ export default function Reservations({
       }
 
       if (correctionTr) {
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(correctionTr)]);
+        const { error: trError } = await supabase.from('mouvements_caisse').upsert([mapTransactionToDb(correctionTr)]);
         if (trError) throw new Error(trError.message);
       }
 
@@ -711,6 +729,12 @@ export default function Reservations({
     const clientName = clientNameInput.trim();
     if (!clientName) {
       notifyError(language === 'fr' ? 'Veuillez renseigner le nom de la cliente.' : 'يرجى كتابة اسم الزبونة.');
+      return;
+    }
+
+    const takenItem = findUnavailableItem();
+    if (takenItem) {
+      notifyError(language === 'fr' ? `"${takenItem}" n'est pas disponible sur ces dates.` : `"${takenItem}" غير متوفر في هذه التواريخ.`);
       return;
     }
 
@@ -807,7 +831,7 @@ export default function Reservations({
     // of a name is what stops the same person being filed twice.
     let validUuidClientId = isUuid(localClientId) ? localClientId : null;
 
-    if (clientPhone) {
+    if (clientPhone && !validUuidClientId) {
       const { data: foundClients } = await supabase
         .from('clients')
         .select('id')
@@ -838,7 +862,7 @@ export default function Reservations({
     const bijouItem = selectedBijoux[0];
     const validBijouId = bijouItem && isUuid(bijouItem.id) ? bijouItem.id : null;
 
-    const { error: resError } = await supabase.from('reservations').insert([{
+    const { error: resError } = await supabase.from('reservations').upsert([{
       // Same identifier on both sides, so the booking can be matched later.
       id: localResId,
       client_id: validUuidClientId,
@@ -891,7 +915,7 @@ export default function Reservations({
       }
 
       if (depositTr) {
-        const { error: trError } = await supabase.from('mouvements_caisse').insert([mapTransactionToDb(depositTr)]);
+        const { error: trError } = await supabase.from('mouvements_caisse').upsert([mapTransactionToDb(depositTr)]);
         if (trError) throw new Error(trError.message);
       }
 

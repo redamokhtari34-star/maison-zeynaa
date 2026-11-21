@@ -206,6 +206,13 @@ function autoUpdateStatuses(
 
 import { DressCategory, DressStatus, ReservationStatus, ReservationItem, TransactionType } from '../types';
 import { todayIso, toIso } from './dates';
+// A timestamp from the database as the shop's own calendar day. Slicing the
+// UTC string put anything recorded after 23:00 in Algeria on the previous day
+// (and on the last night of a month, in the previous month).
+function localDay(ts: string | null | undefined): string {
+  return toIso(ts ? new Date(ts) : new Date());
+}
+
 // Helper to check if string is a valid UUID
 export function isUuid(val: any): boolean {
   if (!val || typeof val !== 'string') return false;
@@ -220,7 +227,7 @@ export function mapClientFromDb(row: any): Cliente {
     telephone: row.telephone || '',
     adresse: row.adresse || '',
     notes: '',
-    date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    date_creation: localDay(row.created_at)
   };
 }
 
@@ -253,7 +260,7 @@ export function mapDressFromDb(row: any): Dress {
     photo_principale: row.photo_url || '',
     photos: row.photo_url ? [row.photo_url] : [],
     statut: (row.statut || 'disponible') as DressStatus,
-    date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    date_creation: localDay(row.created_at)
   };
 }
 
@@ -305,7 +312,7 @@ export function mapBijouFromDb(row: any): Bijou {
     photo: primaryPhoto,
     photos: photosArr,
     statut: (row.statut || 'disponible') as any,
-    date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    date_creation: localDay(row.created_at)
   };
 }
 
@@ -482,7 +489,7 @@ export function mapReservationFromDb(row: any, robeRows: any[] = [], bijouRows: 
     reste_a_payer_da: Number(row.reste_a_payer || 0),
     statut: (row.statut_reservation || 'future') as ReservationStatus,
     notes: row.notes || '',
-    date_creation: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    date_creation: localDay(row.created_at),
     items: items
   };
 }
@@ -500,7 +507,9 @@ export function mapReservationToDb(res: Reservation) {
     prix_total: Number(res.montant_total_da) || 0,
     acompte: Number(res.montant_paye_da) || 0,
     acompte_initial: Number(res.acompte_initial_da ?? res.montant_paye_da) || 0,
-    reste_a_payer: Number(res.reste_a_payer_da) || 0
+    reste_a_payer: Number(res.reste_a_payer_da) || 0,
+    caution_totale: Number(res.caution_da) || 0,
+    notes: res.notes || null
   };
   if (isUuid(res.id)) {
     row.id = res.id;
@@ -518,8 +527,8 @@ export function mapTransactionFromDb(row: any): Transaction {
     type: type,
     montant_da: Number(row.montant || 0),
     description: row.motif || '',
-    categorie: type === 'vidage_caisse' ? 'Vidage de caisse' : (type === 'depense' ? 'Dépense' : 'Réservation'),
-    date: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    categorie: row.categorie || (type === 'vidage_caisse' ? 'Vidage de caisse' : (type === 'depense' ? 'Dépense' : 'Réservation')),
+    date: localDay(row.created_at),
     heure: row.created_at ? new Date(row.created_at).toTimeString().split(' ')[0].substring(0, 5) : '12:00',
     utilisateur: 'Zeyna',
     note: '',
@@ -538,7 +547,8 @@ export function mapTransactionToDb(tr: Transaction) {
     montant: Number(tr.montant_da) || 0,
     source: tr.source_argent || 'caisse',
     beneficiaire: tr.beneficiaire || null,
-    motif: tr.description || ''
+    motif: tr.description || '',
+    categorie: tr.categorie || null
   };
   if (isUuid(tr.id)) {
     row.id = tr.id;
@@ -554,51 +564,197 @@ export function registerSyncWriteErrorCallback(cb: () => void) {
   onSyncWriteError = cb;
 }
 
-// Reusable table synchronization helper
-export async function syncTableToSupabase<TLocal, TDb>(
-  tableName: string,
+// Reads a whole table page by page. A single request is capped server-side
+// (PostgREST max-rows, 1 000 by default) whatever .limit() asks for, so a
+// table past that size came back truncated.
+async function fetchAllRows(
+  supabase: SupabaseClient,
+  table: string,
+  columns = '*'
+): Promise<{ data: any[] | null; error: any }> {
+  const out: any[] = [];
+  for (let from = 0; ; ) {
+    const { data, error } = await supabase.from(table).select(columns).order('id').range(from, from + 999);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    out.push(...data);
+    from += data.length;
+  }
+  return { data: out, error: null };
+}
+
+// Rows written on this device that have not reached the cloud yet, kept on
+// the device so a failed write is retried instead of being overwritten by the
+// next refresh from the cloud.
+const PENDING_KEY = 'zeyna_pending_sync_v1';
+type PendingSync = Record<string, { up: string[]; del: string[] }>;
+
+function updatePending(table: string, change: (p: { up: Set<string>; del: Set<string> }) => void) {
+  const all = loadLocal<PendingSync>(PENDING_KEY, {});
+  const entry = { up: new Set(all[table]?.up || []), del: new Set(all[table]?.del || []) };
+  change(entry);
+  if (entry.up.size || entry.del.size) all[table] = { up: [...entry.up], del: [...entry.del] };
+  else delete all[table];
+  persist(PENDING_KEY, all);
+}
+
+function getPending(table: string) {
+  const p = loadLocal<PendingSync>(PENDING_KEY, {})[table];
+  return { up: new Set(p?.up || []), del: new Set(p?.del || []) };
+}
+
+// One write at a time, in the order they were made: a reservation must not
+// reach the cloud before the client it points to (foreign key), and two saves
+// of the same table must not race each other.
+let syncChain: Promise<void> = Promise.resolve();
+function enqueueSync(job: () => Promise<void>): Promise<void> {
+  const run = syncChain.then(job, job);
+  syncChain = run.catch(() => {});
+  return run;
+}
+
+type SyncTable = 'clients' | 'robes' | 'bijoux' | 'reservations' | 'mouvements_caisse';
+
+function localRowsFor(table: SyncTable): { id: string }[] {
+  switch (table) {
+    case 'clients': return memoryState.clientes;
+    case 'robes': return memoryState.dresses;
+    case 'bijoux': return memoryState.bijoux;
+    case 'reservations': return memoryState.reservations;
+    case 'mouvements_caisse': return memoryState.transactions;
+  }
+}
+
+function toDbRow(table: SyncTable, item: any): any {
+  switch (table) {
+    case 'clients': return mapClientToDb(item);
+    case 'robes': return mapDressToDb(item);
+    case 'bijoux': return mapBijouToDb(item);
+    case 'reservations': return mapReservationToDb(item);
+    case 'mouvements_caisse': return mapTransactionToDb(item);
+  }
+}
+
+// Writes the given rows; on a failed batch retries row by row so one bad
+// record cannot keep every other one out of the cloud. Returns the ids saved.
+async function upsertRows(supabase: SupabaseClient, table: SyncTable, items: any[]): Promise<string[]> {
+  const rows = items
+    .map(item => ({ id: item.id as string, row: toDbRow(table, item) }))
+    // A reservation without a real client cannot be stored (client_id is
+    // required); it stays pending until its client exists.
+    .filter(r => isUuid(r.id) && (table !== 'reservations' || r.row.client_id));
+  if (rows.length === 0) return [];
+
+  const { error } = await supabase.from(table).upsert(rows.map(r => r.row));
+  if (!error) return rows.map(r => r.id);
+
+  console.error(`Failed to upsert to ${table}:`, error);
+  const saved: string[] = [];
+  for (const r of rows) {
+    const { error: rowErr } = await supabase.from(table).upsert([r.row]);
+    if (rowErr) console.error(`Failed to upsert ${table} row ${r.id}:`, rowErr.message);
+    else saved.push(r.id);
+  }
+  return saved;
+}
+
+// Re-creates a reservation's article rows from the local copy, for bookings
+// whose original write never reached the cloud.
+async function pushReservationItems(supabase: SupabaseClient, reservations: Reservation[]) {
+  for (const res of reservations) {
+    const robes = res.items.filter(i => i.type_article === 'robe' && isUuid(i.article_id));
+    const bijoux = res.items.filter(i => i.type_article === 'bijou' && isUuid(i.article_id));
+    // Bookings saved normally already have their rows (written by the
+    // reservation form); only fill in the ones that have none.
+    const [{ count: robeCount }, { count: bijouCount }] = await Promise.all([
+      supabase.from('reservation_robes').select('id', { count: 'exact', head: true }).eq('reservation_id', res.id),
+      supabase.from('reservation_bijoux').select('id', { count: 'exact', head: true }).eq('reservation_id', res.id)
+    ]);
+    if ((robeCount ?? 0) > 0 || (bijouCount ?? 0) > 0) continue;
+    if (robes.length) {
+      await supabase.from('reservation_robes').insert(robes.map(i => ({
+        id: crypto.randomUUID(), reservation_id: res.id, robe_id: i.article_id, prix: i.prix_da || 0, caution: 0
+      })));
+    }
+    if (bijoux.length) {
+      await supabase.from('reservation_bijoux').insert(bijoux.map(i => ({
+        id: crypto.randomUUID(), reservation_id: res.id, bijou_id: i.article_id, prix: i.prix_da || 0, caution: 0
+      })));
+    }
+  }
+}
+
+// Sends what changed in a table since its previous local version: the rows
+// added or edited, and the rows removed on this device. It used to delete
+// every cloud row missing from this device's list, so a phone or tablet whose
+// copy was behind wiped what other devices had recorded (and deleting a
+// client cascades to all her reservations).
+export function syncTableToSupabase<TLocal extends { id: string }>(
+  tableName: SyncTable,
   localItems: TLocal[],
-  mapToDb: (item: TLocal) => TDb,
-  getId: (item: TLocal) => string
-) {
+  previousItems: TLocal[] = []
+): Promise<void> {
+  const prevById = new Map(previousItems.map(p => [p.id, JSON.stringify(p)]));
+  const changed = localItems.filter(i => prevById.get(i.id) !== JSON.stringify(i));
+  const localIds = new Set(localItems.map(i => i.id));
+  const removed = previousItems.map(p => p.id).filter(id => !localIds.has(id) && isUuid(id));
+  if (changed.length === 0 && removed.length === 0) return Promise.resolve();
+
+  updatePending(tableName, p => {
+    changed.forEach(i => { p.up.add(i.id); p.del.delete(i.id); });
+    removed.forEach(id => { p.del.add(id); p.up.delete(id); });
+  });
+
+  return enqueueSync(() => flushTable(tableName, false));
+}
+
+// Retries everything still pending for one table, using the latest local rows.
+// Article rows are only rebuilt on a retry: on the first attempt the
+// reservation form is writing them itself, and doing both duplicated them.
+async function flushTable(table: SyncTable, rebuildItems: boolean): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) return;
+  const pending = getPending(table);
+  if (pending.up.size === 0 && pending.del.size === 0) return;
 
   try {
-    // 1. Get current list of IDs in DB to handle deletions
-    const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id').limit(50000);
-    if (fetchError) {
-      console.error(`Failed to fetch IDs from ${tableName} for sync:`, fetchError);
-      onSyncWriteError?.();
-      return;
-    }
-
-    const localIds = new Set(localItems.map(getId));
-    const dbIds = (dbItems || []).map(row => row.id);
-    const idsToDelete = dbIds.filter(id => !localIds.has(id));
-
-    // 2. Perform deletions
-    if (idsToDelete.length > 0) {
-      const { error: deleteError } = await supabase.from(tableName).delete().in('id', idsToDelete);
-      if (deleteError) {
-        console.error(`Failed to delete removed rows from ${tableName}:`, deleteError);
-        onSyncWriteError?.();
+    let ok = true;
+    if (pending.del.size) {
+      const ids = [...pending.del];
+      const { error } = await supabase.from(table).delete().in('id', ids);
+      if (error) {
+        ok = false;
+        console.error(`Failed to delete removed rows from ${table}:`, error);
+      } else {
+        updatePending(table, p => ids.forEach(id => p.del.delete(id)));
       }
     }
 
-    // 3. Upsert current local state to Supabase
-    if (localItems.length > 0) {
-      const dbRows = localItems.map(mapToDb);
-      const { error: upsertError } = await supabase.from(tableName).upsert(dbRows as any);
-      if (upsertError) {
-        console.error(`Failed to upsert to ${tableName}:`, upsertError);
-        onSyncWriteError?.();
+    if (pending.up.size) {
+      const items = localRowsFor(table).filter(i => pending.up.has(i.id));
+      const gone = [...pending.up].filter(id => !items.some(i => i.id === id));
+      const saved = await upsertRows(supabase, table, items);
+      if (rebuildItems && table === 'reservations' && saved.length) {
+        await pushReservationItems(supabase, (items as Reservation[]).filter(r => saved.includes(r.id) && r.items.length));
       }
+      updatePending(table, p => [...saved, ...gone].forEach(id => p.up.delete(id)));
+      if (saved.length < items.length) ok = false;
     }
+
+    if (!ok) onSyncWriteError?.();
   } catch (err: any) {
-    console.error(`Error in syncTableToSupabase for ${tableName}:`, err);
+    console.error(`Error syncing ${table}:`, err);
     onSyncWriteError?.();
   }
+}
+
+// Clients first, then the catalogue, then what points to them.
+const SYNC_ORDER: SyncTable[] = ['clients', 'robes', 'bijoux', 'reservations', 'mouvements_caisse'];
+
+export function flushPendingSyncs(): Promise<void> {
+  return enqueueSync(async () => {
+    for (const table of SYNC_ORDER) await flushTable(table, true);
+  });
 }
 
 // Update safe/vault balance in tresorerie table
@@ -607,7 +763,7 @@ export async function updateTresorerieInDb() {
   if (!supabase) return;
 
   try {
-    const { data: movements, error } = await supabase.from('mouvements_caisse').select('*');
+    const { data: movements, error } = await fetchAllRows(supabase, 'mouvements_caisse', 'id,type,montant,source');
     if (error) {
       console.error('Failed to fetch movements for tresorerie update:', error);
       return;
@@ -764,6 +920,10 @@ export async function fetchFullDatabaseStateFromSupabase() {
     throw new Error('Supabase client not configured.');
   }
 
+  // Anything this device wrote that has not reached the cloud yet goes first,
+  // so the copy fetched below already contains it.
+  await flushPendingSyncs();
+
   const [
     { data: dressesDb, error: dressesErr },
     { data: bijouxDb, error: bijouxErr },
@@ -774,17 +934,14 @@ export async function fetchFullDatabaseStateFromSupabase() {
     { data: transactionsDb, error: transactionsErr },
     { data: historyDb, error: historyErr }
   ] = await Promise.all([
-    // PostgREST's default cap is 1 000 rows.  Without an explicit limit the
-    // fetch silently truncates, and the subsequent sync then permanently deletes
-    // the missing rows from Supabase — an invisible, irreversible data loss.
-    // 10 000 is far above any realistic shop volume for each of these tables.
-    supabase.from('robes').select('*').limit(10000),
-    supabase.from('bijoux').select('*').limit(10000),
-    supabase.from('clients').select('*').limit(10000),
-    supabase.from('reservations').select('*').limit(10000),
-    supabase.from('reservation_robes').select('*').limit(50000),
-    supabase.from('reservation_bijoux').select('*').limit(50000),
-    supabase.from('mouvements_caisse').select('*').limit(10000),
+    // Paged: a single request is capped at 1 000 rows server-side.
+    fetchAllRows(supabase, 'robes'),
+    fetchAllRows(supabase, 'bijoux'),
+    fetchAllRows(supabase, 'clients'),
+    fetchAllRows(supabase, 'reservations'),
+    fetchAllRows(supabase, 'reservation_robes'),
+    fetchAllRows(supabase, 'reservation_bijoux'),
+    fetchAllRows(supabase, 'mouvements_caisse'),
     supabase.from('historique_actions').select('*').order('created_at', { ascending: false }).limit(300)
   ]);
 
@@ -832,12 +989,43 @@ export async function fetchFullDatabaseStateFromSupabase() {
     return rows.map(map);
   };
 
+  // Same rule, plus: records written here that the cloud does not have yet
+  // are kept (and re-sent) instead of being replaced by the cloud copy. That
+  // replacement is how bookings typed in while a write failed disappeared on
+  // the next refresh. Records dated after the newest one in the cloud are
+  // treated the same way, which recovers entries made before this tracking
+  // existed.
+  let recoveredAny = false;
+  const merge = <TLocal extends { id: string }>(
+    table: SyncTable,
+    cloud: TLocal[] | null,
+    current: TLocal[],
+    dayOf?: (item: TLocal) => string
+  ): TLocal[] => {
+    if (!cloud) return current;
+    if (cloud.length === 0 && current.length > 0) return current;
+    const pending = getPending(table);
+    const cloudIds = new Set(cloud.map(c => c.id));
+    const latest = dayOf ? cloud.reduce((m, c) => (dayOf(c) > m ? dayOf(c) : m), '') : '';
+    const recovered = dayOf
+      ? current.filter(l => isUuid(l.id) && !cloudIds.has(l.id) && !pending.up.has(l.id) && (dayOf(l) || '') > latest)
+      : [];
+    if (recovered.length) {
+      recoveredAny = true;
+      updatePending(table, p => recovered.forEach(r => p.up.add(r.id)));
+    }
+    const keepIds = new Set([...pending.up, ...recovered.map(r => r.id)]);
+    const kept = current.filter(l => keepIds.has(l.id));
+    const keptIds = new Set(kept.map(l => l.id));
+    return [...kept, ...cloud.filter(c => !keptIds.has(c.id) && !pending.del.has(c.id))];
+  };
+
   // Dresses and bijoux land first, so mapReservationFromDb below resolves
   // each booked article against the catalogue as it stands right now, not
   // the one from before this sync.
-  memoryState.dresses = adopt(dressesDb, mapDressFromDb, memoryState.dresses);
-  memoryState.bijoux = adopt(bijouxDb, mapBijouFromDb, memoryState.bijoux);
-  memoryState.clientes = adopt(clientsDb, mapClientFromDb, memoryState.clientes);
+  memoryState.dresses = merge('robes', dressesDb && dressesDb.map(mapDressFromDb), memoryState.dresses);
+  memoryState.bijoux = merge('bijoux', bijouxDb && bijouxDb.map(mapBijouFromDb), memoryState.bijoux);
+  memoryState.clientes = merge('clients', clientsDb && clientsDb.map(mapClientFromDb), memoryState.clientes, c => c.date_creation);
 
   const robeRowsByReservation = new Map<string, any[]>();
   for (const r of reservationRobesDb || []) {
@@ -849,17 +1037,18 @@ export async function fetchFullDatabaseStateFromSupabase() {
     const key = String(r.reservation_id);
     (bijouRowsByReservation.get(key) || bijouRowsByReservation.set(key, []).get(key)!).push(r);
   }
-  memoryState.reservations = adopt(
-    reservationsDb,
-    (row: any) => mapReservationFromDb(
+  memoryState.reservations = merge(
+    'reservations',
+    reservationsDb && reservationsDb.map((row: any) => mapReservationFromDb(
       row,
       robeRowsByReservation.get(String(row.id)) || [],
       bijouRowsByReservation.get(String(row.id)) || []
-    ),
-    memoryState.reservations
+    )),
+    memoryState.reservations,
+    r => r.date_creation
   );
 
-  memoryState.transactions = adopt(transactionsDb, mapTransactionFromDb, memoryState.transactions);
+  memoryState.transactions = merge('mouvements_caisse', transactionsDb && transactionsDb.map(mapTransactionFromDb), memoryState.transactions, t => t.date);
   memoryState.history = adopt(historyDb, mapHistoryFromDb, memoryState.history);
 
   persist(KEYS.DRESSES, memoryState.dresses);
@@ -868,6 +1057,8 @@ export async function fetchFullDatabaseStateFromSupabase() {
   persist(KEYS.RESERVATIONS, memoryState.reservations);
   persist(KEYS.TRANSACTIONS, memoryState.transactions);
   persist(KEYS.HISTORY, memoryState.history);
+
+  if (recoveredAny) void flushPendingSyncs();
 
   return getFullDatabaseState();
 }
@@ -878,9 +1069,10 @@ export function getDresses(): Dress[] {
 }
 
 export function saveDresses(dresses: Dress[]) {
+  const previous = memoryState.dresses;
   memoryState.dresses = dresses;
   persist(KEYS.DRESSES, dresses);
-  syncTableToSupabase('robes', dresses, mapDressToDb, d => d.id);
+  syncTableToSupabase('robes', dresses, previous);
 }
 
 export function getBijoux(): Bijou[] {
@@ -888,9 +1080,10 @@ export function getBijoux(): Bijou[] {
 }
 
 export function saveBijoux(bijoux: Bijou[]) {
+  const previous = memoryState.bijoux;
   memoryState.bijoux = bijoux;
   persist(KEYS.BIJOUX, bijoux);
-  syncTableToSupabase('bijoux', bijoux, mapBijouToDb, b => b.id);
+  syncTableToSupabase('bijoux', bijoux, previous);
 }
 
 export function getClientes(): Cliente[] {
@@ -898,9 +1091,10 @@ export function getClientes(): Cliente[] {
 }
 
 export function saveClientes(clientes: Cliente[]) {
+  const previous = memoryState.clientes;
   memoryState.clientes = clientes;
   persist(KEYS.CLIENTES, clientes);
-  syncTableToSupabase('clients', clientes, mapClientToDb, c => c.id);
+  syncTableToSupabase('clients', clientes, previous);
 }
 
 export function getReservations(): Reservation[] {
@@ -908,9 +1102,10 @@ export function getReservations(): Reservation[] {
 }
 
 export function saveReservations(reservations: Reservation[]) {
+  const previous = memoryState.reservations;
   memoryState.reservations = reservations;
   persist(KEYS.RESERVATIONS, reservations);
-  syncTableToSupabase('reservations', reservations, mapReservationToDb, r => r.id);
+  syncTableToSupabase('reservations', reservations, previous);
 }
 
 export function getTransactions(): Transaction[] {
@@ -918,9 +1113,10 @@ export function getTransactions(): Transaction[] {
 }
 
 export function saveTransactions(transactions: Transaction[]) {
+  const previous = memoryState.transactions;
   memoryState.transactions = transactions;
   persist(KEYS.TRANSACTIONS, transactions);
-  syncTableToSupabase('mouvements_caisse', transactions, mapTransactionToDb, t => t.id).then(() => {
+  syncTableToSupabase('mouvements_caisse', transactions, previous).then(() => {
     updateTresorerieInDb();
   });
 }
@@ -979,11 +1175,20 @@ export function getFullDatabaseState() {
   if (statusChanged.length > 0) {
     const supabase = getSupabaseClient();
     if (supabase) {
+      // update() reports failure in its result rather than by throwing.
       Promise.all(
         statusChanged.map(r =>
           supabase.from('reservations').update({ statut_reservation: r.statut }).eq('id', r.id)
         )
-      ).catch(err => console.error('Auto-status sync to Supabase failed:', err));
+      ).then(results => {
+        if (results.some(r => r.error)) {
+          console.error('Auto-status sync to Supabase failed:', results.find(r => r.error)?.error);
+          onSyncWriteError?.();
+        }
+      }).catch(err => {
+        console.error('Auto-status sync to Supabase failed:', err);
+        onSyncWriteError?.();
+      });
     }
   }
 
@@ -1016,7 +1221,7 @@ export function exportDatabaseToFile() {
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = todayIso();
 
   const link = document.createElement('a');
   link.href = url;
@@ -1055,7 +1260,7 @@ export function addHistoryEntry(action: string, details: string, user: string = 
   const now = new Date();
 
   const entry: HistoriqueAction = {
-    id: `h-${Date.now()}`,
+    id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     action,
     utilisateur: user,
     date: toIso(now),
