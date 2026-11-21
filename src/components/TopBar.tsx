@@ -14,6 +14,7 @@ interface TopBarProps {
   cloudConnected: boolean;
   setCurrentTab: (tab: string) => void;
   account?: Account;
+  onSync?: () => void;
 }
 
 type Hit = { id: string; tab: string; title: string; kind: string };
@@ -28,7 +29,8 @@ export default function TopBar({
   syncing,
   cloudConnected,
   setCurrentTab,
-  account
+  account,
+  onSync
 }: TopBarProps) {
   const isRtl = language === 'ar';
   const [query, setQuery] = useState('');
@@ -169,8 +171,13 @@ export default function TopBar({
 
       {/* Status + notifications */}
       <div className={`flex shrink-0 items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-        <span
-          className={`hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium md:inline-flex ${
+        <button
+          onClick={!syncing ? onSync : undefined}
+          disabled={syncing || !onSync}
+          title={language === 'fr' ? 'Cliquer pour synchroniser' : 'انقر للمزامنة'}
+          className={`hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium md:inline-flex transition-opacity ${
+            syncing || !onSync ? 'cursor-default' : 'cursor-pointer hover:opacity-80'
+          } ${
             syncing
               ? 'border-neutral-200 bg-neutral-50 text-neutral-600'
               : cloudConnected
@@ -185,7 +192,7 @@ export default function TopBar({
           ) : (
             <><CloudOff size={13} />{language === 'fr' ? 'Mode hors ligne' : 'وضع دون اتصال'}</>
           )}
-        </span>
+        </button>
 
         <button
           onClick={() => setCurrentTab('accueil')}
