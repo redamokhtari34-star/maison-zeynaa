@@ -37,10 +37,10 @@ import { getAccounts, getActiveAccountId, setActiveAccountId, clearActiveAccount
 import { 
   getFullDatabaseState, 
   saveDresses, 
-  saveBijoux, 
-  saveClientes, 
-  saveReservations, 
-  saveTransactions, 
+  saveBijoux,
+  saveClientes,
+  saveReservations,
+  saveTransactions,
   saveHistory,
   resetDatabaseToDefaults,
   fetchFullDatabaseStateFromSupabase,
@@ -48,7 +48,8 @@ import {
   seedSupabaseWithSampleData,
   cleanFinancialsAndReservationsForProduction,
   getHistory,
-  subscribeToHistory
+  subscribeToHistory,
+  registerSyncWriteErrorCallback
 } from './lib/storage';
 import { todayIso } from './lib/dates';
 import { notifySuccess } from './lib/toast';
@@ -65,6 +66,12 @@ export default function App() {
   // Whether the last sync actually reached the cloud. Drives the status pill,
   // which must never claim "synchronised" when it isn't.
   const [cloudReachable, setCloudReachable] = useState(false);
+
+  // When any background write to Supabase fails, flip the status pill to
+  // "offline" so the user sees it rather than silently losing data.
+  useEffect(() => {
+    registerSyncWriteErrorCallback(() => setCloudReachable(false));
+  }, []);
 
   const refreshFromSupabase = async () => {
     setSupabaseSyncing(true);

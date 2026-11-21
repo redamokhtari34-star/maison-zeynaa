@@ -546,6 +546,14 @@ export function mapTransactionToDb(tr: Transaction) {
   return row;
 }
 
+// Optional callback invoked whenever a background write to Supabase fails.
+// App.tsx registers this to flip the status pill to "offline" so the user
+// sees the pill go red rather than silently losing data.
+let onSyncWriteError: (() => void) | null = null;
+export function registerSyncWriteErrorCallback(cb: () => void) {
+  onSyncWriteError = cb;
+}
+
 // Reusable table synchronization helper
 export async function syncTableToSupabase<TLocal, TDb>(
   tableName: string,
@@ -558,12 +566,10 @@ export async function syncTableToSupabase<TLocal, TDb>(
 
   try {
     // 1. Get current list of IDs in DB to handle deletions
-    const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id');
+    const { data: dbItems, error: fetchError } = await supabase.from(tableName).select('id').limit(50000);
     if (fetchError) {
-      // Background sync — the status pill already tells the user when the cloud
-      // is unreachable. Spamming one toast per table per save is too noisy, so
-      // errors are only written to the console.
       console.error(`Failed to fetch IDs from ${tableName} for sync:`, fetchError);
+      onSyncWriteError?.();
       return;
     }
 
@@ -576,6 +582,7 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: deleteError } = await supabase.from(tableName).delete().in('id', idsToDelete);
       if (deleteError) {
         console.error(`Failed to delete removed rows from ${tableName}:`, deleteError);
+        onSyncWriteError?.();
       }
     }
 
@@ -585,10 +592,12 @@ export async function syncTableToSupabase<TLocal, TDb>(
       const { error: upsertError } = await supabase.from(tableName).upsert(dbRows as any);
       if (upsertError) {
         console.error(`Failed to upsert to ${tableName}:`, upsertError);
+        onSyncWriteError?.();
       }
     }
   } catch (err: any) {
     console.error(`Error in syncTableToSupabase for ${tableName}:`, err);
+    onSyncWriteError?.();
   }
 }
 
