@@ -24,7 +24,7 @@ import {
   saveReservations, 
   saveTransactions 
 } from '../lib/storage';
-import { notifyError } from '../lib/toast';
+import { notifyError, notifySuccess } from '../lib/toast';
 import { askConfirm } from '../lib/confirm';
 
 interface ParametresProps {
@@ -81,8 +81,10 @@ export default function Parametres({ language, onLanguageChange, onResetData }: 
             if (parsed.reservations) saveReservations(parsed.reservations);
             if (parsed.transactions) saveTransactions(parsed.transactions);
 
-            notifyError(language === 'fr' ? 'Restauration réussie !' : 'تم استيراد البيانات بنجاح !');
-            window.location.reload();
+            notifySuccess(language === 'fr' ? 'Restauration réussie — envoi vers le cloud…' : 'تم استيراد البيانات بنجاح !');
+            // Reloading at once aborted the background Supabase writes, and the
+            // reload then pulled the old cloud data back over the restore.
+            window.setTimeout(() => window.location.reload(), 5000);
           }
         } catch (err) {
           notifyError(language === 'fr' ? 'Format de fichier de sauvegarde non valide !' : 'صيغة ملف غير صحيحة !');
