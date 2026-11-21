@@ -224,7 +224,13 @@ export default function Reservations({
     })) {
       const supabase = getSupabaseClient();
       if (supabase) {
-        mirrorToCloud(() => supabase.from('reservations').delete().eq('id', id), LOCAL_SYNC_FAIL);
+        // Delete junction rows first so FK constraints don't block the parent
+        // delete, then remove the reservation itself.
+        mirrorToCloud(async () => {
+          await supabase.from('reservation_robes').delete().eq('reservation_id', id);
+          await supabase.from('reservation_bijoux').delete().eq('reservation_id', id);
+          return supabase.from('reservations').delete().eq('id', id);
+        }, LOCAL_SYNC_FAIL);
       }
 
       const updated = reservations.filter(r => r.id !== id);

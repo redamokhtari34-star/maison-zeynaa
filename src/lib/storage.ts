@@ -765,13 +765,17 @@ export async function fetchFullDatabaseStateFromSupabase() {
     { data: transactionsDb, error: transactionsErr },
     { data: historyDb, error: historyErr }
   ] = await Promise.all([
-    supabase.from('robes').select('*'),
-    supabase.from('bijoux').select('*'),
-    supabase.from('clients').select('*'),
-    supabase.from('reservations').select('*'),
-    supabase.from('reservation_robes').select('*'),
-    supabase.from('reservation_bijoux').select('*'),
-    supabase.from('mouvements_caisse').select('*'),
+    // PostgREST's default cap is 1 000 rows.  Without an explicit limit the
+    // fetch silently truncates, and the subsequent sync then permanently deletes
+    // the missing rows from Supabase — an invisible, irreversible data loss.
+    // 10 000 is far above any realistic shop volume for each of these tables.
+    supabase.from('robes').select('*').limit(10000),
+    supabase.from('bijoux').select('*').limit(10000),
+    supabase.from('clients').select('*').limit(10000),
+    supabase.from('reservations').select('*').limit(10000),
+    supabase.from('reservation_robes').select('*').limit(50000),
+    supabase.from('reservation_bijoux').select('*').limit(50000),
+    supabase.from('mouvements_caisse').select('*').limit(10000),
     supabase.from('historique_actions').select('*').order('created_at', { ascending: false }).limit(300)
   ]);
 
