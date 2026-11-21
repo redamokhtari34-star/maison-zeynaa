@@ -70,6 +70,14 @@ export default function Calendrier({
     setLiveReservations(reservations);
   }, [reservations]);
 
+  // Bring today's cell into view: late-month days sit below the fold.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      document.getElementById(`cal-day-${todayIso()}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [currentDate]);
+
   // Helpers for resolving names and photos
   const getClientName = (res: Reservation) => {
     if (res.cliente_id && res.cliente_id.length > 20) {
@@ -483,8 +491,10 @@ export default function Calendrier({
                 id={`cal-day-${cell.dateStr}`}
                 onClick={() => openDayModal(cell.dateStr)}
                 className={`min-h-[85px] sm:min-h-[95px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
-                  isSelected
-                    ? 'border-orange-600 bg-orange-50/50 ring-2 ring-orange-500/20'
+                  isToday
+                    ? 'border-orange-600 bg-orange-50 ring-2 ring-orange-500/40'
+                    : isSelected
+                    ? 'border-orange-300 bg-orange-50/50'
                     : cell.isCurrentMonth
                       ? 'border-gray-100 bg-white hover:border-orange-300 hover:bg-slate-50/80'
                       : 'border-gray-50 bg-slate-50/40 opacity-40 hover:opacity-70'
