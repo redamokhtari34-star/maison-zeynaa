@@ -477,6 +477,7 @@ export default function App() {
         cloudConnected={cloudConnected}
         setCurrentTab={setCurrentTab}
         account={activeAccount}
+        onSync={refreshFromSupabase}
       />
 
       {/* Main viewport — clears the fixed top bar and the desktop sidebar. */}
